@@ -48,7 +48,7 @@ body:
     id: rust
     attributes:
       label: Rust version
-      placeholder: e.g. 1.88.0
+      placeholder: e.g. stable or 1.90.0
 
   - type: input
     id: bun
