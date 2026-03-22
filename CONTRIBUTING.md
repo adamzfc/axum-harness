@@ -4,7 +4,7 @@ Thanks for contributing to this template.
 
 ## Development Setup
 
-1. Install Rust `1.82.0`, Node.js `22.11.0`, and Bun `1.3.11`.
+1. Install Rust `1.85.0`, Node.js `22.11.0`, and Bun `1.3.11`.
 2. Install frontend dependencies:
 
 ```bash
