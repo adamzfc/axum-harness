@@ -45,7 +45,13 @@
   4. SvelteKit SPA 在 Tauri WebView 中正确渲染
   5. Cargo workspace 各 crate 可独立编译
   6. 开发者可 `moon run desktop-ui:dev` 启动开发环境
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 00-01-PLAN.md — 目录结构与 moon 配置
+- [ ] 00-02-PLAN.md — Cargo workspace 配置
+- [ ] 00-03-PLAN.md — Tauri v2 + SvelteKit 5 SPA 骨架
+- [ ] 00-04-PLAN.md — moon 任务与 CI/CD
+- [ ] 00-05-PLAN.md — 开发工具链配置
 
 ### Phase 1: 项目脚手架与认证
 **Goal**: 用户能启动应用、认证 GitHub、看到可用的导航结构
@@ -106,7 +112,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. moonrepo 工程化基建 | 0/8 | Not started | - |
+| 0. moonrepo 工程化基建 | 0/5 | Not started | - |
 | 1. 项目脚手架与认证 | 0/4 | Not started | - |
 | 2. 数据层与 TopK 发现引擎 | 0/11 | Not started | - |
 | 3. 订阅系统与信号模型 | 0/10 | Not started | - |
@@ -172,4 +178,4 @@
 ---
 *Roadmap created: 2026-03-22*
 *Updated: 2026-03-22 — added Phase 0 (moonrepo monorepo setup)*
-*Ready for: `/gsd-plan-phase 0`*
+*Ready for: `/gsd-execute-phase 0`*
