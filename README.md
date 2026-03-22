@@ -25,7 +25,7 @@ A desktop-first monorepo template built with Rust workspace, Tauri v2, SvelteKit
 
 ## Prerequisites
 
-- Rust toolchain `1.85.0`
+- Rust toolchain `1.88.0`
 - Node.js `22.11.0`
 - Bun
 
