@@ -1,0 +1,32 @@
+tasks:
+  build:
+    command: 'cargo build'
+    inputs:
+      - '@globs(sources)'
+      - 'Cargo.toml'
+    platform: 'system'
+
+  test:
+    command: 'cargo test'
+    inputs:
+      - '@globs(sources)'
+    platform: 'system'
+
+  check:
+    command: 'cargo check'
+    inputs:
+      - '@globs(sources)'
+      - 'Cargo.toml'
+    platform: 'system'
+
+  lint:
+    command: 'cargo clippy -- -D warnings'
+    inputs:
+      - '@globs(sources)'
+    platform: 'system'
+
+  format:
+    command: 'cargo fmt --all'
+    inputs:
+      - '@globs(sources)'
+    platform: 'system'
