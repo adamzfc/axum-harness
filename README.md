@@ -1,6 +1,6 @@
 # tauri-sveltekit-axum-moon-template
 
-A desktop-first monorepo template built with Rust workspace, Tauri v2, SvelteKit 5, and moon.
+A business-agnostic greenfield template for desktop-first apps: Tauri v2 + SvelteKit 5 + Axum on a Rust workspace monorepo orchestrated by moon and Bun.
 
 ## Stack
 

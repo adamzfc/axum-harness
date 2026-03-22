@@ -18,6 +18,7 @@ logs/
 
 # --- Rust / Cargo ---
 target/
+Cargo.lock
 
 # --- moonrepo ---
 .moon/cache/
