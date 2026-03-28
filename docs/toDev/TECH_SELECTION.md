@@ -18,14 +18,14 @@
 
 ### 1.2 技术框架 (版本已验证)
 
-| 层级 | 选型 | 版本 | 验证日期 |
-|------|------|------|----------|
-| 桌面 Shell | **Tauri** | 2.10.3 | 2026-03-28 |
-| 前端框架 | **SvelteKit** | 2.55.0 | 2026-03-28 |
-| 前端语言 | **Svelte** | 5.55.0 | 2026-03-28 |
-| 后端 HTTP | **Axum** | 0.8.8 | 2026-03-28 |
-| 构建工具 | **moon** | 2.x | 已集成 |
-| 包管理器 | **bun** | 1.3.x | 已配置 |
+| 层级       | 选型          | 版本   | 验证日期   |
+| ---------- | ------------- | ------ | ---------- |
+| 桌面 Shell | **Tauri**     | 2.10.3 | 2026-03-28 |
+| 前端框架   | **SvelteKit** | 2.55.0 | 2026-03-28 |
+| 前端语言   | **Svelte**    | 5.55.0 | 2026-03-28 |
+| 后端 HTTP  | **Axum**      | 0.8.8  | 2026-03-28 |
+| 构建工具   | **moon**      | 2.x    | 已集成     |
+| 包管理器   | **bun**       | 1.3.x  | 已配置     |
 
 ---
 
@@ -34,6 +34,7 @@
 ### 2.1 双数据库架构
 
 用户明确要求:
+
 - **服务端**: SurrealDB (独立部署)
 - **本 App**: libsql/turso (嵌入式本地存储)
 - **云端同步**: turso cloud (可选)
@@ -56,11 +57,11 @@ pub enum DatabaseBackend {
 
 ### 2.3 依赖配置 (版本已验证)
 
-| 用途 | Crate | 版本 | 验证日期 |
-|------|-------|------|----------|
+| 用途     | Crate                 | 版本  | 验证日期   |
+| -------- | --------------------- | ----- | ---------- |
 | 本地存储 | `tauri-plugin-libsql` | 0.1.0 | 2026-02-24 |
-| 云端同步 | `libsql` | 0.4.x | 2026-03-28 |
-| 服务端 | `surrealdb` | 3.0.5 | 2026-03-28 |
+| 云端同步 | `libsql`              | 0.4.x | 2026-03-28 |
+| 服务端   | `surrealdb`           | 3.0.5 | 2026-03-28 |
 
 ---
 
@@ -98,7 +99,7 @@ pub enum DatabaseBackend {
     "typescript": "5.5.0"
   },
   "optionalDependencies": {
-    "vitepress": "1.6.4"
+    "vitepress": "2.0.0-alpha.17"
   }
 }
 ```
@@ -107,11 +108,11 @@ pub enum DatabaseBackend {
 
 用户指定: **pqoqubbw/icons** (7.3K ⭐)
 
-| 方案 | 包 | 动画 |
-|------|-----|------|
-| 主选静态 | `@lucide/svelte` | 无 |
-| 主选动画 | `@pqoqubbw/icons` | ✅ 379+ |
-| Lottie | `@lottiefiles/svelte-lottie-player` | ✅ |
+| 方案     | 包                                  | 动画    |
+| -------- | ----------------------------------- | ------- |
+| 主选静态 | `@lucide/svelte`                    | 无      |
+| 主选动画 | `@pqoqubbw/icons`                   | ✅ 379+ |
+| Lottie   | `@lottiefiles/svelte-lottie-player` | ✅      |
 
 ### 3.3 文档站点
 
@@ -121,10 +122,10 @@ pub enum DatabaseBackend {
 
 ## 四、移动端测试框架 (用户指定 Maestro)
 
-| 框架 | 版本 | 适用场景 |
-|------|------|----------|
-| **Maestro** | 2.0.0 | Mobile E2E (用户指定) |
-| Playwright | 1.58.2 | Web E2E + Mobile |
+| 框架        | 版本   | 适用场景              |
+| ----------- | ------ | --------------------- |
+| **Maestro** | 2.0.0  | Mobile E2E (用户指定) |
+| Playwright  | 1.58.2 | Web E2E + Mobile      |
 
 ---
 
@@ -132,25 +133,25 @@ pub enum DatabaseBackend {
 
 ### 5.1 MCP Servers
 
-| MCP | 用途 | 状态 |
-|-----|------|------|
-| Exa Search | 实时 web 搜索 | ✅ 已配 |
-| Chrome DevTools | 浏览器自动化 | ✅ 已配 |
-| indxr | 代码库语义索引 | 🔲 需配置 |
-| rust-analyzer-mcp | Rust 代码诊断 | 🔲 需配置 |
+| MCP               | 用途           | 状态      |
+| ----------------- | -------------- | --------- |
+| Exa Search        | 实时 web 搜索  | ✅ 已配   |
+| Chrome DevTools   | 浏览器自动化   | ✅ 已配   |
+| indxr             | 代码库语义索引 | 🔲 需配置 |
+| rust-analyzer-mcp | Rust 代码诊断  | 🔲 需配置 |
 
 ### 5.2 Skills
 
-| 领域 | Skill |
-|------|-------|
-| Rust | rust-skills |
-| Svelte | svelte-code-writer |
-| Frontend | frontend-patterns |
-| Backend | backend-patterns |
-| Test | e2e-testing |
-| Docker | docker-patterns |
-| API | api-design |
-| Security | security-review |
+| 领域     | Skill              |
+| -------- | ------------------ |
+| Rust     | rust-skills        |
+| Svelte   | svelte-code-writer |
+| Frontend | frontend-patterns  |
+| Backend  | backend-patterns   |
+| Test     | e2e-testing        |
+| Docker   | docker-patterns    |
+| API      | api-design         |
+| Security | security-review    |
 
 ---
 
@@ -204,12 +205,117 @@ tauri-plugin-libsql = "0.1.0"
 
 ---
 
-## 八、版本检查汇总
+## 八、Release / Changelog / Git Hooks 工具链
+
+### 8.1 Changelog 生成
+
+| 工具 | 版本 | 类型 | 适用场景 |
+|------|------|------|----------|
+| **git-cliff** | 2.12.0 | Rust | ⭐ 主推 - 支持 Conventional Commits |
+| conventional-changelog | - | Node.js | npm 生态 |
+
+```toml
+# Cargo.toml
+[dev-dependencies]
+git-cliff = "2.12.0"
+
+# 生成 changelog
+git-cliff --output CHANGELOG.md
+```
+
+### 8.2 Release 自动化
+
+| 工具 | 版本 | 类型 | 适用场景 |
+|------|------|------|----------|
+| **release-plz** | 0.3.157 | Rust | ⭐ 主推 - 自动版本 + Changelog |
+| changesets | - | Node.js | npm/pnpm 生态 |
+
+```toml
+# Cargo.toml
+[dev-dependencies]
+release-plz = "0.3.157"
+```
+
+```yaml
+# .github/workflows/release.yml
+name: Release
+on:
+  push:
+    branches: [main]
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: release-plz/release-pr@v0.3
+```
+
+### 8.3 Git Hooks
+
+由于是 monorepo (Node.js + Rust 混合)，需要兼容方案:
+
+| 工具 | 版本 | 类型 | 适用场景 |
+|------|------|------|----------|
+| **husky** | 9.1.7 | Node.js | ⭐ npm/bun 脚本 |
+| **cargo-husky** | 1.5.0 | Rust | Rust 代码检查 |
+| **pre-commit** | - | Python | 跨语言通用 |
+| **fasthooks** | 0.1.0 | Rust | 新兴，声称 27x 更快 |
+
+**推荐方案 (moon repo)**:
+
+```yaml
+# .husky/pre-commit (husky)
+#!/bin/sh
+npm run lint:front && npm run lint:back
+
+# 或使用 pre-commit (全局)
+pip install pre-commit
+
+# .pre-commit.yaml
+repos:
+  - repo: local
+    hooks:
+      - id: cargo-check
+        name: cargo check
+        entry: cargo check
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+```
+
+### 8.4 完整配置示例
+
+```yaml
+# moon.yml
+tasks:
+  lint:
+    command: 'biome check .'
+    inputs:
+      - '@globs(*)'
+
+  # Release流程
+  release:dry-run:
+    command: 'release-plz update --dry-run'
+
+  release:pr:
+    command: 'release-plz release-pr'
+
+  changelog:
+    command: 'git-cliff -o CHANGELOG.md'
+    inputs:
+      - '@gitcommits'
+```
+
+---
+
+## 九、版本检查汇总
 
 ### 已验证版本 (2026-03-28)
 
 **NPM**:
-- vitepress: 1.6.4 ✅
+
+- vitepress: 2.0.0-alpha.17 ✅
 - @sveltejs/kit: 2.55.0 ✅
 - svelte: 5.55.0 ✅
 - tailwindcss: 4.2.2 ✅
@@ -218,6 +324,7 @@ tauri-plugin-libsql = "0.1.0"
 - @playwright/test: 1.58.2 ✅
 
 **Rust**:
+
 - tauri: 2.10.3 ✅
 - surrealdb: 3.0.5 ✅
 - reqwest: 0.13.2 ✅
@@ -227,5 +334,5 @@ tauri-plugin-libsql = "0.1.0"
 
 ---
 
-*Last updated: 2026-03-28*
-*Version Checked: 2026-03-28*
+_Last updated: 2026-03-28_
+_Version Checked: 2026-03-28_
