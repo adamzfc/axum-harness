@@ -1,256 +1,398 @@
 # 技术选型文档 - Template Boilerplate
 
-> 基于 rust-docs.md (TWiR 2024-09 ~ 2026-03) + 用户需求
+> 基于 goal.md 需求 + rust-docs.md (TWiR 2024-09 ~ 2026-03) + exa mcp 实时验证
 > 核心目标: 跑通 3 个页面(登录、计数器、admin)的开发基建
 > 基准日期: 2026-03-28
 
 ---
 
-## 一、项目定位
+## 一、项目定位与目标
 
-**当前状态**: Template boilerplate，只有 3 个页面，几乎无业务逻辑
-**核心需求**: 开发环境跑通、工具基建就绪、测试通过
-**不做**:不过度设计业务逻辑、不预加未来功能
+### 1.1 核心需求 (goal.md)
 
----
+- **页面**: 登录页 + 计数器页 + Admin 管理端 (共 3 页)
+- **认证**: Google 一键登录
+- **多租户**: tenant_id 数据隔离
+- **基建**: MCP 代码索引 + WebSearch + 各领域 Skills
+- **平台**: Desktop + Mobile Web (mobile-first, 响应式)
+- **测试**: 编译成功 + 测试通过
 
-## 二、核心栈 (已确认)
+### 1.2 技术框架
 
 | 层级 | 选型 | 依据 |
 |------|------|------|
-| 桌面 Shell | **Tauri 2.x** | rust-docs.md L35 确认 v2.0 |
-| 前端 | **SvelteKit 2.x + Svelte 5** | Runes 稳定 |
-| 后端 | **Axum 0.8.x** | 主流 HTTP 框架 |
-| 构建 | **moon** | 已集成 |
-| 包管理 | **bun** | 已配置 |
+| 桌面 Shell | **Tauri 2.x** | goal.md 要求 |
+| 前端框架 | **SvelteKit 2.x + Svelte 5** | goal.md 要求 |
+| 后端 HTTP | **Axum** | goal.md 要求 |
+| 构建工具 | **moon** | goal.md 要求 + 已集成 |
+| 包管理器 | **bun** | 已配置 |
 
 ---
 
-## 三、基建选型 (基于 rust-docs.md)
+## 二、数据库策略 (核心)
 
-### 3.1 数据库 - 核心依赖
+### 2.1 双数据库架构
 
-| 方案 | 选型 | 依据 | 状态 |
-|------|------|------|------|
-| 主数据库 | **SurrealDB** (embedded) | 用户明确要求，需跑通 | ⚠️ 需验证 |
-| Embedded KV | **redb** | rust-docs.md L155 纯 Rust 3.0.0 | 可选备选 |
-| SQLite 重写 | **Limbo** | rust-docs.md L143 Turso 主推 | 观察 |
+用户明确要求:
+- **服务端**: SurrealDB (独立部署)
+- **本 App**: libsql/turso (嵌入式本地存储)
+- **云端同步**: turso cloud (可选)
 
-**SurrealDB 嵌入式配置**:
+### 2.2 策略模式 (Adapter Pattern)
+
+```rust
+// 数据库抽象层 - 策略模式
+pub trait DatabaseAdapter {
+    async fn query(&self, sql: &str) -> Result<Vec<Row>>;
+    async fn execute(&self, sql: &str) -> Result<()>;
+    async fn sync(&self) -> Result<()>;  // 可选云同步
+}
+
+// 实现变体
+pub enum DatabaseBackend {
+    SurrealDB(SurrealDBAdapter),   // 服务端
+    LibSQL(LibSQLAdapter),          // 本地嵌入式
+    Turso(TursoCloudAdapter),      // 云端同步
+}
+```
+
+### 2.3 依赖配置
+
+| 用途 | Crate | Features |
+|------|-------|----------|
+| 本地存储 | `tauri-plugin-libsql` v0.1.0 | embedded + encryption |
+| 云端同步 | `libsql` + turso-sdk | embedded-replica |
+| 服务端 | `surrealdb` v3.x | kv-mem / kv-rocksdb |
+
 ```toml
 # Cargo.toml
-surrealdb = { version = "3", features = ["kv-mem"] }
-```
-支持 embedded 模式，可在 Tauri 中直接使用。
-
-### 3.2 代码索引 MCP
-
-| 工具 | 用途 | 选型 | 来源 |
-|------|------|------|------|
-| 代码语义搜索 | 理解整个代码库 | **indxr** | rust-docs.md L599 |
-| 代码诊断 | rust-analyzer 集成 | **rust-analyzer-mcp** | 外部生态 |
-| 项目分析 | Crate 索引 | **cratedex** | 外部生态 |
-
-**indxr** (rust-docs.md 收录):
-- Fast codebase indexer for AI coding agents
-- MCP server 集成
-- 支持 semantic + BM25 混合搜索
-
-### 3.3 Web 能力 MCP
-
-| 工具 | 用途 | 选型 |
-|------|------|------|
-| 网页搜索 | 实时信息获取 | **Exa MCP** |
-| 网页浏览 | 自动化测试 | **Chrome DevTools MCP** |
-
-### 3.4 HTTP 客户端
-
-| 工具 | 用途 | 选型 | 来源 |
-|------|------|------|------|
-| HTTP 请求 | 外部 API 调用 | **reqwest 0.13** | rust-docs.md L287 |
-
-**reqwest 0.13 特性**:
-```toml
-# rustls 默认，无需 OpenSSL
-reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
-```
-
-### 3.5 搜索/索引
-
-| 工具 | 用途 | 选型 | 来源 |
-|------|------|------|------|
-| 全文搜索 | 文档检索 | **Tantivy** | rust-docs.md L167 |
-| 向量搜索 | AI 场景 | Qdrant | 外部生态 |
-
-** Tantivy ** (rust-docs.md 收录):
-- Quickwit 开发，成熟稳定
-- 完全 Rust，无 Java 依赖
-
-### 3.6 测试框架
-
-| 类型 | 选型 | 来源 |
-|------|------|------|
-| Rust 单元 | **cargo test** + **rstest** | 官方 |
-| Rust 集成 | **tokio test** | 官方 |
-| Svelte 组件 | **vitest** + **vitest-browser-svelte** | Svelte 官方 |
-| E2E | **Playwright** | 行业标准 |
-
-### 3.7 容器/基础设施 (评估中)
-
-| 工具 | 用途 | 状态 |
-|------|------|------|
-| OCI 运行时 | youki (7.3K ⭐) | 评估中，暂不采用 |
-| 容器管理 | docker-compose | 开发环境必需 |
-
----
-
-## 四、Tauri 相关 Cargo 依赖
-
-基于 rust-docs.md 收录项目和官方文档:
-
-### 4.1 核心插件
-
-```toml
 [dependencies]
-# 官方核心插件
-tauri-plugin-shell = "2"
-tauri-plugin-dialog = "2"
-tauri-plugin-store = "2"
-tauri-plugin-fs = "2"
-tauri-plugin-deep-link = "2"
-tauri-plugin-window-state = "2"
-```
+# 本地存储 (Tauri Plugin)
+tauri-plugin-libsql = "0.1.0"
 
-### 4.2 数据库
+# 云端同步
+libsql = { version = "0.4", features = ["sync"] }
 
-```toml
-# 主数据库 - SurrealDB embedded
-surrealdb = { version = "3", features = ["kv-mem"] }
+# 嵌入式测试 (开发用)
+embedded-sqlite = "0.4"
 
-# 备选 - 纯 Rust embedded KV
-redb = "3.0.0"
-
-# 备选 - SQLite Rust 重写 (观察)
-# limbo = "0.1"  # rust-docs.md L143
-```
-
-### 4.3 HTTP/网络
-
-```toml
-# HTTP 客户端 (rust-docs.md L287 确认 0.13)
-reqwest = "0.13"
-
-# WebSocket
-tokio-tungstenite = "0.24"
-
-# UUID
-uuid = { version = "1", features = ["v4", "serde"] }
-```
-
-### 4.4 序列化
-
-```toml
-# JSON
-serde = "1"
-serde_json = "1"
-tokio-postgres = "0.5"  # 如果用 Postgres
-```
-
-### 4.5 认证
-
-```toml
-# JWT
-jsonwebtoken = "9"
-
-# Session
-cookie = "0.18"
+# 服务端数据库 (Axum Server)
+surrealdb = { version = "3", features = ["kv-rocksdb"] }
 ```
 
 ---
 
-## 五、Frontend (SvelteKit) 依赖
+## 三、前端技术栈 (goal.md)
 
-基于用户要求和 rust-docs.md:
+### 3.1 核心依赖
+
+| 类别 | 包 | 版本 | 状态 |
+|------|-----|------|------|
+| UI 组件 | `bits-ui` | ^2.16.4 | ✅ 已配 |
+| CSS 框架 | `tailwindcss` | ^4.0.0 | ✅ 已配 |
+| Svelte | `svelte` | ^5.54.0 | ✅ 已配 |
+| SvelteKit | `@sveltejs/kit` | ^2.50.0 | ✅ 已配 |
+| 适配器 | `@sveltejs/adapter-static` | ^3.0.0 | ✅ 已配 |
+
+### 3.2 扩展依赖 (goals 要求)
 
 ```json
 {
   "dependencies": {
-    "bits-ui": "^2.16.4",
-    "tailwindcss": "^4.0.0",
-    "@tailwindcss/vite": "^4.0.0"
+    // 图标 - 用户指定 lucide-animated
+    "@lucide/svelte": "^1.7.0",
+    // 动画 - 用户指定 lottieplayer
+    "@lottiefiles/svelte-lottie-player": "^0.3.1",
+    // 可选动画图标
+    "@jis3r/moving-icons": "latest"
   },
   "devDependencies": {
-    "@sveltejs/adapter-static": "^3.0.0",
-    "@sveltejs/kit": "^2.50.0",
-    "svelte": "^5.54.0",
-    "vite": "^8.0.0",
+    // 文档 - 用户指定 vitepress
+    "vitepress": "^1.6.4",
+    // 测试
     "vitest": "^3.0.0",
-    "vitest-browser-svelte": "^1.0.0",
-    "@playwright/test": "^1.50.0"
+    "vitest-browser-svelte": "^1.0.0"
   },
   "optionalDependencies": {
-    "vitepress": "^1.0.0",
-    "lucide-svelte": "^0.500.0"
+    // Svelte 5 原生图标 (备选)
+    "svelte-lucide": "latest",
+    // 文档备选 (Sveltepress)
+    "sveltepress": "latest"
   }
 }
 ```
 
+### 3.3 图标方案 (exa 验证)
+
+| 方案 | 包 | 动画 | Svelte 5 支持 |
+|------|-----|------|---------------|
+| 主选 | `@lucide/svelte` | 无 | ✅ PR#2727 |
+| 动画图标 | `@jis3r/moving-icons` | ✅ | ✅ |
+| Lottie | `@lottiefiles/svelte-lottie-player` | ✅ | ✅ |
+
 ---
 
-## 六、MCP / Skills 清单
+## 四、移动端测试框架 (2026)
 
-### 6.1 MCP Servers (已配置/需配置)
+### 4.1 测试框架对比
+
+| 框架 | 适用场景 | Tauri 兼容 | 备注 |
+|------|---------|-----------|------|
+| **Playwright** | Web E2E + Mobile | ✅ 主力推荐 | 支持 viewport 模拟 |
+| **Appium** | 原生 iOS/Android | ⚠️ 需额外配置 | 成熟但重 |
+| **Maestro** | 轻量移动测试 | ⚠️ 评估中 | 2026 崛起 |
+| **Detox** | React Native | ❌ 不适用 | 仅 RN |
+
+### 4.2 Tauri 移动端测试建议
+
+```yaml
+# moon.yml
+tasks:
+  test:mobile:
+    command: 'playwright test --config=playwright.mobile.config.ts'
+    inputs:
+      - '@tsfiles(tests/mobile/**/*.ts)'
+
+  # AndroidEmulator
+  test:android:
+    command: 'playwright test --device=Pixel5'
+    
+  # iOS Simulator (macOS only)
+  test:ios:
+    command: 'playwright test --device=iPhone14'
+```
+
+### 4.3 选型决策
+
+- **Web/Mobile Web E2E**: Playwright ✅ (同一套测试，viewport 切换)
+- **移动原生 (远期)**: Appium (需要时添加)
+- **理由**: Tauri WebView 本质是 Web，Playwright 完全覆盖
+
+---
+
+## 五、MCP / Skills 配置
+
+### 5.1 MCP Servers
 
 | MCP | 用途 | 状态 |
 |-----|------|------|
-| Exa Search | 实时 web 搜索 | ✅ 已配 |
-| Chrome DevTools | 浏览器自动化 | ✅ 已配 |
-| indxr | 代码索引 | 🔲 需配置 |
-| rust-analyzer | 代码诊断 | 🔲 需配置 |
+| **Exa Search** | 实时 web 搜索 | ✅ 已配 |
+| **Chrome DevTools** | 浏览器自动化 | ✅ 已配 |
+| **indxr** | 代码库语义索引 | 🔲 需配置 |
+| **rust-analyzer-mcp** | Rust 代码诊断 | 🔲 需配置 |
 
-### 6.2 Skills (已加载)
+### 5.2 Skills (各领域)
 
-来自 `/skill list`:
-
-- **rust-skills** (179 rules)
-- **svelte-code-writer**
-- **svelte-core-bestpractices**
-- **frontend-patterns**
-- **backend-patterns**
-- **postgres-patterns** ⚠️ 需改为 surrealdb
-- **docker-patterns**
-- **api-design**
-- **security-review**
-- **testing** (via run-tests)
+| 领域 | Skill | 状态 |
+|------|-------|------|
+| Rust | `rust-skills` (179 rules) | ✅ 已配 |
+| Svelte | `svelte-code-writer` | ✅ 已配 |
+| Svelte | `svelte-core-bestpractices` | ✅ 已配 |
+| Frontend | `frontend-patterns` | ✅ 已配 |
+| Backend | `backend-patterns` | ✅ 已配 |
+| Database | `postgres-patterns` | ⚠️ 需改为 surrealdb |
+| Test | `e2e-testing` | ✅ 已配 |
+| Docker | `docker-patterns` | ✅ 已配 |
+| API | `api-design` | ✅ 已配 |
+| Security | `security-review` | ✅ 已配 |
 
 ---
 
-## 七、Phase 1 具体依赖清单
+## 六、Monorepo 目录架构
 
-### 7.1 package.json (前端)
+### 6.1 当前结构
 
-dependencies:
-- `bits-ui@^2.16.4` - UI 组件
-- `tailwindcss@^4.0.0` - CSS 框架
+```
+tauri-sveltekit-axum-moon-template/
+├── apps/
+│   └── desktop-ui/           # Tauri App
+│       ├── src/              # SvelteKit 前端
+│       └── src-tauri/        # Tauri Rust 后端
+├── crates/
+│   ├── domain/               # 领域模型
+│   ├── application/          # 应用逻辑
+│   ├── runtime_tauri/        # Tauri IPC 运行时
+│   ├── runtime_server/       # Axum HTTP 运行时
+│   └── shared_contracts/     # 共享 DTO
+├── docs/                     # 文档
+├── .planning/                # GSD 规划
+└── moon.yml                  # 构建配置
+```
 
-devDependencies:
-- `@sveltejs/adapter-static@^3.0.0` - Tauri SPA 适配
-- `@sveltejs/kit@^2.50.0`
-- `svelte@^5.54.0`
-- `vite@^8.0.0`
-- `vitest@^3.0.0`
-- `vitest-browser-svelte@^1.0.0`
-- `@playwright/test@^1.50.0`
+### 6.2 扩展后结构
 
-可选 (注释状态):
-- `vitepress` - 文档
-- `lucide-svelte` - 图标
-- `lottie-web` - 动画
+```
+tauri-sveltekit-axum-moon-template/
+├── apps/
+│   ├── desktop-ui/           # Tauri App (桌面)
+│   │   ├── src/              # SvelteKit 前端
+│   │   ├── src-tauri/        # Tauri Rust 后端
+│   │   └── package.json
+│   ├── mobile-web/           # 移动端 Web (可选 PWA)
+│   │   ├── src/
+│   │   └── package.json
+│   └── docs/                 # VitePress 文档站点
+│       ├── src/
+│       └── package.json
+├── crates/
+│   ├── domain/               # 领域模型 (pure Rust)
+│   ├── application/          # 应用逻辑
+│   ├── adapters/             # 数据库适配器 ⭐ NEW
+│   │   ├── libsql_adapter/
+│   │   ├── turso_adapter/
+│   │   └── surrealdb_adapter/
+│   ├── runtime_tauri/        # Tauri IPC
+│   ├── runtime_server/       # Axum REST
+│   └── shared_contracts/     # 共享 DTO
+├── packages/
+│   ├── ui/                   # 共享 UI 组件库
+│   │   └── src/components/
+│   └── utils/                # 共享工具函数
+├── services/
+│   ├── auth/                 # 认证服务
+│   ├── storage/              # 存储服务
+│   └── sync/                 # 云同步服务
+├── docker/
+│   ├── docker-compose.yml    # 开发环境
+│   ├── nginx.conf
+│   └── Dockerfile
+└── moon.yml
+```
 
-### 7.2 Cargo.toml (Rust 端)
+### 6.3 命名规范 (BEM + Rust conventions)
+
+```bash
+# 前端 (SvelteKit)
+components/
+├── Button.svelte              # 基础组件 (BEM: .btn)
+├── Icon.svelte               # 图标封装
+├── LoginForm.svelte          # 业务组件
+└── counter/
+    └── Counter.svelte        # 页面级组件
+
+# 后端 (Rust)
+modules/
+├── domain/
+│   ├── entities/             # User, Tenant, Counter
+│   ├── value_objects/        # Email, TenantId
+│   └── repositories/         # traits
+├── adapters/
+│   ├── database/
+│   │   ├── libsql_repo.rs
+│   │   └── surrealdb_repo.rs
+│   └── cache/
+│       └── redis_adapter.rs
+└── services/
+    ├── auth_service.rs
+    └── sync_service.rs
+```
+
+---
+
+## 七、关键 Cargo 依赖
+
+### 7.1 服务端 (Axum)
 
 ```toml
 [dependencies]
+# HTTP
+axum = "0.8"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "compression"] }
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.13", features = ["rustls"] }
+
+# Database - SurrealDB 服务端
+surrealdb = { version = "3", features = ["kv-rocksdb"] }
+
+# Auth
+jsonwebtoken = "9"
+cookie = "0.18"
+
+# Serialization
+serde = "1"
+serde_json = "1"
+
+# Utils
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+```
+
+### 7.2 客户端 (Tauri Plugin)
+
+```toml
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-store = "2"          # Sesssion 存储
+tauri-plugin-fs = "2"
+tauri-plugin-deep-link = "2"      # OAuth 回调
+tauri-plugin-window-state = "2"
+tauri-plugin-libsql = "0.1.0"      # ⭐ 本地数据库
+
+# 数据库客户端
+libsql = "0.4"
+
+# 服务端通信
+reqwest = { version = "0.13", features = ["rustls"] }
+```
+
+---
+
+## 八、Phase 1 依赖清单
+
+### 8.1 package.json (前端核心)
+
+```json
+{
+  "name": "desktop-ui",
+  "packageManager": "bun@1.3.11",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"vite dev\" \"cargo tauri dev\"",
+    "build": "vite build && cargo tauri build",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "lint": "biome check .",
+    "format": "biome format --write ."
+  },
+  "dependencies": {
+    "bits-ui": "^2.16.4",
+    "@lucide/svelte": "^1.7.0",
+    "@lottiefiles/svelte-lottie-player": "^0.3.1"
+  },
+  "devDependencies": {
+    "svelte": "^5.54.0",
+    "@sveltejs/kit": "^2.50.0",
+    "@sveltejs/adapter-static": "^3.0.0",
+    "vite": "^8.0.0",
+    "tailwindcss": "^4.0.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "vitest": "^3.0.0",
+    "vitest-browser-svelte": "^1.0.0",
+    "@playwright/test": "^1.50.0",
+    "@biomejs/biome": "^1.9.4",
+    "typescript": "^5.5.0"
+  },
+  "optionalDependencies": {
+    "vitepress": "^1.6.4",
+    "@jis3r/moving-icons": "latest"
+  }
+}
+```
+
+### 8.2 workspace Cargo.toml
+
+```toml
+[workspace]
+members = [
+    "apps/desktop-ui/src-tauri",
+    "crates/*",
+]
+resolver = "2"
+
+[workspace.dependencies]
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
@@ -258,90 +400,55 @@ tauri-plugin-store = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-deep-link = "2"
 tauri-plugin-window-state = "2"
-
-# SurrealDB embedded
-surrealdb = { version = "3", features = ["kv-mem"] }
+tauri-plugin-libsql = "0.1.0"
 
 # HTTP
 reqwest = "0.13"
-tokio = { version = "1", features = ["full"] }
 
 # Serialization
 serde = "1"
 serde_json = "1"
-
-# Auth
-jsonwebtoken = "9"
-cookie = "0.18"
-
-# Utils
-uuid = { version = "1", features = ["v4", "serde"] }
-chrono = { version = "0.4", features = ["serde"] }
-
-[dev-dependencies]
-rstest = "0.22"
-mockito = "1.6"
-```
-
-### 7.3 moon.yml 任务配置
-
-```yaml
-tasks:
-  lint:
-    command: 'biome check .'
-    inputs:
-      - '@globs(*)'
-  
-  test:unit:
-    command: 'cargo test --lib'
-    inputs:
-      - '@rustfiles(crate/**)'
-  
-  test:comp:
-    command: 'vitest run'
-    inputs:
-      - '@tsfiles(src/**/*.ts)'
-  
-  test:e2e:
-    command: 'playwright test'
-    inputs:
-      - '@globs(tests/**/*.ts)'
-
-  dev:
-    command: 'conc "vite dev" "cargo tauri dev"'
-    deps:
-      - task: 'build'
 ```
 
 ---
 
-## 八、风险与验证
+## 九、验证点 (Checklist)
 
-### 8.1 SurrealDB 验证点
+### 9.1 编译验证
 
-- [ ] embedded 模式内存占用 (Tauri bundle 大小)
-- [ ] 与 Tauri plugin 共存稳定性
-- [ ] 多租户数据隔离实现复杂度
-- [ ] v3.0 稳定性测试
+- [ ] `cargo check` 通过
+- [ ] `vite build` 生成 SPA
+- [ ] `cargo tauri build` 生成可执行文件 < 15MB
 
-### 8.2 替代方案
+### 9.2 测试验证
 
-如 SurrealDB 不适合:
-- **redb** (rust-docs.md 收录 L155) - 纯 KV，简单场景
-- **libsql** - Turso 主推，已有 tauri-plugin-libsql
+- [ ] `cargo test` Rust 单元测试通过
+- [ ] `vitest run` Svelte 组件测试通过
+- [ ] `playwright test` E2E 测试通过
+
+### 9.3 功能验证
+
+- [ ] SurrealDB 服务端连接
+- [ ] Tauri 本地 libsql 存储
+- [ ] Google OAuth 登录流程
+- [ ] Multi-tenant 数据隔离
+- [ ] 移动端响应式布局
 
 ---
 
-## 九、结论
+## 十、关键参考来源
 
-| 类别 | 选型 | 依据 |
-|------|------|------|
-| 数据库 | **SurrealDB embedded** | 用户明确要求，6月前验证 |
-| 代码索引 | **indxr** | rust-docs.md L599，MCP 集成 |
-| HTTP | **reqwest 0.13** | rust-docs.md L287 |
-| 搜索 | **Tantivy** | rust-docs.md L167 |
-| 测试 | vitest + Playwright | Svelte 官方推荐 |
+### 目标文件
+- goal.md (用户核心需求)
+- rust-docs.md (TWiR 108 项目)
 
-**核心不变**: Tauri 2 + SvelteKit + Axum + moon
+### Exa MCP 验证
+- lucide-animated / @lucide/svelte Runes 支持 ✅
+- lottie-player / @lottiefiles/svelte-lottie-player ✅
+- tauri-plugin-libsql v0.1.0 ✅
+- reqwest 0.13 rustls ✅
 
-需要继续生成 Phase 1 的具体 Cargo.toml 和 package.json 依赖配置吗？
+---
+
+*Last updated: 2026-03-28*
+*Maintainer: AI Research*
