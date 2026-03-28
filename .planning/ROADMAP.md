@@ -82,7 +82,12 @@ Plans:
   1. `Cargo.toml` (axum) has properly versioned dependencies for axum, tower, tokio
   2. `cargo build --release` produces a binary under 15MB (LTO enabled, codegen-units=1, opt-level="z", strip=true)
   3. Axum server starts on configured port and responds to health check
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Root Cargo.toml workspace deps (tower, tower-http, hyper) + release profile
+- [ ] 04-02-PLAN.md — runtime_server crate workspace dependency references
+- [ ] 04-03-PLAN.md — Axum server with healthz/readyz + middleware + moon cargo-bloat task
 
 ### Phase 5: Database & Infrastructure (双数据库架构)
 **Goal**: SurrealDB(服务端) + libsql/turso(本地App) 双数据库架构就绪，HTTP客户端就绪
@@ -166,7 +171,7 @@ Plans:
 | 1. Package Foundation | 4/4 | Completed | 2026-03-28 |
 | 2. UI Styling Infrastructure | 0/3 | Not started | - |
 | 3. Application Pages | 3/3 | Completed | 2026-03-28 |
-| 4. Backend Dependencies & Build | 0/3 | Not started | - |
+| 4. Backend Dependencies & Build | 0/3 | Planning | - |
 | 5. Docker Infrastructure | 0/5 | Not started | - |
 | 6. Google OAuth Authentication | 0/5 | Not started | - |
 | 7. Multi-Tenant Data Isolation | 0/4 | Not started | - |
