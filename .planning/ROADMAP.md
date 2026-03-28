@@ -99,7 +99,12 @@ Plans:
   3. **云同步**: Turso embedded-replica 同步配置 (可选)
   4. **HTTP Client**: `reqwest 0.13.2` 配置完成
   5. **Adapter Pattern**: 数据库抽象层实现 (支持多后端切换)
- **Plans**: TBD
+ **Plans**: 3 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Domain Port traits (SurrealDbPort + LibSqlPort) + workspace deps
+- [ ] 05-02-PLAN.md — Axum AppState with SurrealDB, Moka cache, reqwest client
+- [ ] 05-03-PLAN.md — Tauri libsql plugin registration + HTTP/3 scaffolding
 
 **核心依赖**:
 - 服务端: `surrealdb` - 独立部署通过 Axum 访问
@@ -172,7 +177,7 @@ Plans:
 | 2. UI Styling Infrastructure | 0/3 | Not started | - |
 | 3. Application Pages | 3/3 | Completed | 2026-03-28 |
 | 4. Backend Dependencies & Build | 0/3 | Planning | - |
-| 5. Docker Infrastructure | 0/5 | Not started | - |
+| 5. Database & Infrastructure | 0/3 | Planning | - |
 | 6. Google OAuth Authentication | 0/5 | Not started | - |
 | 7. Multi-Tenant Data Isolation | 0/4 | Not started | - |
 | 8. Desktop Native Features | 0/4 | Not started | - |
