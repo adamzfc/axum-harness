@@ -29,7 +29,13 @@
   3. `Cargo.toml` (tauri) declares all core plugins: tauri-plugin-shell, tauri-plugin-dialog, tauri-plugin-store, tauri-plugin-libsql
   4. `Cargo.toml` (workspace) declares Tauri 2.10.3, Axum 0.8.8, SurrealDB 3.0.5
   5. `moon.yml` workspace runs lint and test tasks in parallel across packages
- **Plans**: TBD
+ **Plans:** 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Frontend package dependencies (package.json alignment)
+- [ ] 01-02-PLAN.md — Rust workspace dependencies (root Cargo.toml)
+- [ ] 01-03-PLAN.md — Tauri plugin registration (src-tauri/Cargo.toml)
+- [ ] 01-04-PLAN.md — Verification gate (cargo check, moon dry-run)
 
 ### Phase 2: UI Styling Infrastructure
 **Goal**: Frontend has a configured design system with reusable components ready for page construction
