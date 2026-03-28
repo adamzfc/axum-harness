@@ -65,7 +65,13 @@ Plans:
   3. Admin dashboard page shows a placeholder layout with sidebar navigation
   4. All three pages adapt cleanly to mobile viewport (375px) and desktop viewport (1280px)
   5. SPA routing works between all three pages without full page reloads
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Route groups + layouts + responsive navigation ✅
+- [ ] 03-02-PLAN.md — Counter page with $state rune
+- [ ] 03-03-PLAN.md — Admin dashboard placeholder
+
 **UI hint**: yes
 
 ### Phase 4: Backend Dependencies & Build Optimization
@@ -159,7 +165,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Package Foundation | 4/4 | Completed | 2026-03-28 |
 | 2. UI Styling Infrastructure | 0/3 | Not started | - |
-| 3. Application Pages | 0/5 | Not started | - |
+| 3. Application Pages | 0/3 | Not started | - |
 | 4. Backend Dependencies & Build | 0/3 | Not started | - |
 | 5. Docker Infrastructure | 0/5 | Not started | - |
 | 6. Google OAuth Authentication | 0/5 | Not started | - |
