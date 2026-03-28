@@ -32,7 +32,7 @@
  **Plans:** 4 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Frontend package dependencies (package.json alignment)
+- [x] 01-01-PLAN.md — Frontend package dependencies (package.json alignment)
 - [ ] 01-02-PLAN.md — Rust workspace dependencies (root Cargo.toml)
 - [ ] 01-03-PLAN.md — Tauri plugin registration (src-tauri/Cargo.toml)
 - [ ] 01-04-PLAN.md — Verification gate (cargo check, moon dry-run)
@@ -151,7 +151,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Package Foundation | 0/4 | Not started | - |
+| 1. Package Foundation | 4/4 | Ready for execute | - |
 | 2. UI Styling Infrastructure | 0/4 | Not started | - |
 | 3. Application Pages | 0/5 | Not started | - |
 | 4. Backend Dependencies & Build | 0/3 | Not started | - |
@@ -166,8 +166,8 @@ Plans:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PKG-01 | Phase 1 | Pending |
-| PKG-02 | Phase 1 | Pending |
+| PKG-01 | Phase 1 | ✅ Complete |
+| PKG-02 | Phase 1 | ✅ Complete |
 | PKG-03 | Phase 1 | Pending |
 | PKG-04 | Phase 4 | Pending |
 | BUILD-03 | Phase 1 | Pending |
