@@ -46,7 +46,13 @@ Plans:
   2. bitsUI components (Button, Dialog, Input, Select) render correctly in the app
   3. Dark mode / light mode toggle works via TailwindCSS v4 theme switching
   4. Component library is importable from `$lib/components`
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — TailwindCSS v4 Vite plugin + global CSS with @theme tokens
+- [ ] 02-02-PLAN.md — cn() utility + dark mode theme store
+- [ ] 02-03-PLAN.md — Root layout + 9 component wrappers + barrel export
+
 **UI hint**: yes
 
 ### Phase 3: Application Pages
@@ -152,7 +158,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Package Foundation | 4/4 | Completed | 2026-03-28 |
-| 2. UI Styling Infrastructure | 0/4 | Not started | - |
+| 2. UI Styling Infrastructure | 0/3 | Not started | - |
 | 3. Application Pages | 0/5 | Not started | - |
 | 4. Backend Dependencies & Build | 0/3 | Not started | - |
 | 5. Docker Infrastructure | 0/5 | Not started | - |
