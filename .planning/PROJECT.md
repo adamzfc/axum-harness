@@ -29,7 +29,6 @@ Provide a runnable, tested, production-ready boilerplate with authentication (Go
 ### Out of Scope
 
 - [Email/password auth] — Google OAuth sufficient for boilerplate
-- [SurrealDB] — Using libsql/turso for simpler setup
 - [Complex RBAC] — Basic multi-tenancy only for v1
 
 ## Context
@@ -37,12 +36,12 @@ Provide a runnable, tested, production-ready boilerplate with authentication (Go
 **Current state:** This is an iteration on an existing Tauri+SvelteKit+Axum boilerplate project. The base template already exists with basic scaffolding. Now extending to production-ready state.
 
 **Tech stack:**
-- Frontend: SvelteKit + bitsUI + TailwindCSS v4 + vitepress + lucide-animated + lottieplayer
-- Desktop: Tauri 2
-- Backend: Axum
-- Database: libsql/turso (avoiding complex SurrealDB for now)
+- Frontend: SvelteKit + bitsUI + TailwindCSS v4 + VitePress + @pqoqubbw/icons + Lottie
+- Desktop: Tauri 2.10.3
+- Backend: Axum 0.8.8
+- Database: SurrealDB (服务端) + libsql/turso (本地 App) - 双数据库架构
 - Build: moon
-- Database: libsql
+- Testing: Maestro (移动端) + Playwright (Web E2E)
 
 **MCP/Skills needed locally:**
 - Code index MCP (for codebase search)
@@ -78,9 +77,11 @@ For Cargo (tauri + axum): Deep dive into docs for plugins and dependencies, prel
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Use libsql/turso over SurrealDB | Simpler setup, lower complexity for bootstrap | — Pending |
-| Google OAuth only | Reduce boilerplate complexity, sufficient for most cases | — Pending |
-| Containerize backend infra | Consistent local dev experience across team | — Pending |
+| Dual DB: SurrealDB + libsql/turso | SurrealDB(服务端) + libsql(本地App) 双架构 | — Pending |
+| Google OAuth only | Reduce boilerplate complexity | — Pending |
+| Maestro + Playwright | 移动端用 Maestro, Web用 Playwright | — Pending |
+| VitePress (静态) | 构建后纯 HTML, 不占服务器资源 | — Pending |
+| release-plz + git-cliff | CI/CD 自动化,综合评估不纯追 Rust | — Pending |
 | Fine granularity phases | Maximum flexibility for feature iteration | — Pending |
 
 ---

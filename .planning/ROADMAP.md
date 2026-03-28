@@ -24,11 +24,12 @@
 **Depends on**: Nothing
 **Requirements**: PKG-01, PKG-02, PKG-03, BUILD-03
 **Success Criteria** (what must be TRUE):
-  1. `package.json` declares SvelteKit, bitsUI, TailwindCSS v4 as active dependencies
-  2. `package.json` declares vitepress, lucide-animated, lottieplayer as commented-out (ready to enable)
-  3. `Cargo.toml` (tauri) declares all core plugins: tauri-plugin-shell, tauri-plugin-dialog, tauri-plugin-store
-  4. `moon.yml` workspace runs lint and test tasks in parallel across packages
-**Plans**: TBD
+  1. `package.json` declares SvelteKit, bitsUI, TailwindCSS v4, @pqoqubbw/icons, Lottie
+  2. `package.json` declares VitePress, vitest, maestro, playwright as devDependencies
+  3. `Cargo.toml` (tauri) declares all core plugins: tauri-plugin-shell, tauri-plugin-dialog, tauri-plugin-store, tauri-plugin-libsql
+  4. `Cargo.toml` (workspace) declares Tauri 2.10.3, Axum 0.8.8, SurrealDB 3.0.5
+  5. `moon.yml` workspace runs lint and test tasks in parallel across packages
+ **Plans**: TBD
 
 ### Phase 2: UI Styling Infrastructure
 **Goal**: Frontend has a configured design system with reusable components ready for page construction
@@ -65,23 +66,22 @@
   3. Axum server starts on configured port and responds to health check
 **Plans**: TBD
 
-### Phase 5: Database & Infrastructure (Rust 方案)
-**Goal**: SurrealDB embedded 运行，HTTP 客户端就绪，基础设施工具就位
+### Phase 5: Database & Infrastructure (双数据库架构)
+**Goal**: SurrealDB(服务端) + libsql/turso(本地App) 双数据库架构就绪，HTTP客户端就绪
 **Depends on**: Nothing (parallel track)
 **Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04
 **Success Criteria** (what must be TRUE):
-  1. **Database**: SurrealDB embedded 启动成功 (`surrealdb` crate with `kv-mem`)
-  2. **HTTP Client**: `reqwest 0.13` 配置完成，可发起外部请求
-  3. **Tunnel** (可选): rathole 或 FerroTunnel 实现开发环境公网暴露
-  4. **Search** (可选): Tantivy 集成就绪，按需启用全文搜索
-  5. **Proxy**: nginx 配置就绪 (生产环境)
+  1. **服务端DB**: SurrealDB 服务端配置完成 (Axum连接)
+  2. **本地DB**: libsql/turso 本地存储 via tauri-plugin-libsql
+  3. **云同步**: Turso embedded-replica 同步配置 (可选)
+  4. **HTTP Client**: `reqwest 0.13.2` 配置完成
+  5. **Adapter Pattern**: 数据库抽象层实现 (支持多后端切换)
  **Plans**: TBD
 
-**Rust 生态工具 (基于 rust-docs.md)**:
-- Database: `surrealdb` (embedded) - 用户明确要求
-- HTTP: `reqwest` (0.13) - rust-docs.md L287 确认
-- Tunnel: `FerroTunnel` (rust-docs.md L263) 或 `rathole`
-- Search: `Tantivy` (rust-docs.md L167) - 完全 Rust 全文搜索
+**核心依赖**:
+- 服务端: `surrealdb` - 独立部署通过 Axum 访问
+- 本地: `tauri-plugin-libsql` + `libsql`
+- 策略模式: DatabaseAdapter trait
 
 ### Phase 6: Google OAuth Authentication
 **Goal**: User can sign in with Google, session persists across app restarts, and tokens auto-refresh
