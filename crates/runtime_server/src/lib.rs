@@ -21,6 +21,6 @@ pub fn create_router() -> Router {
     routes::router()
         .layer(CorsLayer::permissive())     // D-01: dev permissive CORS
         .layer(TraceLayer::new_for_http())   // D-01: request tracing
-        .layer(TimeoutLayer::with_status_code(Duration::from_secs(30), axum::http::StatusCode::REQUEST_TIMEOUT))
+        .layer(TimeoutLayer::with_status_code(axum::http::StatusCode::REQUEST_TIMEOUT, Duration::from_secs(30)))
     // D-01: 30s timeout
 }
