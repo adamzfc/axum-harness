@@ -4,6 +4,7 @@
 //! It owns HTTP concerns: routing, middleware, serialization boundaries.
 //! Business logic lives in `domain` and `application` crates.
 
+pub mod h3_server;
 pub mod routes;
 pub mod state;
 
