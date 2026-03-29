@@ -144,7 +144,7 @@ Plans:
 **Plans**: 3 plans (3 waves)
 
 Plans:
-- [ ] 07-01-PLAN.md — TenantId newtype + SurrealDB schema migrations + TenantAwareSurrealDb wrapper
+- [x] 07-01-PLAN.md — TenantId newtype + SurrealDB schema migrations + TenantAwareSurrealDb wrapper
 - [ ] 07-02-PLAN.md — Axum tenant extraction middleware + router wiring
 - [ ] 07-03-PLAN.md — POST /api/tenant/init endpoint + AppState migration integration
 
@@ -192,7 +192,7 @@ Plans:
 | 4. Backend Dependencies & Build | 0/3 | Planning | - |
 | 5. Database & Infrastructure | 3/3 | Completed | 2026-03-29 |
 | 6. Google OAuth Authentication | 0/5 | Planning | - |
-| 7. Multi-Tenant Data Isolation | 0/3 | Planning | - |
+| 7. Multi-Tenant Data Isolation | 1/3 | In Progress|  |
 | 8. Desktop Native Features | 0/4 | Not started | - |
 | 9. Cross-Platform Build Pipeline | 0/4 | Not started | - |
 | 10. Test Suite | 0/4 | Not started | - |

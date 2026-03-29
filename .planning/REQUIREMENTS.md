@@ -14,7 +14,7 @@
 
 ### Multi-Tenancy
 
-- [ ] **TENANT-01**: Database schema includes tenant_id on all tables
+- [x] **TENANT-01**: Database schema includes tenant_id on all tables
 - [ ] **TENANT-02**: Query middleware automatically scopes by tenant_id
 - [ ] **TENANT-03**: User belongs to exactly one tenant on signup
 
@@ -107,7 +107,7 @@
 | AUTH-02 | Phase 6 | Pending |
 | AUTH-03 | Phase 6 | Pending |
 | AUTH-04 | Phase 6 | Pending |
-| TENANT-01 | Phase 7 | Pending |
+| TENANT-01 | Phase 7 | Complete |
 | TENANT-02 | Phase 7 | Pending |
 | TENANT-03 | Phase 7 | Pending |
 | DESKTOP-01 | Phase 8 | Pending |
