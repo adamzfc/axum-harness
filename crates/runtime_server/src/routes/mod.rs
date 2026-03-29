@@ -1,6 +1,7 @@
 //! Route module barrel — all feature route modules exported here.
 
 pub mod health;
+pub mod tenant;
 
 use crate::state::AppState;
 use axum::Router;
