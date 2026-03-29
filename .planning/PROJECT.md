@@ -21,6 +21,7 @@ Provide a runnable, tested, production-ready boilerplate with authentication (Go
 - ✓ Rust workspace dependencies pinned with release profile — Validated in Phase 01: package-foundation
 - ✓ All 7 Tauri plugins registered — Validated in Phase 01: package-foundation
 - ✓ moon parallel lint/test configured — Validated in Phase 01: package-foundation
+- ✓ Database infrastructure (SurrealDB + libsql dual-DB) — Validated in Phase 05: database-infrastructure
 
 ### Active
 
@@ -37,7 +38,7 @@ Provide a runnable, tested, production-ready boilerplate with authentication (Go
 
 ## Context
 
-**Current state:** Phase 01 (package-foundation) complete — all dependencies configured, workspace resolves, ready for Phase 02 (ui-styling-infrastructure).
+**Current state:** Phase 05 (database-infrastructure) complete — SurrealDB + Moka cache + reqwest in AppState, domain Port traits defined, tauri-plugin-libsql registered, HTTP/3 scaffolding ready. Ready for Phase 06 (google-oauth-authentication).
 
 **Tech stack:**
 - Frontend: SvelteKit + bitsUI + TailwindCSS v4 + VitePress + @pqoqubbw/icons + Lottie
@@ -81,7 +82,7 @@ For Cargo (tauri + axum): Deep dive into docs for plugins and dependencies, prel
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Dual DB: SurrealDB + libsql/turso | SurrealDB(服务端) + libsql(本地App) 双架构 | — Pending |
+| Dual DB: SurrealDB + libsql/turso | SurrealDB(服务端) + libsql(本地App) 双架构 | ✓ Implemented (Phase 05) |
 | Google OAuth only | Reduce boilerplate complexity | — Pending |
 | Maestro + Playwright | 移动端用 Maestro, Web用 Playwright | — Pending |
 | VitePress (静态) | 构建后纯 HTML, 不占服务器资源 | — Pending |
@@ -90,4 +91,4 @@ For Cargo (tauri + axum): Deep dive into docs for plugins and dependencies, prel
 
 ---
 
-*Last updated: 2026-03-27 after Phase 01 completion*
+*Last updated: 2026-03-29 after Phase 05 completion (database-infrastructure)*
