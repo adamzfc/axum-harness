@@ -10,7 +10,7 @@
 - [ ] **Phase 2: UI Styling Infrastructure** - TailwindCSS v4 theme and bitsUI component library
 - [x] **Phase 3: Application Pages** - Login, Counter, Admin dashboard with responsive layout ✅
 - [ ] **Phase 4: Backend Dependencies & Build** - Axum/Tauri cargo deps, release profile optimization
-- [ ] **Phase 5: Docker Infrastructure** - Containerized local dev environment (Redis, nginx, libsql)
+- [x] **Phase 5: Database & Infrastructure** - SurrealDB + libsql dual DB, HTTP/3 scaffolding ✅
 - [ ] **Phase 6: Google OAuth Authentication** - OAuth login, deep link callback, session management
 - [ ] **Phase 7: Multi-Tenant Data Isolation** - tenant_id schema, query middleware, user-tenant binding
 - [ ] **Phase 8: Desktop Native Features** - System tray, window state, single instance, error handling
@@ -104,7 +104,7 @@ Plans:
 Plans:
 - [x] 05-01-PLAN.md — Domain Port traits (SurrealDbPort + LibSqlPort) + workspace deps ✅ `18caf60`
 - [x] 05-02-PLAN.md — Axum AppState with SurrealDB, Moka cache, reqwest client ✅ `01b9993`
-- [ ] 05-03-PLAN.md — Tauri libsql plugin registration + HTTP/3 scaffolding
+- [x] 05-03-PLAN.md — Tauri libsql plugin registration + HTTP/3 scaffolding ✅ `c0aaa75`
 
 **核心依赖**:
 - 服务端: `surrealdb` - 独立部署通过 Axum 访问
@@ -177,7 +177,7 @@ Plans:
 | 2. UI Styling Infrastructure | 0/3 | Not started | - |
 | 3. Application Pages | 3/3 | Completed | 2026-03-28 |
 | 4. Backend Dependencies & Build | 0/3 | Planning | - |
-| 5. Database & Infrastructure | 2/3 | In Progress|  |
+| 5. Database & Infrastructure | 3/3 | Completed | 2026-03-29 |
 | 6. Google OAuth Authentication | 0/5 | Not started | - |
 | 7. Multi-Tenant Data Isolation | 0/4 | Not started | - |
 | 8. Desktop Native Features | 0/4 | Not started | - |
@@ -200,8 +200,8 @@ Plans:
 | BUILD-01 | Phase 4 | Pending |
 | INFRA-01 | Phase 5 | ✅ Complete |
 | INFRA-02 | Phase 5 | ✅ Complete |
-| INFRA-03 | Phase 5 | Pending |
-| INFRA-04 | Phase 5 | Pending |
+| INFRA-03 | Phase 5 | ✅ Complete |
+| INFRA-04 | Phase 5 | ✅ Complete |
 | AUTH-01 | Phase 6 | Pending |
 | AUTH-02 | Phase 6 | Pending |
 | AUTH-03 | Phase 6 | Pending |
