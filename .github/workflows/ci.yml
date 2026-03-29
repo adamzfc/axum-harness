@@ -1,10 +1,8 @@
 name: CI
 
+# CI temporarily disabled - only trigger manually via GitHub Actions UI
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
