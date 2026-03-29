@@ -1,4 +1,5 @@
 import { goto } from '$app/navigation';
+import { listen } from '@tauri-apps/api/event';
 import { getSession, startOAuth, clearAuthStore, type AuthSession, type UserProfile } from '$lib/ipc/auth';
 
 // Reactive state (Svelte 5 $state at module level)
@@ -80,4 +81,21 @@ export async function markExpired(): Promise<void> {
 	isAuthenticated = false;
 	currentUser = null;
 	tokenExpiresAt = 0;
+}
+
+/**
+ * Initialize auth event listeners. Call once from root +layout.svelte.
+ * Listens for auth:expired event from Rust backend refresh timer.
+ */
+export function initAuthListeners(): () => void {
+	const unlisten = listen('auth:expired', () => {
+		isAuthenticated = false;
+		currentUser = null;
+		tokenExpiresAt = 0;
+		// Don't auto-redirect — let auth guard handle it on next navigation
+	});
+
+	return () => {
+		unlisten.then((fn) => fn());
+	};
 }

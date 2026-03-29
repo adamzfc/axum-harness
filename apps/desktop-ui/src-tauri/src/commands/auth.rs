@@ -211,3 +211,140 @@ pub fn get_session(app: AppHandle) -> Result<Option<AuthSession>, String> {
         None => Ok(None),
     }
 }
+
+/// Exchange refresh_token for new access_token
+pub async fn refresh_access_token(
+    app: &AppHandle,
+    refresh_token: &str,
+) -> Result<(String, u64), String> {
+    let client = reqwest::Client::new();
+    let params = [
+        ("client_id", CLIENT_ID),
+        ("client_secret", CLIENT_SECRET),
+        ("refresh_token", refresh_token),
+        ("grant_type", "refresh_token"),
+    ];
+
+    let resp = client
+        .post(GOOGLE_TOKEN_URL)
+        .form(&params)
+        .send()
+        .await
+        .map_err(|e| format!("Refresh request failed: {e}"))?;
+
+    if !resp.status().is_success() {
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format!("Refresh token rejected: {body}"));
+    }
+
+    #[derive(Deserialize)]
+    struct RefreshResponse {
+        access_token: String,
+        expires_in: u64,
+        refresh_token: Option<String>,
+    }
+
+    let refresh: RefreshResponse = resp.json().await.map_err(|e| e.to_string())?;
+    let expires_at = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+        + refresh.expires_in;
+
+    // Update store with new access_token and expiry
+    let store = app.store("auth.json").map_err(|e| e.to_string())?;
+    store.set("access_token", serde_json::json!(refresh.access_token));
+    store.set("expires_at", serde_json::json!(expires_at));
+
+    // If Google rotated the refresh_token, update it too
+    if let Some(new_refresh) = refresh.refresh_token {
+        store.set("refresh_token", serde_json::json!(new_refresh));
+    }
+
+    Ok((refresh.access_token, expires_at))
+}
+
+/// Clear all auth tokens from store and emit expiry event to frontend
+pub fn clear_session_and_notify(app: &AppHandle) {
+    let store = app.store("auth.json").ok();
+    if let Some(ref store) = store {
+        store.delete("access_token");
+        store.delete("refresh_token");
+        store.delete("id_token");
+        store.delete("expires_at");
+        store.delete("user");
+    }
+    app.emit("auth:expired", ()).ok();
+}
+
+/// Start background token refresh timer. Call from Tauri setup().
+pub fn start_refresh_timer(app: AppHandle) {
+    let store = match app.store("auth.json") {
+        Ok(s) => s,
+        Err(_) => return,
+    };
+
+    let Some(refresh_token) = store
+        .get("refresh_token")
+        .and_then(|v| v.as_str().map(String::from))
+    else {
+        return;
+    };
+
+    let Some(expires_at) = store.get("expires_at").and_then(|v| v.as_u64()) else {
+        return;
+    };
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    // Calculate delay: refresh 5 minutes (300s) before expiry
+    let delay_secs = if expires_at > now + 300 {
+        expires_at - now - 300
+    } else {
+        0 // Refresh immediately or token already expired
+    };
+
+    if expires_at <= now {
+        // Token already expired — clear immediately
+        clear_session_and_notify(&app);
+        return;
+    }
+
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_secs(delay_secs)).await;
+
+        match refresh_access_token(&app, &refresh_token).await {
+            Ok((_new_token, new_expiry)) => {
+                // Schedule next refresh for the new token's expiry
+                let next_delay = new_expiry
+                    - std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs()
+                    - 300;
+
+                let app2 = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(std::time::Duration::from_secs(next_delay.max(0))).await;
+                    // Re-read refresh_token in case it was rotated
+                    if let Ok(store) = app2.store("auth.json") {
+                        if let Some(rt) = store
+                            .get("refresh_token")
+                            .and_then(|v| v.as_str().map(String::from))
+                        {
+                            if refresh_access_token(&app2, &rt).await.is_err() {
+                                clear_session_and_notify(&app2);
+                            }
+                        }
+                    }
+                });
+            }
+            Err(_) => {
+                clear_session_and_notify(&app);
+            }
+        }
+    });
+}

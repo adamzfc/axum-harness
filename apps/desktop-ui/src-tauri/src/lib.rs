@@ -15,6 +15,11 @@ pub fn run() {
             commands::auth::handle_oauth_callback,
             commands::auth::get_session,
         ])
+        .setup(|app| {
+            let handle = app.handle().clone();
+            commands::auth::start_refresh_timer(handle);
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
