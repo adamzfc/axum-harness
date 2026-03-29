@@ -89,7 +89,10 @@ Plan: 2 of 3
   - 04-02: runtime_server Cargo.toml 10 workspace = true dependencies
   - 04-03: Axum server with /healthz + /readyz, CORS/Trace/Timeout middleware, main.rs entry point, moon bloat task
 - Phase 05 progress:
-  - 05-01: Port traits + deps (completed by other agent)
+  - 05-01: Domain Port traits (SurrealDbPort, LibSqlPort) + Phase 5 workspace deps activation — completed
+    - 18caf60: feat(05-01): define SurrealDbPort and LibSqlPort traits in domain crate
+    - Cargo.toml: libsql, rusqlite_migration, quinn, h3, rcgen activated; redis/rathole/vector removed
+    - runtime_server Cargo.toml: quinn, h3, rcgen, application deps added
   - 05-02: AppState with SurrealDB, Moka cache, reqwest client — completed
     - state.rs: AppState { db: Surreal<Any>, cache: Cache<String,String>, http_client: reqwest::Client }
     - create_router() accepts AppState, injects via with_state()
