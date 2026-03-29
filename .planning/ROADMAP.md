@@ -103,7 +103,7 @@ Plans:
 
 Plans:
 - [ ] 05-01-PLAN.md — Domain Port traits (SurrealDbPort + LibSqlPort) + workspace deps
-- [ ] 05-02-PLAN.md — Axum AppState with SurrealDB, Moka cache, reqwest client
+- [x] 05-02-PLAN.md — Axum AppState with SurrealDB, Moka cache, reqwest client
 - [ ] 05-03-PLAN.md — Tauri libsql plugin registration + HTTP/3 scaffolding
 
 **核心依赖**:
@@ -177,7 +177,7 @@ Plans:
 | 2. UI Styling Infrastructure | 0/3 | Not started | - |
 | 3. Application Pages | 3/3 | Completed | 2026-03-28 |
 | 4. Backend Dependencies & Build | 0/3 | Planning | - |
-| 5. Database & Infrastructure | 0/3 | Planning | - |
+| 5. Database & Infrastructure | 1/3 | In Progress|  |
 | 6. Google OAuth Authentication | 0/5 | Not started | - |
 | 7. Multi-Tenant Data Isolation | 0/4 | Not started | - |
 | 8. Desktop Native Features | 0/4 | Not started | - |

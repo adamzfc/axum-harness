@@ -20,8 +20,8 @@
 
 ### Infrastructure (Rust 方案)
 
-- [ ] **INFRA-01**: 数据库 - SurrealDB embedded (`surrealdb` crate with `kv-mem` feature)
-- [ ] **INFRA-02**: HTTP 客户端 - `reqwest 0.13` (rustls 默认)
+- [x] **INFRA-01**: 数据库 - SurrealDB embedded (`surrealdb` crate with `kv-mem` feature)
+- [x] **INFRA-02**: HTTP 客户端 - `reqwest 0.13` (rustls 默认)
 - [ ] **INFRA-03**: Tunnel 层 - rathole / FerroTunnel (开发环境公网暴露)
 - [ ] **INFRA-04**: 代理层 - nginx (生产) / 可选 Pingora 评估
 - [ ] **INFRA-05**: 搜索层 - Tantivy (全文) - 按需启用
@@ -99,8 +99,8 @@
 | UI-02 | Phase 3 | Pending |
 | UI-03 | Phase 2 | Pending |
 | UI-04 | Phase 2 | Pending |
-| INFRA-01 | Phase 5 | Pending |
-| INFRA-02 | Phase 5 | Pending |
+| INFRA-01 | Phase 5 | Complete |
+| INFRA-02 | Phase 5 | Complete |
 | INFRA-03 | Phase 5 | Pending |
 | INFRA-04 | Phase 5 | Pending |
 | AUTH-01 | Phase 6 | Pending |
