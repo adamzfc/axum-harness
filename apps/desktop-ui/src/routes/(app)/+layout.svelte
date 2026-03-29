@@ -5,7 +5,7 @@ import { page } from '$app/state';
 import { Switch } from '$lib/components';
 import { LayoutDashboard, Plus, Settings, PanelLeftClose, PanelLeftOpen } from '@jis3r/icons';
 import { toggleTheme, getTheme } from '$lib/stores/theme';
-import { isAuthenticated, checkSession } from '$lib/stores/auth';
+import { auth, checkSession } from '$lib/stores/auth.svelte';
 import type { Snippet } from 'svelte';
 
 interface Props {
@@ -25,12 +25,12 @@ onMount(async () => {
 	}
 });
 
-// Reactive guard: redirect if auth state changes (e.g., token expires)
-$effect(() => {
-	if (!isAuthenticated) {
-		goto('/login');
-	}
-});
+	// Reactive guard: redirect if auth state changes (e.g., token expires)
+	$effect(() => {
+		if (!auth.isAuthenticated) {
+			goto('/login');
+		}
+	});
 
 const navItems = [
 	{ href: '/counter', label: 'Counter', icon: Plus },

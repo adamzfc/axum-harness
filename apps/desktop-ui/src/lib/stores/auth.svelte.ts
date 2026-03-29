@@ -2,12 +2,13 @@ import { goto } from '$app/navigation';
 import { listen } from '@tauri-apps/api/event';
 import { getSession, startOAuth, clearAuthStore, type AuthSession, type UserProfile } from '$lib/ipc/auth';
 
-// Reactive state (Svelte 5 $state at module level)
-export let isAuthenticated = $state(false);
-export let currentUser = $state<UserProfile | null>(null);
-export let authLoading = $state(false);
-export let authError = $state<string | null>(null);
-export let tokenExpiresAt = $state(0);
+export const auth = $state({
+	isAuthenticated: false,
+	currentUser: null as UserProfile | null,
+	authLoading: false,
+	authError: null as string | null,
+	tokenExpiresAt: 0
+});
 
 /**
  * Check stored session on app load. Returns true if valid session found.
@@ -17,9 +18,9 @@ export async function checkSession(): Promise<boolean> {
 	try {
 		const session = await getSession();
 		if (session && session.expires_at > Date.now() / 1000) {
-			isAuthenticated = true;
-			currentUser = session.user;
-			tokenExpiresAt = session.expires_at;
+			auth.isAuthenticated = true;
+			auth.currentUser = session.user;
+			auth.tokenExpiresAt = session.expires_at;
 			return true;
 		}
 		// Session expired — clear stale data
@@ -37,15 +38,15 @@ export async function checkSession(): Promise<boolean> {
  * Per D-09: set authLoading for Lottie loading state in login page.
  */
 export async function signInWithGoogle(): Promise<void> {
-	authLoading = true;
-	authError = null;
+	auth.authLoading = true;
+	auth.authError = null;
 	try {
 		await startOAuth();
 		// Note: actual login completes when deep link callback fires
 		// and handleOAuthCallback is called from the Tauri event handler
 	} catch (e) {
-		authError = String(e);
-		authLoading = false;
+		auth.authError = String(e);
+		auth.authLoading = false;
 	}
 }
 
@@ -53,11 +54,11 @@ export async function signInWithGoogle(): Promise<void> {
  * Called by deep link callback handler after successful token exchange.
  */
 export function setSession(session: AuthSession): void {
-	isAuthenticated = true;
-	currentUser = session.user;
-	tokenExpiresAt = session.expires_at;
-	authLoading = false;
-	authError = null;
+	auth.isAuthenticated = true;
+	auth.currentUser = session.user;
+	auth.tokenExpiresAt = session.expires_at;
+	auth.authLoading = false;
+	auth.authError = null;
 }
 
 /**
@@ -65,10 +66,10 @@ export function setSession(session: AuthSession): void {
  */
 export async function signOut(): Promise<void> {
 	await clearAuthStore();
-	isAuthenticated = false;
-	currentUser = null;
-	tokenExpiresAt = 0;
-	authError = null;
+	auth.isAuthenticated = false;
+	auth.currentUser = null;
+	auth.tokenExpiresAt = 0;
+	auth.authError = null;
 	await goto('/login');
 }
 
@@ -78,9 +79,9 @@ export async function signOut(): Promise<void> {
  */
 export async function markExpired(): Promise<void> {
 	await clearAuthStore();
-	isAuthenticated = false;
-	currentUser = null;
-	tokenExpiresAt = 0;
+	auth.isAuthenticated = false;
+	auth.currentUser = null;
+	auth.tokenExpiresAt = 0;
 }
 
 /**
@@ -89,9 +90,9 @@ export async function markExpired(): Promise<void> {
  */
 export function initAuthListeners(): () => void {
 	const unlisten = listen('auth:expired', () => {
-		isAuthenticated = false;
-		currentUser = null;
-		tokenExpiresAt = 0;
+		auth.isAuthenticated = false;
+		auth.currentUser = null;
+		auth.tokenExpiresAt = 0;
 		// Don't auto-redirect — let auth guard handle it on next navigation
 	});
 

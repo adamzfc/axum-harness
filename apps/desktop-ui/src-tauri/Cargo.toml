@@ -14,6 +14,7 @@ tauri-plugin-store = { workspace = true }
 tauri-plugin-fs = { workspace = true }
 tauri-plugin-deep-link = { workspace = true }
 tauri-plugin-window-state = { workspace = true }
+tauri-plugin-single-instance = { workspace = true }
 tauri-plugin-libsql = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

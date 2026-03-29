@@ -3,17 +3,28 @@ use base64::Engine;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_store::StoreExt;
 
 const GOOGLE_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
-const CLIENT_ID: &str = option_env!("GOOGLE_CLIENT_ID").unwrap_or("YOUR_GOOGLE_CLIENT_ID");
-const CLIENT_SECRET: &str =
-    option_env!("GOOGLE_CLIENT_SECRET").unwrap_or("YOUR_GOOGLE_CLIENT_SECRET");
 const REDIRECT_URI: &str = "com.example.app://oauth/callback";
 const SCOPES: &str = "openid email profile";
+
+fn client_id() -> &'static str {
+    match option_env!("GOOGLE_CLIENT_ID") {
+        Some(v) => v,
+        None => "YOUR_GOOGLE_CLIENT_ID",
+    }
+}
+
+fn client_secret() -> &'static str {
+    match option_env!("GOOGLE_CLIENT_SECRET") {
+        Some(v) => v,
+        None => "YOUR_GOOGLE_CLIENT_SECRET",
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserProfile {
@@ -67,7 +78,8 @@ pub async fn start_oauth(app: AppHandle) -> Result<(), String> {
 
     // 5. Build authorization URL
     let url = format!(
-        "{GOOGLE_AUTH_URL}?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code&scope={SCOPES}&code_challenge={code_challenge}&code_challenge_method=S256&state={state}&access_type=offline&prompt=consent"
+        "{GOOGLE_AUTH_URL}?client_id={}&redirect_uri={REDIRECT_URI}&response_type=code&scope={SCOPES}&code_challenge={code_challenge}&code_challenge_method=S256&state={state}&access_type=offline&prompt=consent",
+        client_id()
     );
 
     // 6. Open system browser
@@ -112,8 +124,8 @@ pub async fn handle_oauth_callback(app: AppHandle, url: String) -> Result<AuthSe
     let client = reqwest::Client::new();
     let params = [
         ("code", code.as_str()),
-        ("client_id", CLIENT_ID),
-        ("client_secret", CLIENT_SECRET),
+        ("client_id", client_id()),
+        ("client_secret", client_secret()),
         ("redirect_uri", REDIRECT_URI),
         ("grant_type", "authorization_code"),
         ("code_verifier", code_verifier.as_str()),
@@ -219,8 +231,8 @@ pub async fn refresh_access_token(
 ) -> Result<(String, u64), String> {
     let client = reqwest::Client::new();
     let params = [
-        ("client_id", CLIENT_ID),
-        ("client_secret", CLIENT_SECRET),
+        ("client_id", client_id()),
+        ("client_secret", client_secret()),
         ("refresh_token", refresh_token),
         ("grant_type", "refresh_token"),
     ];

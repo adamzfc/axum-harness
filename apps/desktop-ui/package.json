@@ -17,6 +17,8 @@
     "test:mobile": "maestro test tests/flow/"
   },
   "dependencies": {
+    "@tauri-apps/plugin-store": "2",
+    "@tauri-apps/plugin-window-state": "2",
     "@jis3r/icons": "^2.7.0",
     "@lottiefiles/dotlottie-svelte": "^0.9.8",
     "bits-ui": "2.16.4",
@@ -31,6 +33,7 @@
     "@sveltejs/kit": "2.55.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "@tailwindcss/vite": "^4.0.0",
+    "@tauri-apps/cli": "^2",
     "concurrently": "latest",
     "maestro": "latest",
     "svelte": "5.55.0",

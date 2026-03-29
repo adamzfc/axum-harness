@@ -28,7 +28,8 @@ export async function getSession(): Promise<AuthSession | null> {
 }
 
 export async function clearAuthStore(): Promise<void> {
-	const store = new (await import('@tauri-apps/plugin-store')).Store('auth.json');
+	const { Store } = await import('@tauri-apps/plugin-store');
+	const store = await Store.load('auth.json');
 	await store.delete('access_token');
 	await store.delete('refresh_token');
 	await store.delete('id_token');

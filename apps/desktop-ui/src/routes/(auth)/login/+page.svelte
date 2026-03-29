@@ -2,13 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { Button, Input, LottiePlayer } from '$lib/components';
-	import {
-		isAuthenticated,
-		authLoading,
-		authError,
-		signInWithGoogle,
-		checkSession
-	} from '$lib/stores/auth';
+	import { auth, signInWithGoogle, checkSession } from '$lib/stores/auth.svelte';
 
 	// D-11: Redirect to /counter if already authenticated
 	onMount(async () => {
@@ -20,7 +14,7 @@
 
 	// Reactive redirect when auth state changes (e.g., after callback)
 	$effect(() => {
-		if (isAuthenticated) {
+		if (auth.isAuthenticated) {
 			goto('/counter');
 		}
 	});
@@ -52,7 +46,7 @@
 
 		<!-- Login Actions -->
 		<div class="space-y-4">
-			{#if authLoading}
+			{#if auth.authLoading}
 				<!-- D-09: Loading state — Lottie spinner replaces button -->
 				<div class="flex items-center justify-center gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 py-3">
 					<div class="h-8 w-8">
@@ -85,9 +79,9 @@
 			{/if}
 
 			<!-- D-10: Error state — inline error message -->
-			{#if authError}
+			{#if auth.authError}
 				<div class="rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-4 py-3">
-					<p class="text-sm text-red-700 dark:text-red-400">{authError}</p>
+					<p class="text-sm text-red-700 dark:text-red-400">{auth.authError}</p>
 				</div>
 			{/if}
 
