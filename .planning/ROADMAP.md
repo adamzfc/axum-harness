@@ -12,6 +12,7 @@
 - [ ] **Phase 4: Backend Dependencies & Build** - Axum/Tauri cargo deps, release profile optimization
 - [x] **Phase 5: Database & Infrastructure** - SurrealDB + libsql dual DB, HTTP/3 scaffolding ✅
 - [ ] **Phase 6: Google OAuth Authentication** - OAuth login, deep link callback, session management
+  - Plans: 5 plans (3 waves)
 - [ ] **Phase 7: Multi-Tenant Data Isolation** - tenant_id schema, query middleware, user-tenant binding
 - [ ] **Phase 8: Desktop Native Features** - System tray, window state, single instance, error handling
 - [ ] **Phase 9: Cross-Platform Build Pipeline** - Windows, macOS, Linux build verification
@@ -121,7 +122,14 @@ Plans:
   3. Closing and reopening the app restores the session without re-prompting for login
   4. Session token auto-refreshes before expiry without user intervention
   5. Login page redirects to the Counter page when user is already authenticated
-**Plans**: TBD
+**Plans**: 5 plans (3 waves)
+
+Plans:
+- [ ] 06-01-PLAN.md — Backend auth foundation (deep-link plugin, capabilities, PKCE + token exchange commands)
+- [ ] 06-02-PLAN.md — Frontend auth IPC wrapper + reactive auth store
+- [ ] 06-03-PLAN.md — Background token refresh timer + auth:expired event
+- [ ] 06-04-PLAN.md — Login page UX (Lottie loading, error states, background animation)
+- [ ] 06-05-PLAN.md — Auth guard, deep link wiring, end-to-end integration
 **UI hint**: yes
 
 ### Phase 7: Multi-Tenant Data Isolation
@@ -178,7 +186,7 @@ Plans:
 | 3. Application Pages | 3/3 | Completed | 2026-03-28 |
 | 4. Backend Dependencies & Build | 0/3 | Planning | - |
 | 5. Database & Infrastructure | 3/3 | Completed | 2026-03-29 |
-| 6. Google OAuth Authentication | 0/5 | Not started | - |
+| 6. Google OAuth Authentication | 0/5 | Planning | - |
 | 7. Multi-Tenant Data Isolation | 0/4 | Not started | - |
 | 8. Desktop Native Features | 0/4 | Not started | - |
 | 9. Cross-Platform Build Pipeline | 0/4 | Not started | - |
