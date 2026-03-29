@@ -2,36 +2,36 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-  last_updated: "2026-03-28T12:00:00.000Z"
+status: executing
+last_updated: "2026-03-29T01:55:00Z"
 progress:
   total_phases: 10
   completed_phases: 4
-  total_plans: 5
-  completed_plans: 11
+  total_plans: 17
+  completed_plans: 15
 ---
 
 # STATE: Tauri-SvelteKit-Axum Boilerplate
 
-**Last updated:** 2026-03-28
-**Phase:** 04
+**Last updated:** 2026-03-29
+**Phase:** 05
 
 ## Project Reference
 
 - **Core value:** Production-ready boilerplate for cross-platform desktop apps (Tauri 2 + SvelteKit + Axum + moon)
-- **Current focus:** Phase 05 — Database & Infrastructure (双数据库架构)
+- **Current focus:** Phase 05 — database-infrastructure
 - **Stack:** Tauri 2.10.x, SvelteKit 2.x + Svelte 5 runes, Axum 0.8.x, libsql, moon, bun
 - **Granularity:** fine (10 phases)
 
 ## Current Position
 
-Phase: 05 (database-infrastructure) — PLANNING
-Plan: 3 plans created, ready for execution
+Phase: 05 (database-infrastructure) — EXECUTING
+Plan: 2 of 3
 
-- [██████████████░░░░░░] 10/29 requirements complete
-- **Phase:** 01 ✅ | 02 ✅ | 03 ✅ | 04 ✅ | 05 — Planning
-- **Plan:** 05-01 (Port traits + deps), 05-02 (AppState + cache), 05-03 (libsql plugin + h3)
-- **Status:** Phase 05 plans created, 3 plans across 2 waves
+- [████████████████░░░░] 12/29 requirements complete
+- **Phase:** 01 ✅ | 02 ✅ | 03 ✅ | 04 ✅ | 05 — Executing
+- **Plan:** 05-01 ✅ | 05-02 ✅ | 05-03 (pending)
+- **Status:** Executing Phase 05 (05-02 complete)
 - **Blockers:** None
 
 ## Phase Progress
@@ -60,6 +60,8 @@ Plan: 3 plans created, ready for execution
 | Docker infra as independent track | No dependency on app code | Accepted |
 | CorsLayer::permissive dev, tighten prod | Faster dev iteration | Accepted |
 | SERVER_PORT env var w/ 3001 default | Flexible deployment config | Accepted |
+| Axum typed state over Extension | Compile-time state type safety | Accepted |
+| Moka replaces Redis as cache | Simpler, no external service dependency | Accepted |
 
 ## Accumulated Context
 
@@ -86,6 +88,13 @@ Plan: 3 plans created, ready for execution
   - 04-01: Root Cargo.toml Axum middleware stack (tower, tower-http, hyper), tracing deps, panic="abort" release profile, future-phase comment deps
   - 04-02: runtime_server Cargo.toml 10 workspace = true dependencies
   - 04-03: Axum server with /healthz + /readyz, CORS/Trace/Timeout middleware, main.rs entry point, moon bloat task
+- Phase 05 progress:
+  - 05-01: Port traits + deps (completed by other agent)
+  - 05-02: AppState with SurrealDB, Moka cache, reqwest client — completed
+    - state.rs: AppState { db: Surreal<Any>, cache: Cache<String,String>, http_client: reqwest::Client }
+    - create_router() accepts AppState, injects via with_state()
+    - /readyz performs real SurrealDB health check, returns degraded on failure
+    - moka 0.12 added to workspace, surrealdb kv-mem feature enabled
 
 ## Session Continuity
 
