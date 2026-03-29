@@ -1,8 +1,11 @@
 <script lang="ts">
+import { onMount } from 'svelte';
+import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import { Switch } from '$lib/components';
 import { LayoutDashboard, Plus, Settings, PanelLeftClose, PanelLeftOpen } from '@jis3r/icons';
 import { toggleTheme, getTheme } from '$lib/stores/theme';
+import { isAuthenticated, checkSession } from '$lib/stores/auth';
 import type { Snippet } from 'svelte';
 
 interface Props {
@@ -13,6 +16,21 @@ const { children }: Props = $props();
 
 let sidebarExpanded = $state(true);
 let isDark = $state(getTheme() === 'dark');
+
+// Auth guard: check session on mount, redirect if not authenticated
+onMount(async () => {
+	const hasSession = await checkSession();
+	if (!hasSession) {
+		goto('/login');
+	}
+});
+
+// Reactive guard: redirect if auth state changes (e.g., token expires)
+$effect(() => {
+	if (!isAuthenticated) {
+		goto('/login');
+	}
+});
 
 const navItems = [
 	{ href: '/counter', label: 'Counter', icon: Plus },

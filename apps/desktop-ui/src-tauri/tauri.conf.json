@@ -21,6 +21,11 @@
     ],
     "security": {
       "csp": null
+    },
+    "deep-link": {
+      "desktop": {
+        "schemes": ["com.example.app"]
+      }
     }
   },
   "bundle": {
