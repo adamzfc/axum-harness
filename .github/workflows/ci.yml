@@ -78,6 +78,14 @@ jobs:
         working-directory: apps/desktop-ui
         run: bun run test:unit
 
+      - name: Install Playwright browsers
+        working-directory: apps/desktop-ui
+        run: npx playwright install --with-deps chromium
+
+      - name: Frontend E2E tests
+        working-directory: apps/desktop-ui
+        run: bun run test:e2e --project=desktop
+
       - name: Frontend build
         working-directory: apps/desktop-ui
         run: bun run build
