@@ -18,7 +18,6 @@ logs/
 
 # --- Rust / Cargo ---
 target/
-Cargo.lock
 
 # --- moonrepo ---
 .moon/cache/
@@ -31,6 +30,10 @@ node_modules/
 **/dist/
 **/coverage/
 **/*.tsbuildinfo
+
+# --- Playwright ---
+**/playwright-report/
+**/test-results/
 
 # --- Tauri generated ---
 apps/desktop-ui/src-tauri/target/
