@@ -7,6 +7,8 @@ use moka::future::Cache;
 use std::time::Duration;
 use surrealdb::{engine::any::Any, Surreal};
 
+use crate::config::Config;
+use crate::error::AppError;
 use crate::ports::surreal_db::run_tenant_migrations;
 
 /// Shared application state for Axum routes.
@@ -26,13 +28,18 @@ pub struct AppState {
     /// - 30s timeout
     /// - 10 max idle connections per host
     pub http_client: reqwest::Client,
+
+    /// Application configuration
+    pub config: Config,
 }
 
 impl AppState {
     /// Initialize AppState with in-memory SurrealDB for development.
     ///
     /// Production: use `rocksdb://path` or remote SurrealDB endpoint.
-    pub async fn new_dev() -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn new_dev() -> Result<Self, AppError> {
+        let config = Config::default();
+
         // SurrealDB — in-memory for dev (per D-04)
         let db = Surreal::<Any>::init();
         db.connect("memory").await?;
@@ -41,24 +48,64 @@ impl AppState {
         // Run tenant schema migrations (tenant + user_tenant tables)
         run_tenant_migrations(&db)
             .await
-            .map_err(|e| format!("Tenant migration failed: {e}"))?;
+            .map_err(AppError::Database)?;
 
         // Moka cache — 10k entries, 5min TTL (per D-10/D-11)
         let cache: Cache<String, String> = Cache::builder()
-            .max_capacity(10_000)
-            .time_to_live(Duration::from_secs(300))
+            .max_capacity(config.cache.max_capacity)
+            .time_to_live(Duration::from_secs(config.cache.ttl_secs))
             .build();
 
         // reqwest client — 30s timeout, 10 idle per host (per D-13/D-14)
         let http_client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(30))
+            .timeout(Duration::from_secs(config.server.request_timeout_secs))
             .pool_max_idle_per_host(10)
-            .build()?;
+            .build()
+            .map_err(|e| AppError::Config(e.to_string()))?;
 
         Ok(Self {
             db,
             cache,
             http_client,
+            config,
+        })
+    }
+
+    /// Initialize AppState with configuration (production-ready)
+    pub async fn new_with_config(config: Config) -> Result<Self, AppError> {
+        // SurrealDB connection
+        let db = Surreal::<Any>::init();
+        db.connect(&config.database.url)
+            .await
+            .map_err(|e| AppError::Database(e.into()))?;
+        db.use_ns(&config.database.ns)
+            .use_db(&config.database.db)
+            .await
+            .map_err(|e| AppError::Database(e.into()))?;
+
+        // Run tenant schema migrations
+        run_tenant_migrations(&db)
+            .await
+            .map_err(AppError::Database)?;
+
+        // Moka cache
+        let cache: Cache<String, String> = Cache::builder()
+            .max_capacity(config.cache.max_capacity)
+            .time_to_live(Duration::from_secs(config.cache.ttl_secs))
+            .build();
+
+        // reqwest client
+        let http_client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(config.server.request_timeout_secs))
+            .pool_max_idle_per_host(10)
+            .build()
+            .map_err(|e| AppError::Config(e.to_string()))?;
+
+        Ok(Self {
+            db,
+            cache,
+            http_client,
+            config,
         })
     }
 }

@@ -47,6 +47,11 @@ impl TenantAwareSurrealDb {
 
     /// Inject tenant_id filter into a SurrealQL query string.
     ///
+    /// WARNING: This uses simple string matching and does NOT parse SQL properly.
+    /// It can be fooled by SQL string literals containing keywords like "WHERE".
+    /// The primary defense against injection is parameterized queries — always use
+    /// $param placeholders instead of string interpolation for user input.
+    ///
     /// - SELECT without WHERE → append `WHERE tenant_id = $tenant_id`
     /// - SELECT with WHERE → append `AND tenant_id = $tenant_id`
     /// - CREATE → append `, tenant_id = $tenant_id` to SET clause
@@ -285,8 +290,71 @@ mod tests {
     #[test]
     fn admin_mode_no_injection() {
         let sql = "SELECT * FROM counter";
-        // Admin mode — no tenant_id, SQL passes through unchanged
-        // This test verifies the logic, actual passthrough is in query() method
         assert!(!sql.contains("tenant_id"));
+    }
+
+    #[test]
+    fn json_value_null() {
+        let result = json_to_surreal_value(serde_json::Value::Null);
+        assert!(matches!(result, surrealdb::types::Value::Null));
+    }
+
+    #[test]
+    fn json_value_bool() {
+        let result = json_to_surreal_value(serde_json::Value::Bool(true));
+        assert!(matches!(result, surrealdb::types::Value::Bool(true)));
+    }
+
+    #[test]
+    fn json_value_integer() {
+        let result = json_to_surreal_value(serde_json::json!(42));
+        assert!(matches!(
+            result,
+            surrealdb::types::Value::Number(surrealdb::types::Number::Int(42))
+        ));
+    }
+
+    #[test]
+    fn json_value_float() {
+        let result = json_to_surreal_value(serde_json::json!(3.14));
+        assert!(
+            matches!(result, surrealdb::types::Value::Number(surrealdb::types::Number::Float(f)) if (f - 3.14).abs() < 0.001)
+        );
+    }
+
+    #[test]
+    fn json_value_string() {
+        let result = json_to_surreal_value(serde_json::Value::String("hello".into()));
+        assert!(matches!(result, surrealdb::types::Value::String(s) if s == "hello"));
+    }
+
+    #[test]
+    fn json_value_record_id_string() {
+        let result = json_to_surreal_value(serde_json::Value::String("tenant:abc123".into()));
+        assert!(matches!(result, surrealdb::types::Value::RecordId(_)));
+    }
+
+    #[test]
+    fn json_value_array_falls_back_to_string() {
+        let result = json_to_surreal_value(serde_json::json!([1, 2, 3]));
+        assert!(matches!(result, surrealdb::types::Value::String(_)));
+    }
+
+    #[test]
+    fn json_value_object_falls_back_to_string() {
+        let result = json_to_surreal_value(serde_json::json!({"key": "value"}));
+        assert!(matches!(result, surrealdb::types::Value::String(_)));
+    }
+
+    #[test]
+    fn json_value_empty_array() {
+        let result = json_to_surreal_value(serde_json::json!([]));
+        assert!(matches!(result, surrealdb::types::Value::String(_)));
+    }
+
+    #[test]
+    fn json_value_empty_object() {
+        let result = json_to_surreal_value(serde_json::json!({}));
+        assert!(matches!(result, surrealdb::types::Value::String(_)));
     }
 }

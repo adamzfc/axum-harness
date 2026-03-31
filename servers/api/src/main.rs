@@ -3,33 +3,48 @@
 //! Usage: cargo run -p runtime_server
 //!
 //! Listens on 0.0.0.0:3001 by default.
-//! Override with SERVER_PORT env var.
+//! Override with SERVER_PORT env var or config.toml.
 
-use runtime_server::{create_router, state::AppState};
+use runtime_server::{config::Config, create_router, error::AppError, state::AppState};
 use std::net::SocketAddr;
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize tracing
-    tracing_subscriber::fmt::init();
+async fn main() -> Result<(), AppError> {
+    // Initialize tracing with structured logging
+    let filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info,runtime_server=debug"));
+    tracing_subscriber::registry()
+        .with(fmt::layer().with_target(true).with_thread_ids(true))
+        .with(filter)
+        .init();
 
-    let port: u16 = std::env::var("SERVER_PORT")
-        .unwrap_or_else(|_| "3001".to_string())
-        .parse()
-        .expect("SERVER_PORT must be a valid port number");
+    // Try to load config from environment, fall back to defaults
+    let config = Config::from_env().unwrap_or_default();
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    let addr = SocketAddr::from((
+        [0, 0, 0, 0],
+        std::env::var("SERVER_PORT")
+            .unwrap_or_else(|_| config.server.port.to_string())
+            .parse()
+            .unwrap_or(config.server.port),
+    ));
 
     // Initialize shared application state
     let state = AppState::new_dev().await?;
     let app = create_router(state);
 
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    println!("🚀 Runtime server listening on {addr}");
-    println!("   Health: http://localhost:{port}/healthz");
-    println!("   Ready:  http://localhost:{port}/readyz");
+    let listener = tokio::net::TcpListener::bind(addr)
+        .await
+        .map_err(|e| AppError::Config(format!("Failed to bind to {}: {}", addr, e)))?;
 
-    axum::serve(listener, app).await.unwrap();
+    tracing::info!("🚀 Runtime server listening on {}", addr);
+    tracing::info!("   Health: http://localhost:{}/healthz", config.server.port);
+    tracing::info!("   Ready:  http://localhost:{}/readyz", config.server.port);
+
+    axum::serve(listener, app)
+        .await
+        .map_err(|e| AppError::Internal(format!("Server error: {}", e)))?;
 
     Ok(())
 }

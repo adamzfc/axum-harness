@@ -2,12 +2,14 @@
 //!
 //! POST /api/tenant/init — ensure tenant exists for user (auto-create on first login).
 
-use axum::{extract::State, http::StatusCode, routing::post, Json, Router};
+use axum::{extract::State, routing::post, Json, Router};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
-use surrealdb::types::{RecordId, RecordIdKey};
+use utoipa::ToSchema;
+use validator::Validate;
 
+use crate::error::{AppError, AppResult};
 use crate::ports::surreal_db::TenantAwareSurrealDb;
 use crate::state::AppState;
 use domain::ports::surreal_db::SurrealDbPort;
@@ -17,46 +19,47 @@ fn json_str(s: &str) -> Value {
     Value::String(s.to_string())
 }
 
-/// Format a RecordId as "table:key" string.
-fn record_id_to_string(rid: &RecordId) -> String {
-    let key_str = match &rid.key {
-        RecordIdKey::String(s) => s.clone(),
-        RecordIdKey::Number(n) => n.to_string(),
-        RecordIdKey::Uuid(u) => u.to_string(),
-        _ => format!("{:?}", rid.key),
-    };
-    format!("{}:{}", rid.table, key_str)
-}
-
 /// Request body for tenant init.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Validate, ToSchema)]
 pub struct InitTenantRequest {
+    /// OAuth provider's subject identifier for the user.
+    #[validate(length(min = 1, message = "user_sub is required"))]
     pub user_sub: String,
+    /// Display name for the user.
+    #[validate(length(
+        min = 1,
+        max = 100,
+        message = "user_name must be between 1 and 100 characters"
+    ))]
     pub user_name: String,
 }
 
 /// Response from tenant init.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct InitTenantResponse {
+    /// The tenant ID in "table:key" format.
     pub tenant_id: String,
+    /// User's role within the tenant (e.g., "owner", "member").
     pub role: String,
+    /// Whether a new tenant was created (true) or existing one returned (false).
     pub created: bool,
 }
 
 /// Result type from user_tenant SELECT query.
+/// Note: id and tenant_id are strings because TenantAwareSurrealDb::query()
+/// serializes through serde_json::Value, which converts RecordId to strings.
 #[derive(Debug, Deserialize)]
 struct UserTenantRecord {
     #[allow(dead_code)]
-    id: RecordId,
-    tenant_id: RecordId,
+    id: String,
+    tenant_id: String,
     role: String,
 }
 
 /// Result type from tenant CREATE query.
 #[derive(Debug, Deserialize)]
 struct TenantRecord {
-    #[allow(dead_code)]
-    id: RecordId,
+    id: String,
 }
 
 /// POST /api/tenant/init
@@ -64,13 +67,25 @@ struct TenantRecord {
 /// Ensures a tenant exists for the given user_sub.
 /// - First login: creates tenant + user_tenant (role: 'owner')
 /// - Subsequent login: returns existing tenant_id
+#[utoipa::path(
+    post,
+    path = "/api/tenant/init",
+    tag = "tenant",
+    request_body = InitTenantRequest,
+    responses(
+        (status = 200, description = "Tenant initialized successfully", body = InitTenantResponse, content_type = "application/json"),
+        (status = 400, description = "Bad request — empty user_sub or user_name"),
+        (status = 401, description = "Unauthorized — missing or invalid JWT"),
+        (status = 422, description = "Unprocessable Entity — invalid request body"),
+        (status = 500, description = "Internal server error — database failure"),
+    ),
+)]
 pub async fn init_tenant(
     State(state): State<AppState>,
     Json(body): Json<InitTenantRequest>,
-) -> Result<Json<Value>, StatusCode> {
-    if body.user_sub.is_empty() || body.user_name.is_empty() {
-        return Err(StatusCode::BAD_REQUEST);
-    }
+) -> AppResult<Json<Value>> {
+    body.validate()
+        .map_err(|e| AppError::Validation(e.to_string()))?;
 
     // Use admin-mode DB for tenant operations (cross-tenant query)
     let admin_db = TenantAwareSurrealDb::new_admin(state.db.clone());
@@ -82,23 +97,19 @@ pub async fn init_tenant(
             BTreeMap::from([("sub".into(), json_str(&body.user_sub))]),
         )
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(AppError::Database)?;
 
     if let Some(ut) = existing.first() {
         // Already bound — return existing
         return Ok(Json(json!({
-            "tenant_id": record_id_to_string(&ut.tenant_id),
+            "tenant_id": ut.tenant_id,
             "role": ut.role,
             "created": false,
         })));
     }
 
     // 2. Create tenant
-    let tenant_name = if body.user_name.is_empty() {
-        body.user_sub.clone()
-    } else {
-        body.user_name.clone()
-    };
+    let tenant_name = body.user_name.clone();
 
     let created_tenants: Vec<TenantRecord> = admin_db
         .query(
@@ -106,25 +117,25 @@ pub async fn init_tenant(
             BTreeMap::from([("name".into(), json_str(&tenant_name))]),
         )
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(AppError::Database)?;
 
     let created = created_tenants
         .first()
-        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
-    let tenant_id = record_id_to_string(&created.id);
+        .ok_or_else(|| AppError::Internal("Failed to create tenant".to_string()))?;
+    let tenant_id = &created.id;
 
     // 3. Create user_tenant binding (owner role)
-    // Use the tenant_id string directly — SurrealDB will parse "tenant:xxx" as a record
+    // Use parameterized query — $tenant_id prevents SQL injection
     let _: Vec<serde_json::Value> = admin_db
         .query(
-            &format!(
-                "CREATE user_tenant SET user_sub = $sub, tenant_id = {}, role = 'owner'",
-                tenant_id
-            ),
-            BTreeMap::from([("sub".into(), json_str(&body.user_sub))]),
+            "CREATE user_tenant SET user_sub = $sub, tenant_id = $tenant_id, role = 'owner'",
+            BTreeMap::from([
+                ("sub".into(), json_str(&body.user_sub)),
+                ("tenant_id".into(), json_str(tenant_id)),
+            ]),
         )
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(AppError::Database)?;
 
     Ok(Json(json!({
         "tenant_id": tenant_id,

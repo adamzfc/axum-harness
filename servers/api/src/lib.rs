@@ -4,6 +4,9 @@
 //! It owns HTTP concerns: routing, middleware, serialization boundaries.
 //! Business logic lives in `domain` and `application` crates.
 
+pub mod config;
+pub mod error;
+#[cfg(feature = "http3")]
 pub mod h3_server;
 pub mod middleware;
 pub mod ports;
@@ -13,8 +16,33 @@ pub mod state;
 use axum::{middleware as axum_mw, Router};
 use std::time::Duration;
 use tower_http::{cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 use state::AppState;
+
+/// OpenAPI documentation root.
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        routes::health::healthz,
+        routes::health::readyz,
+        routes::tenant::init_tenant,
+    ),
+    components(schemas(
+        routes::health::HealthResponse,
+        routes::tenant::InitTenantRequest,
+        routes::tenant::InitTenantResponse,
+    )),
+    tags(
+        (name = "health", description = "Health check and readiness probes"),
+        (name = "tenant", description = "Tenant lifecycle operations"),
+    ),
+    servers(
+        (url = "http://localhost:3001", description = "Local development server"),
+    ),
+)]
+struct ApiDoc;
 
 /// Build the root router with shared state and middleware layers.
 ///
@@ -33,6 +61,7 @@ pub fn create_router(state: AppState) -> Router {
     let public_routes = routes::health::router();
 
     Router::new()
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .merge(public_routes)
         .merge(api_routes)
         .with_state(state)

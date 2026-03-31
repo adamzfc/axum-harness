@@ -25,6 +25,22 @@ hyper = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 
+# Error handling (2026 best practices)
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Configuration (2026 best practices)
+figment = { workspace = true }
+
+# Validation (2026 best practices)
+validator = { workspace = true }
+
+# Tracing enhancements
+tracing-error = { workspace = true }
+
+# Testing
+mockito = { workspace = true }
+
 # Database
 surrealdb = { workspace = true }
 
@@ -41,10 +57,10 @@ jsonwebtoken = { workspace = true }
 chrono = { workspace = true }
 async-trait = "0.1"
 
-# HTTP/3 transport (per D-07, D-08)
-quinn = { workspace = true }
-h3 = { workspace = true }
-rcgen = { workspace = true }
+# HTTP/3 transport (per D-07, D-08) — gated behind h3 feature
+quinn = { workspace = true, optional = true }
+h3 = { workspace = true, optional = true }
+rcgen = { workspace = true, optional = true }
 
 # Tracing
 tracing = { workspace = true }
@@ -57,3 +73,8 @@ utoipa-swagger-ui = { version = "9", features = ["axum"] }
 [dev-dependencies]
 http-body-util = "0.1"
 tower = { workspace = true, features = ["util"] }
+uuid = { workspace = true, features = ["v4"] }
+
+[features]
+default = []
+http3 = ["dep:quinn", "dep:h3", "dep:rcgen"]
