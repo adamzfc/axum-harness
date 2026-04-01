@@ -1,262 +1,113 @@
 # ROADMAP: Tauri-SvelteKit-Axum Boilerplate
 
-**Generated:** 2026-03-28
+**Generated:** 2026-04-01
+**Milestone:** v0.1.1
 **Granularity:** fine
-**Total v1 Requirements:** 29
+**Total v0.1.1 Requirements:** 9
+**Active Plan Range:** Phase 11-15
 
 ## Phases
 
-- [x] **Phase 1: Package Foundation** - Configure all package dependencies and moon workspace ✅
-- [ ] **Phase 2: UI Styling Infrastructure** - TailwindCSS v4 theme and bitsUI component library
-- [x] **Phase 3: Application Pages** - Login, Counter, Admin dashboard with responsive layout ✅
-- [ ] **Phase 4: Backend Dependencies & Build** - Axum/Tauri cargo deps, release profile optimization
-- [x] **Phase 5: Database & Infrastructure** - SurrealDB + libsql dual DB, HTTP/3 scaffolding ✅
-- [ ] **Phase 6: Google OAuth Authentication** - OAuth login, deep link callback, session management
-  - Plans: 5 plans (3 waves)
-- [x] **Phase 7: Multi-Tenant Data Isolation** - tenant_id schema, query middleware, user-tenant binding (completed 2026-03-29)
-- [ ] **Phase 8: Desktop Native Features** - System tray, window state, single instance, error handling
-- [x] **Phase 9: Cross-Platform Build Pipeline** - Windows, macOS, Linux build verification ✅
-- [ ] **Phase 10: Test Suite** - Unit, component, and E2E tests for all core flows
+- [ ] **Phase 11: Security Baseline Closure** - Close JWT validation, secret fail-fast, and path portability gaps for production readiness
+- [ ] **Phase 12: Contract-First Type Sync** - Make `contracts_api` the single contract source and enforce Rust→TS drift prevention
+- [ ] **Phase 13: Runtime Boundary Convergence** - Move new orchestration ownership into `runtime_tauri` and keep native host bootstrap-only
+- [ ] **Phase 14: Workflow Guardrails Unification** - Provide unified Moon/Just entrypoints for fullstack dev, typegen, and verify
+- [ ] **Phase 15: Decision Ledger & Forward Map** - Record all strategy decisions with rationale and explicit future-phase triggers
 
 ## Phase Details
 
-### Phase 1: Package Foundation
-**Goal**: Project has all dependencies declared and moon workspace configured for parallel lint/test
-**Depends on**: Nothing
-**Requirements**: PKG-01, PKG-02, PKG-03, BUILD-03
+### Phase 11: Security Baseline Closure
+**Goal**: Users and operators can trust that auth-critical traffic, environment secrets, and runtime paths behave safely across environments.
+**Depends on**: Existing baseline through Phase 10
+**Requirements**: SEC-01, SEC-02, SEC-03
 **Success Criteria** (what must be TRUE):
-  1. `package.json` declares SvelteKit, bitsUI, TailwindCSS v4, @pqoqubbw/icons, Lottie
-  2. `package.json` declares VitePress, vitest, maestro, playwright as devDependencies
-  3. `Cargo.toml` (tauri) declares all core plugins: tauri-plugin-shell, tauri-plugin-dialog, tauri-plugin-store, tauri-plugin-libsql
-  4. `Cargo.toml` (workspace) declares Tauri 2.10.3, Axum 0.8.8, SurrealDB 3.0.5
-  5. `moon.yml` workspace runs lint and test tasks in parallel across packages
- **Plans:** 4 plans
-
-Plans:
-- [x] 01-01-PLAN.md — Frontend package dependencies (package.json alignment) ✅ `ec2c5a7`
-- [x] 01-02-PLAN.md — Rust workspace dependencies (root Cargo.toml) ✅ `04228c1`
-- [x] 01-03-PLAN.md — Tauri plugin registration (src-tauri/Cargo.toml) ✅ `8d36a6c`
-- [x] 01-04-PLAN.md — Verification gate (config audit passed, env deps noted)
-
-### Phase 2: UI Styling Infrastructure
-**Goal**: Frontend has a configured design system with reusable components ready for page construction
-**Depends on**: Phase 1
-**Requirements**: UI-03, UI-04
-**Success Criteria** (what must be TRUE):
-  1. TailwindCSS v4 compiles with a custom theme (colors, fonts, spacing tokens)
-  2. bitsUI components (Button, Dialog, Input, Select) render correctly in the app
-  3. Dark mode / light mode toggle works via TailwindCSS v4 theme switching
-  4. Component library is importable from `$lib/components`
-**Plans:** 3 plans
-
-Plans:
-- [ ] 02-01-PLAN.md — TailwindCSS v4 Vite plugin + global CSS with @theme tokens
-- [ ] 02-02-PLAN.md — cn() utility + dark mode theme store
-- [ ] 02-03-PLAN.md — Root layout + 9 component wrappers + barrel export
-
-**UI hint**: yes
-
-### Phase 3: Application Pages
-**Goal**: Three core pages are functional and responsive on mobile and desktop viewports
-**Depends on**: Phase 2
-**Requirements**: UI-01, UI-02
-**Success Criteria** (what must be TRUE):
-  1. Login page renders with Google sign-in button and branded layout
-  2. Counter page displays a reactive counter with increment/decrement controls (Svelte 5 runes)
-  3. Admin dashboard page shows a placeholder layout with sidebar navigation
-  4. All three pages adapt cleanly to mobile viewport (375px) and desktop viewport (1280px)
-  5. SPA routing works between all three pages without full page reloads
-**Plans**: 3 plans
-
-Plans:
-- [x] 03-01-PLAN.md — Route groups + layouts + responsive navigation
-- [x] 03-02-PLAN.md — Counter page with $state rune
-- [x] 03-03-PLAN.md — Admin dashboard placeholder
-
-**UI hint**: yes
-
-### Phase 4: Backend Dependencies & Build Optimization
-**Goal**: Rust workspace compiles with optimized release profile producing binaries under 15MB
-**Depends on**: Phase 1
-**Requirements**: PKG-04, BUILD-01
-**Success Criteria** (what must be TRUE):
-  1. `Cargo.toml` (axum) has properly versioned dependencies for axum, tower, tokio
-  2. `cargo build --release` produces a binary under 15MB (LTO enabled, codegen-units=1, opt-level="z", strip=true)
-  3. Axum server starts on configured port and responds to health check
-**Plans:** 3 plans
-
-Plans:
-- [ ] 04-01-PLAN.md — Root Cargo.toml workspace deps (tower, tower-http, hyper) + release profile
-- [ ] 04-02-PLAN.md — runtime_server crate workspace dependency references
-- [ ] 04-03-PLAN.md — Axum server with healthz/readyz + middleware + moon cargo-bloat task
-
-### Phase 5: Database & Infrastructure (双数据库架构)
-**Goal**: SurrealDB(服务端) + libsql/turso(本地App) 双数据库架构就绪，HTTP客户端就绪
-**Depends on**: Nothing (parallel track)
-**Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04
-**Success Criteria** (what must be TRUE):
-  1. **服务端DB**: SurrealDB 服务端配置完成 (Axum连接)
-  2. **本地DB**: libsql/turso 本地存储 via tauri-plugin-libsql
-  3. **云同步**: Turso embedded-replica 同步配置 (可选)
-  4. **HTTP Client**: `reqwest 0.13.2` 配置完成
-  5. **Adapter Pattern**: 数据库抽象层实现 (支持多后端切换)
- **Plans**: 3 plans
-
-Plans:
-- [x] 05-01-PLAN.md — Domain Port traits (SurrealDbPort + LibSqlPort) + workspace deps ✅ `18caf60`
-- [x] 05-02-PLAN.md — Axum AppState with SurrealDB, Moka cache, reqwest client ✅ `01b9993`
-- [x] 05-03-PLAN.md — Tauri libsql plugin registration + HTTP/3 scaffolding ✅ `c0aaa75`
-
-**核心依赖**:
-- 服务端: `surrealdb` - 独立部署通过 Axum 访问
-- 本地: `tauri-plugin-libsql` + `libsql`
-- 策略模式: DatabaseAdapter trait
-
-### Phase 6: Google OAuth Authentication
-**Goal**: User can sign in with Google, session persists across app restarts, and tokens auto-refresh
-**Depends on**: Phase 3, Phase 4
-**Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04
-**Success Criteria** (what must be TRUE):
-  1. Clicking "Sign in with Google" opens the OAuth consent screen in the system browser
-  2. After Google consent, the app receives the callback via Tauri deep link and logs the user in
-  3. Closing and reopening the app restores the session without re-prompting for login
-  4. Session token auto-refreshes before expiry without user intervention
-  5. Login page redirects to the Counter page when user is already authenticated
-**Plans**: 5 plans (3 waves)
-
-Plans:
-- [x] 06-01-PLAN.md — Backend auth foundation (deep-link plugin, capabilities, PKCE + token exchange commands)
-- [ ] 06-02-PLAN.md — Frontend auth IPC wrapper + reactive auth store
-- [ ] 06-03-PLAN.md — Background token refresh timer + auth:expired event
-- [ ] 06-04-PLAN.md — Login page UX (Lottie loading, error states, background animation)
-- [ ] 06-05-PLAN.md — Auth guard, deep link wiring, end-to-end integration
-**UI hint**: yes
-
-### Phase 7: Multi-Tenant Data Isolation
-**Goal**: All data access is automatically scoped by tenant_id, preventing cross-tenant data leaks
-**Depends on**: Phase 6
-**Requirements**: TENANT-01, TENANT-02, TENANT-03
-**Success Criteria** (what must be TRUE):
-  1. Every database table includes a `tenant_id` column (visible in schema/migration files)
-  2. Query middleware automatically filters all SELECT queries by the current user's tenant_id
-  3. New user signup creates a tenant record and binds the user to it
-  4. Attempting to query data with a mismatched tenant_id returns empty results (not errors)
-**Plans**: 3 plans (3 waves)
-
-Plans:
-- [x] 07-01-PLAN.md — TenantId newtype + SurrealDB schema migrations + TenantAwareSurrealDb wrapper
-- [x] 07-02-PLAN.md — Axum tenant extraction middleware + router wiring ✅ `318e8cd` `5b8a6d3`
-- [x] 07-03-PLAN.md — POST /api/tenant/init endpoint + AppState migration integration
-
-### Phase 8: Desktop Native Features
-**Goal**: App behaves as a polished desktop application with system tray, persistent window state, and user-friendly errors
-**Depends on**: Phase 4
-**Requirements**: DESKTOP-01, DESKTOP-02, DESKTOP-03, DESKTOP-04
-**Success Criteria** (what must be TRUE):
-  1. System tray icon appears with a menu offering Show/Hide/Quit options
-  2. Resizing and moving the window, then restarting, restores the exact previous position and size
-  3. Launching the app a second time focuses the existing window instead of opening a new one
-  4. Unhandled errors display a user-friendly toast/message dialog instead of a blank screen
+  1. Forged/invalid JWTs are rejected on tenant/auth-critical endpoints with unauthorized responses.
+  2. In non-dev environments, startup fails immediately with a clear error when required secrets are missing.
+  3. Project can run from a different machine/path without editing hardcoded absolute paths.
 **Plans**: TBD
 
-### Phase 9: Cross-Platform Build Pipeline
-**Goal**: Project builds successfully on Windows, macOS, and Linux from a single configuration
-**Depends on**: Phase 4, Phase 8
-**Requirements**: BUILD-02
+### Phase 12: Contract-First Type Sync
+**Goal**: Rust and TypeScript share one contract truth source and cannot silently drift.
+**Depends on**: Phase 11
+**Requirements**: CONTRACT-01, CONTRACT-02
 **Success Criteria** (what must be TRUE):
-  1. `cargo build` completes without errors on Windows (with WebView2)
-  2. `cargo build` completes without errors on macOS (with entitlements)
-  3. `cargo build` completes without errors on Linux
-  4. CI configuration (or moon task) exists to verify all three platform builds
-**Plans**: 2 plans
+  1. Shared DTO/contracts are defined in `contracts_api` and consumed by runtime code instead of duplicate handwritten schemas.
+  2. Running `typegen` produces TS types directly from Rust contracts and updates generated artifacts deterministically.
+  3. `verify`/CI fails when generated contract outputs are stale or drifted, and passes once regenerated.
+**Plans**: TBD
 
-Plans:
-- [x] 09-01-PLAN.md — Tauri 跨平台打包基线（Windows NSIS + macOS entitlements）
-- [x] 09-02-PLAN.md — GitHub Actions 三平台 matrix 自动构建验证
-
-### Phase 10: Test Suite
-**Goal**: Core application flows are covered by passing unit, component, and E2E tests
-**Depends on**: Phase 6, Phase 7, Phase 8
-**Requirements**: TEST-01, TEST-02, TEST-03
+### Phase 13: Runtime Boundary Convergence
+**Goal**: Runtime orchestration responsibilities are clearly owned by `runtime_tauri`, with native host remaining a thin shell.
+**Depends on**: Phase 12
+**Requirements**: RUNTIME-01
 **Success Criteria** (what must be TRUE):
-  1. `cargo test` passes for all Rust service/middleware unit tests
-  2. Vitest passes for Svelte component tests (Login page, Counter page interactions)
-  3. Playwright E2E tests cover: login flow, counter increment/decrement, admin page navigation
-  4. Test output shows green with no skipped or ignored tests for core flows
-**Plans**: 4 plans (2 waves)
-**UI hint**: yes
+  1. Newly introduced orchestration logic is implemented under `runtime_tauri`, not in `apps/client/native/src-tauri` host bootstrap code.
+  2. Native host entry remains focused on builder/bootstrap responsibilities and still launches successfully.
+  3. Existing core app startup and command flow continue to work after boundary convergence.
+**Plans**: TBD
 
-Plans:
-- [x] 10-01-PLAN.md — Rust test infrastructure + integration tests ✅ `5d8a894`
-- [x] 10-02-PLAN.md — Vitest component tests (Login, Counter, Admin) ✅
-- [ ] 10-03-PLAN.md — Playwright E2E (login, counter, admin)
-- [ ] 10-04-PLAN.md — Tenant isolation + token refresh E2E
+### Phase 14: Workflow Guardrails Unification
+**Goal**: Developers have one consistent command surface to run, sync, and verify the stack.
+**Depends on**: Phase 13
+**Requirements**: WF-01
+**Success Criteria** (what must be TRUE):
+  1. Developers can start the full stack through a single `fullstack:dev` entrypoint.
+  2. Developers can run a single `typegen` entrypoint that regenerates contract-derived TS types.
+  3. Developers can run a single `verify` entrypoint that enforces quality gates (including type drift checks).
+**Plans**: TBD
+
+### Phase 15: Decision Ledger & Forward Map
+**Goal**: All milestone strategy decisions are auditable now and actionable in future milestones.
+**Depends on**: Phase 14
+**Requirements**: DECISION-01, DECISION-02
+**Success Criteria** (what must be TRUE):
+  1. Every strategy item from the v0.1.1 discussion is recorded with status (`implement-now` / `defer` / `reject`) and rationale.
+  2. Every deferred/rejected item includes a target future phase mapping and explicit promotion trigger.
+  3. Team can inspect one ledger source to understand what is implemented now versus postponed and why.
+**Plans**: TBD
 
 ## Progress Table
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Package Foundation | 4/4 | Completed | 2026-03-28 |
-| 2. UI Styling Infrastructure | 0/3 | Not started | - |
-| 3. Application Pages | 3/3 | Completed | 2026-03-28 |
-| 4. Backend Dependencies & Build | 0/3 | Planning | - |
-| 5. Database & Infrastructure | 3/3 | Completed | 2026-03-29 |
-| 6. Google OAuth Authentication | 0/5 | Planning | - |
-| 7. Multi-Tenant Data Isolation | 3/3 | Complete   | 2026-03-29 |
-| 8. Desktop Native Features | 0/4 | Not started | - |
-| 9. Cross-Platform Build Pipeline | 2/2 | Complete | 2026-03-30 |
-| 10. Test Suite | 0/4 | Not started | - |
+| 11. Security Baseline Closure | 0/TBD | Not started | - |
+| 12. Contract-First Type Sync | 0/TBD | Not started | - |
+| 13. Runtime Boundary Convergence | 0/TBD | Not started | - |
+| 14. Workflow Guardrails Unification | 0/TBD | Not started | - |
+| 15. Decision Ledger & Forward Map | 0/TBD | Not started | - |
 
-## Coverage Map
+## Coverage Map (v0.1.1)
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PKG-01 | Phase 1 | ✅ Complete |
-| PKG-02 | Phase 1 | ✅ Complete |
-| PKG-03 | Phase 1 | ✅ Complete |
-| PKG-04 | Phase 4 | Pending |
-| BUILD-03 | Phase 1 | ✅ Complete |
-| UI-03 | Phase 2 | Pending |
-| UI-04 | Phase 2 | Pending |
-| UI-01 | Phase 3 | ✅ Complete |
-| UI-02 | Phase 3 | ✅ Complete |
-| BUILD-01 | Phase 4 | Pending |
-| INFRA-01 | Phase 5 | ✅ Complete |
-| INFRA-02 | Phase 5 | ✅ Complete |
-| INFRA-03 | Phase 5 | ✅ Complete |
-| INFRA-04 | Phase 5 | ✅ Complete |
-| AUTH-01 | Phase 6 | Pending |
-| AUTH-02 | Phase 6 | Pending |
-| AUTH-03 | Phase 6 | Pending |
-| AUTH-04 | Phase 6 | Pending |
-| TENANT-01 | Phase 7 | ✅ Complete |
-| TENANT-02 | Phase 7 | ✅ Complete |
-| TENANT-03 | Phase 7 | ✅ Complete |
-| DESKTOP-01 | Phase 8 | Pending |
-| DESKTOP-02 | Phase 8 | Pending |
-| DESKTOP-03 | Phase 8 | Pending |
-| DESKTOP-04 | Phase 8 | Pending |
-| BUILD-02 | Phase 9 | ✅ Complete |
-| TEST-01 | Phase 10 | Pending |
-| TEST-02 | Phase 10 | Pending |
-| TEST-03 | Phase 10 | Pending |
+| SEC-01 | Phase 11 | Pending |
+| SEC-02 | Phase 11 | Pending |
+| SEC-03 | Phase 11 | Pending |
+| CONTRACT-01 | Phase 12 | Pending |
+| CONTRACT-02 | Phase 12 | Pending |
+| RUNTIME-01 | Phase 13 | Pending |
+| WF-01 | Phase 14 | Pending |
+| DECISION-01 | Phase 15 | Pending |
+| DECISION-02 | Phase 15 | Pending |
 
-**Coverage: 29/29 v1 requirements mapped ✓**
+**Coverage: 9/9 v0.1.1 requirements mapped ✓**
 
-## Phase Dependency Graph
+## Prior Milestone History (Context Preserved)
 
-```
-Phase 1 (Packages) ──→ Phase 2 (UI Infra) ──→ Phase 3 (Pages) ──→ Phase 6 (Auth) ──→ Phase 7 (Tenancy)
-       │                                        ↑                               │
-       └──→ Phase 4 (Backend/Build) ────────────┘                               └──→ Phase 10 (Tests)
-                │                │                                                       ↑
-                └──→ Phase 8 (Desktop) ──→ Phase 9 (Cross-Platform)                    │
-                                                                                        │
-Phase 5 (Docker) ──────────────────────────────────────────────────────────────────────┘
-(independent)
-```
+Previous roadmap phases remain historical context and are retained for continuity:
+
+- Phase 1: Package Foundation
+- Phase 2: UI Styling Infrastructure
+- Phase 3: Application Pages
+- Phase 4: Backend Dependencies & Build Optimization
+- Phase 5: Database & Infrastructure
+- Phase 6: Google OAuth Authentication
+- Phase 7: Multi-Tenant Data Isolation
+- Phase 8: Desktop Native Features
+- Phase 9: Cross-Platform Build Pipeline
+- Phase 10: Test Suite
 
 ---
 
-*Roadmap generated: 2026-03-28*
-*Ready for phase planning: `/gsd-plan-phase 1`*
+*Roadmap updated: 2026-04-01*
+*Ready for phase planning: `/gsd-plan-phase 11`*

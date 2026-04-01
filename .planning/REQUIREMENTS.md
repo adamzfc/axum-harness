@@ -56,21 +56,21 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEC-01 | TBD | Pending |
-| SEC-02 | TBD | Pending |
-| SEC-03 | TBD | Pending |
-| CONTRACT-01 | TBD | Pending |
-| CONTRACT-02 | TBD | Pending |
-| RUNTIME-01 | TBD | Pending |
-| WF-01 | TBD | Pending |
-| DECISION-01 | TBD | Pending |
-| DECISION-02 | TBD | Pending |
+| SEC-01 | Phase 11 | Pending |
+| SEC-02 | Phase 11 | Pending |
+| SEC-03 | Phase 11 | Pending |
+| CONTRACT-01 | Phase 12 | Pending |
+| CONTRACT-02 | Phase 12 | Pending |
+| RUNTIME-01 | Phase 13 | Pending |
+| WF-01 | Phase 14 | Pending |
+| DECISION-01 | Phase 15 | Pending |
+| DECISION-02 | Phase 15 | Pending |
 
 **Coverage:**
 - v0.1.1 requirements: 9 total
-- Mapped to phases: 0
-- Unmapped: 9 ⚠️
+- Mapped to phases: 9
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-01*
-*Last updated: 2026-04-01 after milestone v0.1.1 requirement confirmation*
+*Last updated: 2026-04-01 after v0.1.1 roadmap phase mapping (Phase 11-15)*

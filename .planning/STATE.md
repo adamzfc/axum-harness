@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v0.1.1
 milestone_name: 架构收敛、决策沉淀与生产闭环
 status: planning
-stopped_at: Milestone initialized, requirements definition in progress
-last_updated: "2026-04-01T00:00:00.000Z"
+stopped_at: Roadmap created for v0.1.1 (Phase 11-15), ready for phase planning
+last_updated: "2026-04-01T12:00:00.000Z"
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -15,7 +15,7 @@ progress:
 # STATE: Tauri-SvelteKit-Axum Boilerplate
 
 **Last updated:** 2026-04-01
-**Phase:** Not started
+**Phase:** Phase 11 (ready to start)
 
 ## Project Reference
 
@@ -26,16 +26,20 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: -
-Status: Defining requirements
-Last activity: 2026-04-01 — Milestone v0.1.1 started
+Phase: 11 - Security Baseline Closure
+Plan: TBD
+Status: Roadmap ready, awaiting `/gsd-plan-phase 11`
+Last activity: 2026-04-01 — v0.1.1 roadmap written with full requirement mapping
 
 ## Phase Progress
 
 | Phase | Requirements | Criteria | Status |
 |-------|-------------|----------|--------|
-| TBD | TBD | TBD | Not started |
+| 11. Security Baseline Closure | SEC-01, SEC-02, SEC-03 | 3 | Not started |
+| 12. Contract-First Type Sync | CONTRACT-01, CONTRACT-02 | 3 | Not started |
+| 13. Runtime Boundary Convergence | RUNTIME-01 | 3 | Not started |
+| 14. Workflow Guardrails Unification | WF-01 | 3 | Not started |
+| 15. Decision Ledger & Forward Map | DECISION-01, DECISION-02 | 3 | Not started |
 
 ## Key Decisions
 
@@ -44,6 +48,8 @@ Last activity: 2026-04-01 — Milestone v0.1.1 started
 | v0.1.1 focuses on convergence and closure | Highest ROI for long-term agent velocity | Accepted |
 | Keep minimum-change strategy | Avoid architecture churn and regression | Accepted |
 | Preserve all historical context and decisions | Prevent strategy loss between milestones | Accepted |
+| Continue phase numbering from prior roadmap (start at 11) | Maintain cross-milestone traceability and planning continuity | Accepted |
+| v0.1.1 roadmap uses 5 requirement-derived phases | Aligns with dependency chain and fine granularity target | Accepted |
 
 ## Accumulated Context
 
@@ -144,15 +150,15 @@ Last activity: 2026-04-01 — Milestone v0.1.1 started
 - **Roadmap file:** `.planning/ROADMAP.md`
 - **Requirements file:** `.planning/REQUIREMENTS.md`
 - **Research files:** `.planning/research/SUMMARY.md`, `.planning/research/STACK.md`, `.planning/research/ARCHITECTURE.md`
-- **Next command:** Project complete (all 10 phases done). Remaining: Phase 06 (Google OAuth) and Phase 08 (Desktop Native Features) are optional/not started.
+- **Next command:** `/gsd-plan-phase 11`
 
 ## Session
 
 **Last Date:** 2026-03-30T12:10:00.000Z
-**Stopped At:** Phase 10 complete — all test suites green
-**Resume File:** .planning/phases/10-test-suite/10-04-SUMMARY.md
+**Stopped At:** v0.1.1 roadmap complete — Phase 11-15 ready for execution
+**Resume File:** .planning/ROADMAP.md
 
 ---
 
 *Created: 2026-03-28 by /gsd-new-project roadmap phase*
-*Updated: 2026-03-30 — Phase 10 complete (56 Vitest+Playwright tests + 30 Rust tests across 3 layers)*
+*Updated: 2026-04-01 — v0.1.1 roadmap activated (Phase 11-15, coverage 9/9)*
