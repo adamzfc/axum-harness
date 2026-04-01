@@ -1,5 +1,5 @@
 [package]
-name = "contracts_api"
+name = "contracts_events"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,4 +7,3 @@ edition = "2021"
 serde = { workspace = true }
 utoipa = { workspace = true }
 ts-rs = { workspace = true }
-validator = { workspace = true }
