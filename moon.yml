@@ -134,6 +134,7 @@ tasks:
       moon run repo:typegen
       echo "=== Checking for drift ==="
       git diff --exit-code packages/contracts/generated/ && echo "DRIFT CHECK PASSED" || (echo "DRIFT CHECK FAILED — generated types differ from committed" && exit 1)
+      git diff --exit-code apps/client/web/app/src/lib/generated/ && echo "FRONTEND SYNC PASSED" || (echo "FRONTEND SYNC FAILED — frontend types differ from committed" && exit 1)
     inputs:
       - 'packages/contracts/**/src/**'
       - 'packages/contracts/**/Cargo.toml'
@@ -156,6 +157,7 @@ tasks:
       - 'repo:fmt'
       - 'repo:lint'
       - 'repo:typecheck'
+      - 'repo:contracts-check'
       - 'repo:test-unit'
 
   # ── repo:codegen ───────────────────────────────────────────────────
@@ -166,8 +168,11 @@ tasks:
       cp -r packages/contracts/api/bindings/api packages/contracts/generated/api 2>/dev/null || true
       cp -r packages/contracts/auth/bindings/auth packages/contracts/generated/auth 2>/dev/null || true
       cp -r packages/contracts/events/bindings/events packages/contracts/generated/events 2>/dev/null || true
+      echo "=== Syncing to frontend ==="
+      mkdir -p apps/client/web/app/src/lib/generated
+      cp -r packages/contracts/generated/* apps/client/web/app/src/lib/generated/ 2>/dev/null || true
       echo "=== Typegen complete ==="
-      ls -la packages/contracts/generated/api/ packages/contracts/generated/auth/ packages/contracts/generated/events/ 2>/dev/null || echo "No generated files yet"
+      ls -la apps/client/web/app/src/lib/generated/ 2>/dev/null || echo "No generated files yet"
     inputs:
       - 'packages/contracts/**/src/**'
       - 'packages/contracts/**/Cargo.toml'
