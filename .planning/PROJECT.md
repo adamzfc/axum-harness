@@ -8,6 +8,18 @@ A production-ready boilerplate/template for building cross-platform desktop appl
 
 Provide a runnable, tested, production-ready boilerplate with authentication (Google OAuth), multi-tenancy, backend infrastructure (containerized Redis/cache, database, reverse proxy), and full stack best practices — so developers can start building business logic immediately.
 
+## Current Milestone: v0.1.1 架构收敛、决策沉淀与生产闭环
+
+**Goal:** 在最小改动原则下，把关键架构建议全部落盘为可追踪决策，并完成高优先级生产闭环能力，确保后续 agent 迭代稳定且低认知负担。
+
+**Target features:**
+- 安全基线硬化（JWT 校验链路、敏感配置治理、路径可移植性）
+- 契约与类型闭环（`contracts_api` + Rust/TS typegen 自动同步）
+- 运行时边界收敛（`runtime_tauri` 落地，native host 瘦身）
+- Moon/Just 任务体系补全（`fullstack:dev`、`typegen`、`verify`）
+- 全量建议决策账本（逐条记录是否实现、何时实现、如何实现、原因）
+- 后续 phase 简要概括（即使不在本里程碑实施也不丢失）
+
 ## Requirements
 
 ### Validated
@@ -26,10 +38,11 @@ Provide a runnable, tested, production-ready boilerplate with authentication (Go
 
 ### Active
 
-- [ ] User can sign in with Google OAuth
-- [ ] Backend containerized with docker-compose (Redis/cache, DB, nginx)
-- [ ] Tests pass for core flows
-- [ ] Local dev environment fully configured
+- [ ] 安全基线达到可发布标准（JWT 校验、敏感配置、路径移植）
+- [ ] Rust/TS 契约实现自动同步，避免手写类型漂移
+- [ ] `runtime_tauri` 与 native host 的职责边界清晰且落地
+- [ ] Moon/Just 提供统一的全栈开发与验证入口
+- [ ] 历史建议形成决策清单并映射到当前/后续 phase
 
 ### Out of Scope
 
@@ -38,7 +51,7 @@ Provide a runnable, tested, production-ready boilerplate with authentication (Go
 
 ## Context
 
-**Current state:** Phase 07 (multi-tenant-data-isolation) complete — TenantId domain type, tenant-aware query scoping middleware, and tenant initialization API are implemented and verified. Next up is Phase 08 (desktop-native-features), while earlier pending phases remain tracked in ROADMAP.
+**Current state:** Existing milestone implementation has reached strong scaffold maturity (Axum router/middleware, tenant isolation, E2E layers), but there are strategic gaps blocking long-term low-friction agent iteration: contracts crate is still placeholder, Rust↔TS type pipeline is missing, runtime boundary is drifting toward host code, and several security/portability defaults need hardening.
 
 **Tech stack:**
 - Frontend: SvelteKit + bitsUI + TailwindCSS v4 + VitePress + @pqoqubbw/icons + Lottie
@@ -89,6 +102,23 @@ For Cargo (tauri + axum): Deep dive into docs for plugins and dependencies, prel
 | release-plz + git-cliff | CI/CD 自动化,综合评估不纯追 Rust | — Pending |
 | Fine granularity phases | Maximum flexibility for feature iteration | — Pending |
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
 
-*Last updated: 2026-03-29 after Phase 07 completion (multi-tenant-data-isolation)*
+*Last updated: 2026-04-01 after starting milestone v0.1.1 (architecture convergence and production closure)*

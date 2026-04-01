@@ -1,72 +1,49 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: completed
-stopped_at: Phase 10 test suite complete
-last_updated: "2026-03-30T12:10:00.000Z"
+milestone: v0.1.1
+milestone_name: 架构收敛、决策沉淀与生产闭环
+status: planning
+stopped_at: Milestone initialized, requirements definition in progress
+last_updated: "2026-04-01T00:00:00.000Z"
 progress:
-  total_phases: 10
-  completed_phases: 8
-  total_plans: 28
-  completed_plans: 30
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # STATE: Tauri-SvelteKit-Axum Boilerplate
 
-**Last updated:** 2026-03-30
-**Phase:** 10
+**Last updated:** 2026-04-01
+**Phase:** Not started
 
 ## Project Reference
 
 - **Core value:** Production-ready boilerplate for cross-platform desktop apps (Tauri 2 + SvelteKit + Axum + moon)
-- **Current focus:** Phase 10 — test-suite (COMPLETED)
+- **Current focus:** Milestone v0.1.1 — 架构收敛、决策沉淀与生产闭环
 - **Stack:** Tauri 2.10.x, SvelteKit 2.x + Svelte 5 runes, Axum 0.8.x, libsql, moon, bun
-- **Granularity:** fine (10 phases)
+- **Granularity:** fine
 
 ## Current Position
 
-Phase: 10 (test-suite) — COMPLETED
-Plan: 4 of 4
-
-- [████████████████████] 27/27 requirements complete
-- **Phase:** 01 ✅ | 02 ✅ | 03 ✅ | 04 ✅ | 05 ✅ | 07 ✅ | 09 ✅ | 10 ✅
-- **Plan:** 10-01 ✅ | 10-02 ✅ | 10-03 ✅ | 10-04 ✅
-- **Status:** Phase 10 complete — all test layers green
-- **Blockers:** cmake required for full workspace compile (pre-existing env issue); Rust tests can't run locally but code is correct
+Phase: Not started (defining requirements)
+Plan: -
+Status: Defining requirements
+Last activity: 2026-04-01 — Milestone v0.1.1 started
 
 ## Phase Progress
 
 | Phase | Requirements | Criteria | Status |
 |-------|-------------|----------|--------|
-| 1. Package Foundation | 4 | 4 | ✅ Completed |
-| 2. UI Styling Infrastructure | 2 | 4 | ✅ Completed |
-| 3. Application Pages | 2 | 5 | ✅ Completed |
-| 4. Backend Dependencies & Build | 2 | 3 | ✅ Completed |
-| 5. Docker Infrastructure | 4 | 5 | ✅ Completed |
-| 6. Google OAuth Authentication | 4 | 5 | Not started |
-| 7. Multi-Tenant Data Isolation | 3 | 4 | ✅ Completed |
-| 8. Desktop Native Features | 4 | 4 | Not started |
-| 9. Cross-Platform Build Pipeline | 1 | 4 | ✅ Completed |
-| 10. Test Suite | 3 | 4 | ✅ Completed |
+| TBD | TBD | TBD | Not started |
 
 ## Key Decisions
 
 | Decision | Rationale | Status |
 |----------|-----------|--------|
-| libsql/turso over SurrealDB | Simpler setup, lower complexity | Accepted |
-| Google OAuth only | Sufficient for boilerplate | Accepted |
-| IPC over HTTP for local comms | 20-100x faster, type-safe | Accepted |
-| Fine granularity phases | Max flexibility for iteration | Accepted |
-| Docker infra as independent track | No dependency on app code | Accepted |
-| CorsLayer::permissive dev, tighten prod | Faster dev iteration | Accepted |
-| SERVER_PORT env var w/ 3001 default | Flexible deployment config | Accepted |
-| Axum typed state over Extension | Compile-time state type safety | Accepted |
-| Moka replaces Redis as cache | Simpler, no external service dependency | Accepted |
-| HTTP/3 (Quinn) primary, HTTP/2 (Axum TCP) fallback | Future-proof production transport | Accepted |
-| tauri-plugin-libsql for local DB | Already declared, official plugin, dev-friendly | Accepted |
-| bundle.targets 保持 all + Windows NSIS currentUser + downloadBootstrapper | 对齐 Phase 9 跨平台打包基线且避免过度配置 | Accepted |
-| CI 改为 push/main + pull_request 三平台 matrix（native runner） | 把跨平台构建验证前移到每次提交，降低回归风险 | Accepted |
+| v0.1.1 focuses on convergence and closure | Highest ROI for long-term agent velocity | Accepted |
+| Keep minimum-change strategy | Avoid architecture churn and regression | Accepted |
+| Preserve all historical context and decisions | Prevent strategy loss between milestones | Accepted |
 
 ## Accumulated Context
 
