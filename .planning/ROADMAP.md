@@ -44,7 +44,7 @@ Plans:
   4. 前端和 server 路由引用 generated types，不再手写接口定义。
 **Plans**: 2 plans in 2 waves
 Plans:
-- [ ] 02-01-PLAN.md — Contracts crates setup + typegen pipeline
+- [x] 02-01-PLAN.md — Contracts crates setup + typegen pipeline
 - [ ] 02-02-PLAN.md — Server migration + frontend integration + drift check
 
 ### Phase 3: Runtime 边界收敛
@@ -87,7 +87,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. 仓库目录结构与工具链对齐 | 4/4 | Complete | 2026-04-01 |
-| 2. Contracts/typegen 单一真理源 | 0/TBD | Not started | - |
+| 2. Contracts/typegen 单一真理源 | 1/2 | In progress | - |
 | 3. Runtime 边界收敛 | 0/TBD | Not started | - |
 | 4. 最小功能实现 | 0/TBD | Not started | - |
 | 5. Agent-Friendly 开发基建 | 0/TBD | Not started | - |
@@ -98,8 +98,8 @@ Plans:
 |-------------|-------|--------|
 | STRUCT-01 | Phase 1 | Completed (Plans 01-02) |
 | TOOL-01 | Phase 1 | Completed (Plans 02-03) |
-| CONTRACT-01 | Phase 2 | Pending |
-| CONTRACT-02 | Phase 2 | Pending |
+| CONTRACT-01 | Phase 2 | Plan 1/2 complete |
+| CONTRACT-02 | Phase 2 | Plan 1/2 complete |
 | RUNTIME-01 | Phase 3 | Pending |
 | RUNTIME-02 | Phase 3 | Pending |
 | RUNTIME-03 | Phase 3 | Pending |

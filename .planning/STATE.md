@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.2.0
 milestone_name: milestone
-status: verifying
+status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-04-01T22:52:18.192Z"
-last_activity: 2026-04-01
+last_updated: "2026-04-01T23:45:00Z"
+last_activity: 2026-04-01 -- Plan 02-01 complete: contracts crates + typegen pipeline
 progress:
   total_phases: 7
   completed_phases: 6
-  total_plans: 21
-  completed_plans: 21
+  total_plans: 23
+  completed_plans: 22
 ---
 
 # STATE: Tauri-SvelteKit-Axum Boilerplate
@@ -21,24 +21,24 @@ progress:
 ## Project Reference
 
 - **Core value:** Agent-Native Cross-Platform Application Engineering Base
-- **Current focus:** Milestone v0.2.0 — 架构蓝图对齐与核心功能实现
+- **Current focus:** Phase 02 — contracts-typegen
 - **Stack:** Tauri v2, SvelteKit 2 + Svelte 5, Axum 0.8.x, Bun, moon, proto, Just
 - **Architecture reference:** docs/blueprints/agent-native-starter-v1/
 - **Granularity:** fine
 
 ## Current Position
 
-Phase: Phase 1 complete, Phase 2 ready to start
-Plan: Not started
-Status: Phase 1 fully verified — directory scaffold, moon tasks, Justfile, cargo workspace all working
-Last activity: 2026-04-01
+Phase: 02 (contracts-typegen) — EXECUTING
+Plan: 1 of 2 — COMPLETE
+Status: Plan 02-01 complete, ready for Plan 02-02 or Phase 03
+Last activity: 2026-04-01 -- Plan 02-01 complete: contracts crates + typegen pipeline
 
 ## Phase Progress
 
 | Phase | Requirements | Criteria | Status |
 |-------|-------------|----------|--------|
 | 1. 仓库目录结构与工具链对齐 | STRUCT-01, TOOL-01 | 5 | ✓ Complete (4/4 plans) |
-| 2. Contracts/typegen 单一真理源 | CONTRACT-01, CONTRACT-02 | 4 | Not started |
+| 2. Contracts/typegen 单一真理源 | CONTRACT-01, CONTRACT-02 | 4 | ✓ Plan 1/2 complete |
 | 3. Runtime 边界收敛 | RUNTIME-01, RUNTIME-02, RUNTIME-03 | 4 | Not started |
 | 4. 最小功能实现 | AUTH-01, COUNTER-01, ADMIN-01, AGENT-01 | 5 | Not started |
 | 5. Agent-Friendly 开发基建 | AGENT-DEV-01 | 5 | Not started |
@@ -55,6 +55,8 @@ Last activity: 2026-04-01
 | 未来阶段任务用 echo stub 实现 | just --list 从第一天起完整，不用等 Phase 9 实现 | Accepted |
 | Root moon.yml 增加 repo:* 编排任务 | Justfile 的 moon run repo:* 委托模式需要对应目标任务存在 | Accepted |
 | Phase 1 集成验证 checkpoint 自动通过 | 所有自动化检查均通过，无阻塞问题，workflow.auto_advance=true | Accepted |
+| contracts 分为 api/auth/events 三个独立 crate | 蓝图 D-03 对齐，每个 concern 有独立命名空间 | Accepted |
+| ts-rs + utoipa 共存于同一 struct | OpenAPI 和 TS 类型来自单一事实源，避免维护两份定义 | Accepted |
 
 ## Accumulated Context (from v0.1.0)
 
@@ -79,10 +81,10 @@ Last activity: 2026-04-01
 
 ## Session
 
-**Last Date:** 2026-04-01T22:52:18.189Z
-**Stopped At:** Phase 2 context gathered
-**Resume File:** .planning/phases/02-contracts-typegen/02-CONTEXT.md
-**Next:** `/gsd-plan-phase 2` — Contracts/typegen 单一真理源
+**Last Date:** 2026-04-01T23:45:00Z
+**Stopped At:** Plan 02-01 complete — contracts crates + typegen pipeline
+**Resume File:** .planning/phases/02-contracts-typegen/02-01-SUMMARY.md
+**Next:** Continue Phase 02 Plan 02-02 or proceed to Phase 03
 
 ---
 

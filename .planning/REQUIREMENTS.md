@@ -13,8 +13,8 @@
 
 ### Contracts 与类型闭环
 
-- [ ] **CONTRACT-01**: packages/contracts/api 定义跨边界共享 DTO/contracts 作为 Rust 单一真理源
-- [ ] **CONTRACT-02**: typegen 从 Rust contracts 自动生成 TS 类型，CI 在生成后有未提交 diff 时失败
+- [x] **CONTRACT-01**: packages/contracts/api 定义跨边界共享 DTO/contracts 作为 Rust 单一真理源
+- [x] **CONTRACT-02**: typegen 从 Rust contracts 自动生成 TS 类型，CI 在生成后有未提交 diff 时失败
 
 ### Runtime 边界收敛
 
@@ -67,8 +67,8 @@
 |-------------|-------|--------|
 | STRUCT-01 | Phase 1 | Pending |
 | TOOL-01 | Phase 1 | Pending |
-| CONTRACT-01 | Phase 2 | Pending |
-| CONTRACT-02 | Phase 2 | Pending |
+| CONTRACT-01 | Phase 2 | Plan 02-01 complete |
+| CONTRACT-02 | Phase 2 | Plan 02-01 complete |
 | RUNTIME-01 | Phase 3 | Pending |
 | RUNTIME-02 | Phase 3 | Pending |
 | RUNTIME-03 | Phase 3 | Pending |
