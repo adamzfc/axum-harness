@@ -29,3 +29,23 @@ pub struct UserSession {
     pub tenant_id: String,
     pub role: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn export_token_pair() {
+        TokenPair::export().unwrap();
+    }
+
+    #[test]
+    fn export_oauth_callback() {
+        OAuthCallback::export().unwrap();
+    }
+
+    #[test]
+    fn export_user_session() {
+        UserSession::export().unwrap();
+    }
+}

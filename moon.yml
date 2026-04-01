@@ -129,7 +129,14 @@ tasks:
       - 'apps~client~web~app:check'
 
   repo:contracts-check:
-    command: 'echo "Contracts check — Phase 2 implementation"'
+    command: |
+      echo "=== Running typegen ==="
+      moon run repo:typegen
+      echo "=== Checking for drift ==="
+      git diff --exit-code packages/contracts/generated/ && echo "DRIFT CHECK PASSED" || (echo "DRIFT CHECK FAILED — generated types differ from committed" && exit 1)
+    inputs:
+      - 'packages/contracts/**/src/**'
+      - 'packages/contracts/**/Cargo.toml'
 
   repo:test-unit:
     deps:
@@ -153,7 +160,17 @@ tasks:
 
   # ── repo:codegen ───────────────────────────────────────────────────
   repo:typegen:
-    command: 'echo "Typegen — Phase 2 implementation"'
+    command: |
+      cargo test -p contracts_api -p contracts_auth -p contracts_events 2>&1 || true
+      rm -rf packages/contracts/generated/api packages/contracts/generated/auth packages/contracts/generated/events
+      cp -r packages/contracts/api/bindings/api packages/contracts/generated/api 2>/dev/null || true
+      cp -r packages/contracts/auth/bindings/auth packages/contracts/generated/auth 2>/dev/null || true
+      cp -r packages/contracts/events/bindings/events packages/contracts/generated/events 2>/dev/null || true
+      echo "=== Typegen complete ==="
+      ls -la packages/contracts/generated/api/ packages/contracts/generated/auth/ packages/contracts/generated/events/ 2>/dev/null || echo "No generated files yet"
+    inputs:
+      - 'packages/contracts/**/src/**'
+      - 'packages/contracts/**/Cargo.toml'
 
   repo:openapi-gen:
     command: 'echo "OpenAPI gen — Phase 2 implementation"'

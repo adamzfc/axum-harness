@@ -37,3 +37,23 @@ pub struct InitTenantResponse {
     /// Whether a new tenant was created.
     pub created: bool,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn export_health_response() {
+        HealthResponse::export().unwrap();
+    }
+
+    #[test]
+    fn export_init_tenant_request() {
+        InitTenantRequest::export().unwrap();
+    }
+
+    #[test]
+    fn export_init_tenant_response() {
+        InitTenantResponse::export().unwrap();
+    }
+}

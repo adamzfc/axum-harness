@@ -20,3 +20,18 @@ pub struct TenantMemberAdded {
     pub user_sub: String,
     pub role: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn export_tenant_created() {
+        TenantCreated::export().unwrap();
+    }
+
+    #[test]
+    fn export_tenant_member_added() {
+        TenantMemberAdded::export().unwrap();
+    }
+}

@@ -38,3 +38,4 @@ node_modules/
 # --- Tauri generated ---
 apps/client/native/src-tauri/target/
 apps/client/native/src-tauri/gen/
+-e \n# ts-rs intermediate output\npackages/contracts/*/bindings/
