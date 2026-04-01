@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.2.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 2 context gathered
-last_updated: "2026-04-01T23:45:00Z"
-last_activity: 2026-04-01 -- Plan 02-01 complete: contracts crates + typegen pipeline
+stopped_at: Completed 02-contracts-typegen plan 02-02 — server migration + verify pipeline
+last_updated: "2026-04-01T23:35:34.051Z"
+last_activity: 2026-04-01
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 23
-  completed_plans: 22
+  completed_plans: 23
 ---
 
 # STATE: Tauri-SvelteKit-Axum Boilerplate
@@ -28,17 +28,17 @@ progress:
 
 ## Current Position
 
-Phase: 02 (contracts-typegen) — EXECUTING
-Plan: 1 of 2 — COMPLETE
-Status: Plan 02-01 complete, ready for Plan 02-02 or Phase 03
-Last activity: 2026-04-01 -- Plan 02-01 complete: contracts crates + typegen pipeline
+Phase: 02 (contracts-typegen) — COMPLETE
+Plan: 2 of 2 — COMPLETE
+Status: Phase 02 complete, ready for Phase 03
+Last activity: 2026-04-01 -- Plan 02-02 complete: server routes migrated to contracts, verify pipeline wired
 
 ## Phase Progress
 
 | Phase | Requirements | Criteria | Status |
 |-------|-------------|----------|--------|
 | 1. 仓库目录结构与工具链对齐 | STRUCT-01, TOOL-01 | 5 | ✓ Complete (4/4 plans) |
-| 2. Contracts/typegen 单一真理源 | CONTRACT-01, CONTRACT-02 | 4 | ✓ Plan 1/2 complete |
+| 2. Contracts/typegen 单一真理源 | CONTRACT-01, CONTRACT-02 | 4 | ✓ Complete (2/2 plans) |
 | 3. Runtime 边界收敛 | RUNTIME-01, RUNTIME-02, RUNTIME-03 | 4 | Not started |
 | 4. 最小功能实现 | AUTH-01, COUNTER-01, ADMIN-01, AGENT-01 | 5 | Not started |
 | 5. Agent-Friendly 开发基建 | AGENT-DEV-01 | 5 | Not started |
@@ -57,6 +57,8 @@ Last activity: 2026-04-01 -- Plan 02-01 complete: contracts crates + typegen pip
 | Phase 1 集成验证 checkpoint 自动通过 | 所有自动化检查均通过，无阻塞问题，workflow.auto_advance=true | Accepted |
 | contracts 分为 api/auth/events 三个独立 crate | 蓝图 D-03 对齐，每个 concern 有独立命名空间 | Accepted |
 | ts-rs + utoipa 共存于同一 struct | OpenAPI 和 TS 类型来自单一事实源，避免维护两份定义 | Accepted |
+| Server 路由从 contracts_api 导入 DTO | 单一事实源，消除内联重复定义 | Accepted |
+| repo:contracts-check 同时验证 frontend generated/ | 确保前端类型同步不漂移 | Accepted |
 
 ## Accumulated Context (from v0.1.0)
 
@@ -81,10 +83,10 @@ Last activity: 2026-04-01 -- Plan 02-01 complete: contracts crates + typegen pip
 
 ## Session
 
-**Last Date:** 2026-04-01T23:45:00Z
-**Stopped At:** Plan 02-01 complete — contracts crates + typegen pipeline
-**Resume File:** .planning/phases/02-contracts-typegen/02-01-SUMMARY.md
-**Next:** Continue Phase 02 Plan 02-02 or proceed to Phase 03
+**Last Date:** 2026-04-01T24:00:00Z
+**Stopped At:** Completed 02-contracts-typegen plan 02-02 — server migration + verify pipeline
+**Resume File:** None
+**Next:** Proceed to Phase 03 (runtime boundary convergence)
 
 ---
 

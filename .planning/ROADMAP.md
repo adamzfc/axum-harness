@@ -45,7 +45,7 @@ Plans:
 **Plans**: 2 plans in 2 waves
 Plans:
 - [x] 02-01-PLAN.md — Contracts crates setup + typegen pipeline
-- [ ] 02-02-PLAN.md — Server migration + frontend integration + drift check
+- [x] 02-02-PLAN.md — Server migration + frontend integration + drift check
 
 ### Phase 3: Runtime 边界收敛
 **Goal**: 核心业务规则不依赖宿主，adapters 只做外部世界翻译，新增 capability 走新路径。
