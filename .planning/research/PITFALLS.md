@@ -1,301 +1,161 @@
 # Pitfalls Research
 
-**Domain:** Tauri+SvelteKit+Axum Full-Stack Desktop Application
-**Researched:** 2026-03-28
-**Confidence:** MEDIUM-HIGH
+**Domain:** Brownfield Tauri + SvelteKit + Axum（v0.1.1 安全硬化 / typegen / 边界收敛）  
+**Researched:** 2026-04-01  
+**Confidence:** HIGH（仓库实证 + Context7 官方文档）
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Tauri 2 Permission System Misconfiguration
+### Pitfall 1: Tenant 鉴权“看起来可用”但实际上可伪造（`insecure_decode`）
 
 **What goes wrong:**
-Application fails at runtime with "Permission denied" errors. Features like file system access, HTTP requests, or clipboard operations silently fail or throw cryptic errors.
+当前 `servers/api/src/middleware/tenant.rs` 使用 `jsonwebtoken::dangerous::insecure_decode` 提取 `sub`，未验证签名/issuer/audience/exp。攻击者可构造任意 JWT payload，伪造 tenant 身份，导致跨租户数据访问。
 
 **Why it happens:**
-Tauri 2 uses a "Deny by Default" security model. Unlike Tauri 1 or Electron, all system access is blocked unless explicitly permitted via Capabilities. Developers assume plugins work out-of-the-box after installation.
+历史阶段为了先打通链路（v1）接受了“只 decode 不 verify”。在 brownfield 里，这种“临时方案”最容易被遗忘并进入生产。
 
 **How to avoid:**
-1. Configure capabilities in `src-tauri/capabilities/` directory
-2. Explicitly declare permissions for each plugin used:
+1. 将 middleware 改为 `decode + Validation`（验证 `alg/exp/nbf/iss/aud/sub`）。
+2. 拒绝与预期算法不匹配的 token（禁止 algorithm confusion）。
+3. 把 `tenant_id` 来源切换为“已验签 claims + 后端映射”，不要直接信任 `sub`。
+4. 为 token 校验失败写结构化日志（含 request_id，不含敏感 token）。
 
-```json
-{
-  "identifier": "main-capability",
-  "description": "Main window permissions",
-  "windows": ["main"],
-  "permissions": [
-    "core:default",
-    "fs:default",
-    "fs:allow-read-text-file",
-    "http:default"
-  ]
-}
-```
+**Warning signs (detection signal):**
+- 代码中出现 `dangerous::insecure_decode`。  
+- 401 比例异常低，但跨租户访问告警升高。  
+- 伪造 `sub` 的集成测试仍返回 200。
 
-3. For scoped permissions (like file system), specify exact paths:
-
-```json
-"fs:allow-read-file",
-{
-  "identifier": "fs:scope",
-  "allow": [
-    { "path": "$APPDATA/*" },
-    { "path": "$DOCUMENT/*" }
-  ]
-}
-```
-
-**Warning signs:**
-- Plugin installed via `cargo add` or npm but no capability file updated
-- "invoke() function not found" errors in console
-- Application works in dev mode but fails in production build
-
-**Phase to address:** Foundation Phase (Phase 1) — must configure capabilities before any feature development
+**Phase to address:**
+- v0.1.1 Phase A（安全基线硬化）
 
 ---
 
-### Pitfall 2: Bundle Size Bloat Due to Unoptimized Cargo Config
+### Pitfall 2: 敏感配置与默认占位值漏入运行时（假安全）
 
 **What goes wrong:**
-Tauri application produces 50MB+ executables when 5-10MB should be achievable. Users resist downloading, CI/CD pipelines slow down.
+`apps/client/native/src-tauri/src/commands/config.rs` 和 `commands/auth.rs` 对 `GOOGLE_CLIENT_SECRET`、`GOOGLE_CLIENT_ID` 使用占位默认值（`YOUR_*`）；`servers/api/src/config.rs` 中 `jwt_secret` 也有 dev 默认值。结果是：
+- 本地“能跑”但实际未正确加固；
+- CI/生产可能带着弱配置上线；
+- secret 出现在桌面端配置读取路径中，增加暴露面。
 
 **Why it happens:**
-Default Cargo build settings prioritize compile speed over binary size. Developers don't configure release profiles or enable link-time optimization (LTO).
+模板项目常用“兜底默认值”降低上手门槛，但里程碑升级到“生产闭环”后，默认值策略需要切换为 fail-fast。
 
 **How to avoid:**
-Configure release profile in `src-tauri/Cargo.toml`:
+1. 区分 dev/prod：生产环境遇到占位值或空值直接启动失败。  
+2. 不在客户端配置命令中返回 client secret（前端只需 client_id 与 API endpoint）。  
+3. 将 refresh_token 等高敏感数据迁移到 Stronghold（插件生态建议）而非普通 store。  
+4. 加入 `verify` 任务：扫描 `YOUR_`、`dev-secret-change-in-production`、空 token。
 
-```toml
-[profile.release]
-codegen-units = 1
-lto = true
-opt-level = "z"
-panic = "abort"
-strip = true
-```
+**Warning signs (detection signal):**
+- 日志出现 `client_id_len=0` 或 `api_url` 为空。  
+- 仓库 grep 出现 `YOUR_GOOGLE_CLIENT_SECRET`、`dev-secret-change-in-production`。  
+- 前端可通过 `get_config` 拿到 secret。
 
-Additionally, enable `removeUnusedCommands` in `tauri.conf.json`:
-
-```json
-{
-  "build": {
-    "removeUnusedCommands": true
-  }
-}
-```
-
-This automatically strips Tauri commands not exposed in your capability files.
-
-**Warning signs:**
-- Release build directory exceeds 30MB
-- No `[profile.release]` section in Cargo.toml
-- Using debug build for "testing performance"
-
-**Phase to address:** Foundation Phase (Phase 1) — set up optimized build config from start
+**Phase to address:**
+- v0.1.1 Phase A（安全基线硬化）
 
 ---
 
-### Pitfall 3: IPC vs HTTP Performance Mismatch
+### Pitfall 3: 本地 `.env` 与绝对路径依赖导致跨环境回归
 
 **What goes wrong:**
-Application makes unnecessary HTTP calls to Axum backend running on localhost, adding 50-200ms latency per request when direct IPC would take 1-5ms.
+`apps/client/native/src-tauri/src/lib.rs` 在 setup 中写死项目绝对路径 `/Users/.../tauri-sveltekit-axum-moon-template` 并尝试 `set_current_dir` + `dotenv_override`。这会在 CI、其他开发机、打包后安装环境直接失效。
 
 **Why it happens:**
-Confusion between "local API" (Axum on localhost) and "remote API" (external service). Using HTTP for frontend-to-backend communication within the same application adds WebView network stack overhead.
+brownfield 常有“为本机调试临时加的路径”，后续未收敛到 runtime/path abstraction。
 
 **How to avoid:**
-- **Use Tauri IPC (`invoke()`)** for all Axum backend communication because:
-  - Same machine (localhost) — no network benefits
-  - IPC bypasses HTTP parsing overhead
-  - Type-safe across Rust/TypeScript boundary
-  
-- **Use HTTP plugin (`fetch()`)** only for:
-  - Actual external APIs (payment gateways, OAuth, third-party services)
-  - Situations where HTTP is required by external service
+1. 删除硬编码路径，统一用 Tauri path API（app data/config dir）。  
+2. 开发态可选读取 `.env`，发布态必须通过平台配置注入。  
+3. 在 `runtime_tauri` 里集中配置加载策略，native host 仅负责启动与依赖注入。
 
-```typescript
-// ❌ Wrong: HTTP to local Axum
-const response = await fetch('http://localhost:1420/api/data');
-const data = await response.json();
+**Warning signs (detection signal):**
+- 代码中出现绝对路径（`/Users/`、`C:\\`）。  
+- 打包后首次启动日志出现 `failed to load .env` 后功能异常。  
+- 不同机器需要“手工改路径”才能运行。
 
-// ✅ Correct: Tauri IPC invoke
-const data = await invoke<{ id: number; name: string }[]>('get_data');
-```
-
-**Warning signs:**
-- Frontend makes `fetch()` calls to `localhost` or `127.0.0.1`
-- Network tab shows "HTTP/1.1 200" for local addresses
-- API response times exceed 100ms for simple queries
-
-**Phase to address:** Integration Phase (Phase 2) — establish correct communication patterns early
+**Phase to address:**
+- v0.1.1 Phase A（路径可移植性） + Phase C（runtime 边界收敛）
 
 ---
 
-### Pitfall 4: Database Migration Missing in Production
+### Pitfall 4: typegen 管线“半自动”导致 Rust/TS 契约漂移
 
 **What goes wrong:**
-SQLite database fails to load on first production run, or schema is outdated causing runtime errors. Works perfectly in development but crashes for users.
+`packages/contracts/api` 当前仍是 placeholder（仅注释），如果直接在 TS 与 Rust 各自手写 DTO，短期可用，后续出现字段名/可空性/枚举值漂移，引发运行时隐性 bug（尤其是 IPC 与 HTTP 双边界）。
 
 **Why it happens:**
-- Migrations embedded at compile time fail to find the database file in production's app data directory
-- No migration runner executes on startup
-- Assumes database file is copied with application bundle
+brownfield 中最常见的是“先手写，后补 typegen”，但后补时常缺少单一真实源（single source of truth）。
 
 **How to avoid:**
-1. Use proper migration library like `rusqlite_migration`:
+1. 规定 `contracts_api` 为唯一契约源；Rust/TS 均由其生成。  
+2. moon 增加显式 `typegen` 任务并作为 `check-all/test-all` 前置依赖。  
+3. CI 增加“生成后无 diff”守门（防止开发者忘记提交生成产物）。  
+4. 对破坏性变更采用版本化策略（至少在 changelog/decision log 标记）。
 
-```rust
-use rusqlite_migration::{Engine, M};
+**Warning signs (detection signal):**
+- `contracts_api/src/lib.rs` 仍为空或仅注释。  
+- PR 里修改了 Rust DTO 但无 TS 类型更新。  
+- E2E 报错集中在序列化/反序列化边界。
 
-fn main() {
-    let migrations = vec![
-        M::up("CREATE TABLE user (id INTEGER PRIMARY KEY, name TEXT)"),
-        M::up("ALTER TABLE user ADD COLUMN email TEXT"),
-    ];
-    
-    let db_path = get_app_data_dir().join("app.db");
-    let mut engine = Engine::builder(db_path)
-        .migrations(&migrations)
-        .build();
-    
-    // Runs migrations automatically if needed
-    engine.execute_migrations();
-}
-```
-
-2. Store database in OS-appropriate location (use `tauri::api::path` or `dirs` crate):
-
-```rust
-use dirs::data_dir;
-let app_data = data_dir().unwrap().join("your-app");
-std::fs::create_dir_all(&app_data).ok();
-let db_path = app_data.join("app.db");
-```
-
-3. Initialize migrations at application startup, not just first run
-
-**Warning signs:**
-- Database path hardcoded to project directory
-- No migration logic visible in startup code
-- Database file exists in source directory but not in installed app
-
-**Phase to address:** Data Layer Phase (Phase 3) — implement migrations with proper path handling
+**Phase to address:**
+- v0.1.1 Phase B（契约与 typegen 闭环）
 
 ---
 
-### Pitfall 5: Desktop Security Model Misunderstanding
+### Pitfall 5: runtime 边界收敛失败，native host 继续膨胀
 
 **What goes wrong:**
-Application has security vulnerabilities exposing user data or allowing remote code execution through malicious web content.
+`apps/client/native/src-tauri/src/lib.rs` 当前承载：DB 初始化、迁移、sync 启动、refresh timer、panic hook、tray 菜单、window close 行为等多类职责。若 v0.1.1 继续在此叠加逻辑，会导致：
+- 回归面扩大（任一改动影响启动路径）；
+- 可测性差（难做细粒度单测）；
+- runtime_tauri 形同虚设。
 
 **Why it happens:**
-- Assuming WebView is same as browser — it's not sandboxed by default
-- Using `nodeIntegration: true` patterns from Electron without understanding Tauri differences
-- Exposing backend commands without input validation
+brownfield 默认“就近改动”偏向在入口文件堆逻辑，短期快，长期不可维护。
 
 **How to avoid:**
-1. **Never trust frontend input** — validate everything in Rust handlers:
+1. 明确边界：`lib.rs` 仅编排；业务初始化移入 `runtime_tauri`。  
+2. 拆分 startup pipeline（config/auth/sync/ui lifecycle）并可独立测试。  
+3. 给 `runtime_tauri` 增加最小 API 面，禁止反向依赖 host 细节。
 
-```rust
-#[tauri::command]
-fn process_user_input(input: String) -> Result<String, String> {
-    // Validate length, content, SQL injection attempts
-    if input.len() > 1000 {
-        return Err("Input too long".into());
-    }
-    if input.contains("DROP TABLE") || input.contains("--") {
-        return Err("Suspicious content".into());
-    }
-    // Proceed with sanitized input
-}
-```
+**Warning signs (detection signal):**
+- `lib.rs` 持续增长且新增 feature 直接改入口。  
+- 新逻辑无法在不启动 Tauri 的情况下测试。  
+- 代码评审频繁出现“顺手在 setup 加一下”。
 
-2. **Configure Content Security Policy (CSP)** in `tauri.conf.json`:
-
-```json
-{
-  "security": {
-    "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
-  }
-}
-```
-
-3. **Use capabilities, not broad permissions** — avoid `allow: *`:
-
-```json
-// ❌ Too broad
-"fs:allow-read-file"
-
-// ✅ Specific scope
-"fs:allow-read-file",
-{
-  "identifier": "fs:scope",
-  "allow": [{ "path": "$APPDATA/my-app/*" }]
-}
-```
-
-4. **Never embed secrets in binary** — use environment variables at runtime, not build time
-
-**Warning signs:**
-- No CSP configured in tauri.conf.json
-- Using `allow: *` in any capability
-- Backend commands接受原始字符串输入 without validation
-- .env files included in production bundle
-
-**Phase to address:** Foundation Phase (Phase 1) — security model must be correct from start
+**Phase to address:**
+- v0.1.1 Phase C（运行时边界收敛）
 
 ---
 
-### Pitfall 6: Cross-Platform Build Complexity Underestimated
+### Pitfall 6: Moon/Just 工作流补全不彻底，文档与执行漂移
 
 **What goes wrong:**
-- Windows build fails when generated on macOS (or vice versa)
-- WebView2 runtime missing on Windows target machines
-- Platform-specific entitlements block macOS builds
-- Path separators break on different OS
+路标要求 `fullstack:dev / typegen / verify` 统一入口，但当前仓库 moon 任务以 cargo check/test 为主，尚未形成“单命令可复现全链路”。结果是：
+- 新成员按文档无法一键跑通；
+- 本地通过与 CI 通过标准不一致；
+- 规划文档状态与真实任务图不一致（planning drift）。
 
 **Why it happens:**
-- Assuming "one build works everywhere" without cross-compilation setup
-- Not testing on target platform before release
-- Hardcoded paths using `/` or `\` instead of Rust's `Path` or `std::path::MAIN_SEPARATOR`
+里程碑是后补式治理，若只补代码不补任务与文档，漂移会在下一轮迭代放大。
 
 **How to avoid:**
-1. **Use `cross` tool or CI/CD for cross-compilation** — requires:
-   - `x86_64-pc-windows-gnu` target on macOS/Linux
-   - Appropriate Windows SDK
+1. 建立统一入口：`fullstack:dev`（web+api+native 编排）、`typegen`、`verify`。  
+2. `verify` 必须覆盖：格式、lint、check、test、typegen-diff、secret/default-value scan。  
+3. 将 `.planning/ROADMAP.md` 的 phase success criteria 映射到可执行任务（任务名即验收项）。  
+4. 每次 phase 结束同步更新 `STATE.md` 与任务矩阵。
 
-2. **Handle paths correctly in Rust:**
+**Warning signs (detection signal):**
+- CI 能过但本地无等价命令；或反之。  
+- ROADMAP 标记完成，但对应 task 不存在。  
+- 新人 README 走不通，需要口头补步骤。
 
-```rust
-use std::path::PathBuf;
-
-fn get_config_path() -> PathBuf {
-    let mut path = dirs::config_dir().unwrap();
-    path.push("my-app");
-    std::fs::create_dir_all(&path).ok();
-    path.push("config.json");
-    path
-}
-
-// In frontend (TypeScript), use Tauri path APIs:
-import { path } from '@tauri-apps/api';
-const configPath = await path.configDir();
-```
-
-3. **Configure WebView2 bootstrap for Windows** in NSIS/MSI installer:
-   - Set `installerHints` or bundle WebView2installer
-
-4. **Test on target platform before release** — at minimum, build on all target platforms
-
-**Warning signs:**
-- Build uses only local OS toolchain
-- Path strings contain hardcoded separators
-- No WebView2 fallback logic in Windows build
-- `panic = "abort"` not set (causes larger binaries with panic data)
-
-**Phase to address:** Build & Distribution Phase (Phase 4) — implement proper cross-platform build pipeline
+**Phase to address:**
+- v0.1.1 Phase D（任务体系补全） + Phase E（决策账本）
 
 ---
 
@@ -303,11 +163,11 @@ const configPath = await path.configDir();
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Skipping capability config in dev | "Works in dev mode" | Breaks in production with cryptic errors | Never — capabilities required from start |
-| Using HTTP for local IPC | "Consistent with web patterns" | 100ms+ latency per call | Never — use invoke() for local |
-| Hardcoding database path | Simple local development | Fails on different OS installs | Never — use OS API paths |
-| Bypassing validation in IPC | "Faster development" | Security vulnerabilities | Never |
-| Debug build for performance testing | Faster compiles | Misleading benchmarks | Never — use release for any performance work |
+| `insecure_decode` 先上线 | 快速打通租户链路 | 高危越权风险 | 仅限本地 PoC，禁止进入生产分支 |
+| 客户端配置返回 secret | 调试方便 | 凭据暴露面扩大 | Never |
+| 入口 `lib.rs` 集中堆功能 | 改起来快 | 回归半径持续扩大 | 仅限临时 hotfix，需后续拆分 ticket |
+| 手写双端类型 | 无需搭 typegen | 长期契约漂移 | 一次性 spike 可接受，合入主干前必须回归 typegen |
+| 文档先不更新 | 节省当下时间 | 团队执行分叉 | Never（本里程碑目标即“决策沉淀”） |
 
 ---
 
@@ -315,11 +175,11 @@ const configPath = await path.configDir();
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Axum HTTP server | Using `127.0.0.1` which binds to specific interface | Use `0.0.0.0` for desktop, but prefer IPC for local communication |
-| SQLite database | Not creating app data directory | Ensure `$APPDATA/app-name/` exists before DB operations |
-| Tauri plugin initialization | Initializing plugins after Tauri builder | Add plugins in `tauri::Builder::default().plugin(...)` chain |
-| Environment variables | Embedding secrets at build time | Load from `.env` at runtime, use keychain plugins for production |
-| WebView2 (Windows) | Assuming it's always installed | Bundle installer or check at runtime with graceful fallback |
+| Axum tenant middleware × OAuth tokens | 只读 `sub` 不验签 | 使用 `decode + Validation` 并校验 iss/aud/exp |
+| Tauri plugin-store × auth session | 把 refresh token 明文长期存储 | token 分级存储；高敏感迁移 Stronghold |
+| Tauri setup × 环境配置 | 依赖项目根 `.env` + 绝对路径 | 发布态走标准配置注入 + path API |
+| contracts_api × 前端类型 | contract crate 仍 placeholder | 先固化 contract schema，再生成 TS/Rust 类型 |
+| moon tasks × roadmap criteria | 只有 cargo 子集任务 | 增加 fullstack/typegen/verify 与文档双向绑定 |
 
 ---
 
@@ -327,11 +187,9 @@ const configPath = await path.configDir();
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| HTTP to localhost | 100ms+ API latency | Use Tauri `invoke()` | Every request — significant cumulative delay |
-| Large IPC payloads | UI freezes during data transfer | Chunk data >1MB, use streaming | Large database queries, file operations |
-| No binary size optimization | 50MB+ executables | Configure LTO, strip, opt-level=z | Distribution — users refuse downloads |
-| Blocking IPC on main thread | UI freezes | Use `tokio::spawn` for long operations | Any blocking operation >100ms |
-| Memory leaks in Rust | Growing memory usage | Use appropriate ownership patterns | Long-running applications |
+| 启动阶段串行做太多初始化 | 冷启动慢、偶发超时 | 分层初始化（关键路径最小化，后台异步延迟加载） | 功能增加后立即恶化 |
+| typegen 未增量化 | CI 时间显著上升 | 基于输入变更触发生成，缓存产物 | 合同规模扩大后明显 |
+| 单入口文件高耦合 | 小改动引发大范围重编译/回归 | runtime 边界拆分 | 中期持续恶化 |
 
 ---
 
@@ -339,36 +197,32 @@ const configPath = await path.configDir();
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| No CSP configured | XSS attacks execute malicious scripts | Set strict CSP in tauri.conf.json |
-| Broad capability permissions | Compromise allows wider system access | Use specific permissions with scopes |
-| No input validation in IPC | SQL injection, command injection | Validate all arguments in Rust handlers |
-| Embedding secrets in binary | Reverse engineering exposes credentials | Use runtime env vars, keychain plugins |
-| `nodeIntegration` equivalent | Not applicable to Tauri (different model) | Never enable Node.js in WebView |
-| No capability isolation | One compromised feature exposes all | Use separate capabilities per feature window |
+| `dangerous::insecure_decode` 用于权限决策 | 伪造 token 越权 | 强制验签与 claim 验证 |
+| 占位默认 secret 可运行 | 生产弱密钥/错误配置上线 | prod fail-fast + verify 扫描 |
+| 客户端暴露 `google_client_secret` | 凭据泄露 | 客户端仅保留 public config |
+| 普通 store 长期存放高敏 token | 本地泄露风险 | Stronghold/OS 安全存储 + 轮换策略 |
+| permissive CORS 长期保留 | 跨域攻击面扩大 | dev/prod 分离配置，生产最小化策略 |
 
 ---
 
-## UX Pitfalls
+## Workflow / Documentation Drift Pitfalls
 
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| No loading states for IPC | User thinks app is frozen | Show loading indicators during invoke() calls |
-| Blank window on production, fine in dev | User can't use app | Test production build before release; check WebView availability |
-| No error messages for permission denials | Users don't know why features fail | Display friendly error dialogs with resolution steps |
-| Different behavior dev vs prod | QA misses critical bugs | Mirror production config in development |
+| Pitfall | Impact | Guardrail |
+|---------|--------|-----------|
+| ROADMAP 状态与真实代码不一致 | 决策失真，后续 phase 误判 | 每次 phase 完成后同步 STATE/ROADMAP/任务清单 |
+| 任务名不稳定（同义多命令） | 团队执行习惯分裂 | 只保留官方入口：fullstack:dev/typegen/verify |
+| 决策仅在聊天记录，不落盘 | 关键约束丢失 | 维护决策账本（实现/延期/放弃+原因） |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Capabilities:** Configured but not tested in production build — verify on fresh install
-- [ ] **Database migrations:** Tested in dev but not in clean production environment
-- [ ] **IPC validation:** Backend accepts calls but never validated malicious input
-- [ ] **CSP:** Configured but allows `'unsafe-inline'` — cookie-monster attacks possible
-- [ ] **File paths:** Work in source directory but fail in installed app location
-- [ ] **Cross-platform builds:** Windows build tested on Windows before release
-- [ ] **WebView2:** Windows deployment includes fallback for missing runtime
-- [ ] **Error handling:** IPC errors caught but no user-facing messages
+- [ ] **Tenant middleware:** 已能解析 token，但未验证签名/aud/iss/exp。  
+- [ ] **Security hardening:** 已有 env 读取，但仍允许占位默认值进入运行。  
+- [ ] **Typegen:** 有 contracts crate，但未接入 CI diff 守门。  
+- [ ] **Boundary refactor:** runtime_tauri crate 存在，但 host 入口职责未减。  
+- [ ] **Workflow:** moon 有 check/test，但无 fullstack:dev/typegen/verify 统一闭环。  
+- [ ] **Docs:** phase 标记完成，但无可执行命令映射到 success criteria。
 
 ---
 
@@ -376,37 +230,46 @@ const configPath = await path.configDir();
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Permission denied in production | MEDIUM | Add missing capability to JSON file, rebuild and release |
-| Database migration failed | HIGH | Implement backup/restore, manual migration path for users |
-| Security vulnerability found | HIGH | Patch release, potential user notification, audit logs |
-| Cross-platform build failure | MEDIUM | Set up proper CI/CD with target platform toolchains |
-| Bundle size too large | LOW | Add optimize flags, rebuild — typically 50%+ reduction |
+| 伪造 token 越权已上线 | HIGH | 立即切验签；轮换密钥；审计访问日志；补跨租户回归测试 |
+| secret 默认值进入生产 | HIGH | 立即失效旧凭据；添加启动阻断；补 CI secret-scan |
+| type 漂移导致线上序列化错误 | MEDIUM | 回滚到最近一致版本；补 typegen 单源；加 contract compatibility test |
+| 边界重构引发启动回归 | MEDIUM | 分阶段拆分 + feature flag；保留旧路径回退窗口 |
+| 文档/任务漂移 | LOW-MEDIUM | 统一任务入口；将验收项改为“命令可验证”并补自动检查 |
 
 ---
 
-## Pitfall-to-Phase Mapping
+## Pitfall-to-Phase Mapping (v0.1.1)
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Permission system misconfiguration | Foundation (Phase 1) | Build production .exe, test in clean environment |
-| Bundle size bloat | Foundation (Phase 1) | Check release binary size <20MB |
-| IPC vs HTTP mismatch | Integration (Phase 2) | Network tab shows no localhost HTTP calls |
-| Database migration issues | Data Layer (Phase 3) | Fresh install on clean system works |
-| Security model gaps | Foundation (Phase 1) | Security audit, CSP testing |
-| Cross-platform builds | Build & Distribution (Phase 4) | Build on all target platforms, test each |
+| JWT 未验签导致租户伪造 | Phase A 安全基线 | 伪造 token E2E 必须 401；合法 token 200 |
+| 默认占位 secret / 客户端 secret 暴露 | Phase A 安全基线 | 生产配置缺失时启动失败；`get_config` 不含 secret |
+| 绝对路径/.env 依赖 | Phase A + C | 跨机器/CI/打包安装场景一致通过 |
+| contracts_api 空壳、双端类型漂移 | Phase B typegen | typegen 后 git diff 必须为空 |
+| host 入口职责膨胀 | Phase C 边界收敛 | `lib.rs` 仅编排；新增 feature 不再直接改入口 |
+| moon/文档执行漂移 | Phase D + E | `verify` 一条命令覆盖里程碑验收项；STATE/ROADMAP 同步 |
 
 ---
 
 ## Sources
 
-- Tauri v2 Documentation: https://tauri.app (App Size, Security, Permissions sections)
-- Tauri v2 Security Model Guide: https://www.oflight.co.jp/en/columns/tauri-v2-security-model (Comprehensive permission-based access control)
-- Tauri GitHub Issues: #14259 (fs permissions bug), #12312 (cross-platform compilation)
-- Community Discussions: Tauri Discord, Reddit r/tauri
-- Rust crates: rusqlite_migration, tauri-plugin-fs, tauri-plugin-http
-- CVE Database comparison (Electron vs Tauri security)
+### HIGH confidence
+- Repository evidence (current milestone code):  
+  - `servers/api/src/middleware/tenant.rs`  
+  - `apps/client/native/src-tauri/src/commands/config.rs`  
+  - `apps/client/native/src-tauri/src/lib.rs`  
+  - `apps/client/native/src-tauri/src/commands/auth.rs`  
+  - `packages/contracts/api/src/lib.rs`  
+  - `moon.yml` + module-level `moon.yml`
+- Context7 / Official docs:  
+  - jsonwebtoken (`dangerous::insecure_decode` does not verify signature/claims)  
+  - Tauri v2 permissions/capabilities model（deny-by-default + capability attachment）  
+  - Tauri plugins workspace（Stronghold for secure secret storage）
+
+### MEDIUM confidence
+- 具体“最佳实践落地方式”（如 token 分级策略、任务命名细节）属于工程策略层，需要在本里程碑 design review 中最终定稿。
 
 ---
 
-*Pitfalls research for: Tauri+SvelteKit+Axum Full-Stack Desktop Application*
-*Researched: 2026-03-28*
+*Pitfalls research for: brownfield Tauri+SvelteKit+Axum v0.1.1*  
+*Researched: 2026-04-01*

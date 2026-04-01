@@ -1,208 +1,183 @@
 # Project Research Summary
 
-**Project:** Tauri + SvelteKit + Axum Full-Stack Desktop Boilerplate
-**Domain:** Cross-platform desktop application with embedded backend
-**Researched:** 2026-03-28
+**Project:** Tauri-SvelteKit-Axum Boilerplate（v0.1.1）
+**Domain:** 跨端桌面模板工程收敛（安全、契约、运行时边界、流程治理）
+**Researched:** 2026-04-01
 **Confidence:** HIGH
 
 ## Executive Summary
 
-This project is a production-ready boilerplate for building cross-platform desktop applications using **Tauri 2** (Rust-based desktop shell), **SvelteKit** (frontend framework with Svelte 5 runes), and **Axum** (embedded HTTP server). The research confirms this is an established and well-supported stack as of March 2026, with a real-world precedent shipping an 18MB binary with 114 API routes. The template uses a **moon** polyglot build orchestrator and **bun** as package manager, both already integrated.
+这不是“新增业务功能”里程碑，而是一个 **生产闭环收口里程碑**：把已有可运行模板从“能跑”提升到“可持续迭代、可审计、可自动验证”。四份研究在结论上高度一致：当前最大风险不是技术栈选错，而是关键边界尚未落地（`contracts_api` 和 `runtime_tauri` 仍是 placeholder）、安全链路仍有历史临时方案（`insecure_decode` / 默认占位 secret），以及任务体系还没把目标转成强约束门禁。
 
-The recommended architecture follows **Clean Architecture** principles: a `domain` crate for pure business logic, an `application` crate for use case orchestration, `runtime_tauri` for Tauri IPC glue, `runtime_server` for Axum HTTP endpoints, and a `shared_contracts` crate for type-safe DTOs across the Rust/TypeScript boundary. The primary IPC mechanism should be **Tauri `invoke()` calls** (1-5ms latency, type-safe), not HTTP to localhost (50-200ms, no type safety). Axum is reserved for external-facing endpoints like OAuth callbacks and webhooks.
+推荐路径是“最小改动、高收益优先”的顺序：先补安全基线（JWT 验签、敏感配置 fail-fast、路径可移植），再补契约闭环（`contracts_api` + `ts-rs` + `typegen` 门禁），然后做运行时边界收敛（新能力走 `runtime_tauri`，native host 瘦身），最后把 moon/just 与决策账本绑定为可执行治理。这个顺序同时满足依赖关系与风险最小化，避免在 v0.1.1 触发全仓重构。
 
-Key risks center on **Tauri 2's permission system** (deny-by-default, must configure capabilities before any feature development), **bundle size optimization** (must configure LTO/release profile from the start), and **cross-platform build complexity** (WebView2 on Windows, platform-specific entitlements on macOS). The database strategy uses **libsql** (SQLite-compatible, pure Rust, concurrent reads, optional Turso cloud sync) with `rusqlite_migration` for embedded migrations. Google OAuth via deep link callback is the authentication requirement; multi-tenant isolation via `tenant_id` column scoping is a core feature.
+核心风险与缓解：最大风险是“看起来完成但实际没闭环”（文档写了、代码跑了，但无 verify 门禁）。缓解策略是把每个里程碑目标映射到可执行命令与可检测信号：伪造 token 必须 401、typegen 后 git diff 必须为空、生产缺关键 secret 必须启动失败、host 入口不再继续堆业务逻辑。这样 roadmap 才不会在下一 phase 回退。
 
 ## Key Findings
 
 ### Recommended Stack
 
-See [STACK.md](./STACK.md) for full details.
+详见 [STACK.md](./STACK.md)。v0.1.1 的栈结论是“**增量补强，不换底座**”。
 
-**Core technologies:**
-- **Tauri 2.10.x**: Desktop app shell — latest stable with mobile support, capability-based security, plugin ecosystem
-- **SvelteKit 2.x + Svelte 5.x**: Frontend framework — runes-based reactivity (`$state`, `$derived`, `$effect`), adapter-static SPA mode for Tauri
-- **Axum 0.8.x**: Embedded HTTP server — Tower ecosystem, ergonomic extractors, reserved for external API endpoints only
-- **libsql**: Embedded SQLite-compatible database — pure Rust, concurrent reads, Turso sync path for cloud backup
-- **Vite 8.x**: Build tool — native ESM, HMR, optimal Tauri integration
-- **moon + bun**: Build orchestration + package manager — already in template
-
-**Required Tauri 2 plugins:** `tauri-plugin-shell`, `tauri-plugin-dialog`, `tauri-plugin-store` (all v2.x). High priority: `tauri-plugin-fs`, `tauri-plugin-window-state`, `tauri-plugin-updater`. All plugins follow capability-based permissions — each must be declared in `capabilities/default.json`.
-
-**Testing stack:** `cargo test` + `rstest` for Rust, Vitest + `vitest-browser-svelte` for Svelte components, Playwright for E2E.
+**Core technologies（新增/变更）:**
+- `openidconnect@4.0.1`：用于 OIDC discovery + JWKS + ID Token 验签，直接替换 payload-only 解码缺口。
+- `ts-rs@12.0.1`：从 Rust DTO 自动导出 TS 类型，建立 Rust/TS 契约单一真相源。
+- `tauri-specta@2.0.0-rc.24`（可选二阶段）：命令签名导出 TS 绑定，但因 RC 状态不作为 v0.1.1 必做。
+- moon/just 现有能力增强：通过 `deps/inputs/outputs` + `dotenv-load` 把 typegen/verify 变成可缓存、可复现任务图。
 
 ### Expected Features
 
-See [FEATURES.md](./FEATURES.md) for full details.
+详见 [FEATURES.md](./FEATURES.md)。
 
-**Must have (v1 — table stakes):**
-- Google OAuth login with deep link callback — core PROJECT.md requirement
-- Session persistence (JWT in tauri-plugin-store) — required for auth to be useful
-- Multi-tenant data isolation (`tenant_id` in schema) — core PROJECT.md requirement
-- libsql database with basic schema and migrations — required for any data persistence
-- System tray with show/hide/quit — expected desktop feature
-- Window state persistence — trivial to add, high user expectation
-- Single instance lock — prevents duplicate launches
-- Docker-compose for local dev infrastructure — core PROJECT.md requirement
-- Error boundaries + toast notifications — required for production feel
+**Must have（table stakes / v0.1.1 必做）:**
+- IN-01 JWT 最小安全校验闭环
+- IN-02 敏感配置分级与 fail-fast
+- IN-03 路径可移植性统一
+- IN-04 `contracts_api` 单一契约源
+- IN-05 `typegen` 纳入 `verify` 并防漂移
+- IN-06 `runtime_tauri` 与 native host 边界收敛
+- IN-07 决策账本 v1（implement/defer/reject）
+- IN-08 deferred 的 future phase 摘要沉淀
 
-**Should have (v1.x — competitive differentiators):**
-- Embedded Axum server (full REST API inside desktop app — rare in Tauri templates)
-- Local-first database with Turso sync (offline-capable, syncs when connected)
-- Auto-updater (when ready to distribute)
-- Deep link protocol handler (extending OAuth pattern for custom URLs)
+**Should have（differentiators）:**
+- 决策账本可执行化（决策→任务→验证三向映射）
+- 契约漂移 CI 门禁（生成后有 diff 即失败）
+- 安全基线可观测（输出 machine-readable 检查结果）
 
-**Defer (v2+):**
-- Mobile (iOS/Android) support — Tauri mobile is maturing, desktop-first is scope
-- CRDT-based collaborative editing — very complex, feature-specific
-- Complex RBAC/permissions — massive scope creep for boilerplate
-- Email/password auth — doubles auth surface, add when specific project needs it
-- Server-side rendering — incompatible with Tauri WebView, SPA mode is correct
+**Defer（v0.1.2+）:**
+- DF-01 完整 JWKS 缓存与轮换
+- DF-02 细粒度 RBAC
+- DF-03 决策账本自动生成器
+- DF-04 跨语言契约版本协商
+
+**Reject / Out-of-scope（本里程碑明确不做）:**
+- OOS-01 新认证方式（email/password）
+- OOS-02 新业务页面/模块扩展
+- OOS-03 全栈技术栈替换或大规模迁移
+- OOS-04 新增重型基础设施
+- 以及架构研究明确 reject：v0.1.1 引入 `tauri-plugin-axum` 作为主通信路径
 
 ### Architecture Approach
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for full details.
-
-The architecture is a **layered Clean Architecture** with clear separation of concerns and two runtime entry points (Tauri and Axum) sharing the same domain and application layers.
+详见 [ARCHITECTURE.md](./ARCHITECTURE.md)。方向不是重构重写，而是在现有仓库上做 **Contract-first + Strangler-style runtime migration**。
 
 **Major components:**
-1. **SvelteKit SPA Frontend** (`apps/desktop-ui/`) — UI rendering, SPA routing, communicates via Tauri `invoke()` through typed IPC wrapper functions in `lib/ipc/`
-2. **Domain Crate** (`crates/domain/`) — Pure business rules, zero external dependencies, entities and value objects
-3. **Application Crate** (`crates/application/`) — Use case orchestration, defines trait interfaces (ports) for infrastructure
-4. **Runtime Tauri** (`crates/runtime_tauri/`) — `#[tauri::command]` handlers, plugin registration, app state management
-5. **Runtime Server** (`crates/runtime_server/`) — Axum HTTP routes, Tower middleware (CORS, compression, tracing)
-6. **Shared Contracts** (`crates/shared_contracts/`) — DTOs shared between frontend and backend, single source of truth for types
-
-**Key architectural decisions:**
-- **IPC over HTTP for local communication** — `invoke()` is 20-100x faster than HTTP to localhost and provides compile-time type safety
-- **Svelte 5 runes** for all state management — no external state library needed
-- **Tenant-scoped repository pattern** — all data access auto-scoped by `tenant_id` to prevent cross-tenant leaks
-- **Axum reserved for external endpoints** — OAuth callbacks, webhooks, future public API
+1. `packages/contracts/api` — 外部 DTO/错误模型唯一真相源，驱动 TS 导出。
+2. `packages/adapters/hosts/tauri` (`runtime_tauri`) — 命令注册、状态桥接、事件桥。
+3. `apps/client/native/src-tauri` — 保留 builder 与平台壳层装配，剥离业务初始化。
+4. `servers/api` — HTTP 路由/中间件/状态注入，业务规则继续下沉 usecases。
 
 ### Critical Pitfalls
 
-See [PITFALLS.md](./PITFALLS.md) for full details.
+详见 [PITFALLS.md](./PITFALLS.md)。Top 5：
 
-1. **Tauri 2 Permission System Misconfiguration** — Deny-by-default security model; plugins fail silently without capability declarations. Must configure `capabilities/default.json` before any feature development. *Prevention: add permissions for every plugin at install time, test in production build.*
-
-2. **Bundle Size Bloat** — Default Cargo settings produce 50MB+ binaries when 5-10MB is achievable. *Prevention: configure `[profile.release]` with `lto=true`, `codegen-units=1`, `opt-level="z"`, `strip=true` from the start.*
-
-3. **IPC vs HTTP Performance Mismatch** — Using `fetch('http://localhost:...')` for local communication adds 50-200ms latency vs 1-5ms for `invoke()`. *Prevention: use Tauri IPC for all frontend↔Rust communication; HTTP only for external services.*
-
-4. **Database Migration Failures in Production** — Hardcoded paths and missing migration runners cause crashes on first production run. *Prevention: use `rusqlite_migration`, store DB in OS-appropriate data directory via `app.path().app_local_data_dir()`, run migrations on every startup.*
-
-5. **Cross-Platform Build Complexity** — WebView2 missing on Windows, platform-specific entitlements, path separator issues. *Prevention: CI/CD with target platform toolchains, use `std::path::Path` everywhere, bundle WebView2 installer for Windows.*
+1. **`insecure_decode` 伪造租户风险** — 必须改为验签+claims 校验并做负向测试。
+2. **占位 secret/默认弱配置漏入运行时** — 生产环境 fail-fast，且客户端不得回传 secret。
+3. **硬编码绝对路径与 `.env` 本机依赖** — 统一 Tauri path API 与环境注入策略。
+4. **typegen 半自动导致契约漂移** — `contracts_api` 单源 + CI diff gate。
+5. **native host 继续膨胀** — 以 `runtime_tauri` 承接新能力，入口只保留编排。
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+基于四份研究，建议 roadmap 采用 5 个阶段（与依赖严格对齐）：
 
-### Phase 1: Foundation & Configuration
-**Rationale:** Must come first — Tauri 2's permission system and build optimization are prerequisites for everything else. Skipping this causes cryptic production failures and bloated binaries.
-**Delivers:** Working Tauri 2 + SvelteKit + Axum scaffold with correct capabilities, optimized build profile, moon task configuration
-**Addresses:** Window state persistence, single instance lock (trivially achievable in this phase)
-**Avoids:** Pitfall 1 (permission misconfiguration), Pitfall 2 (bundle size bloat), Pitfall 6 (cross-platform build issues)
-**Stack:** Tauri 2.10.x, SvelteKit 2.x, Axum 0.8.x, Vite 8.x, moon, bun
-**Research needed:** No — well-documented setup patterns
+### Phase 1: Security Baseline Closure
+**Rationale:** 风险最高、收益最大，且是后续所有 phase 的前置门槛。  
+**Delivers:** JWT 验签替换、secret fail-fast、路径可移植策略。  
+**Addresses:** IN-01 / IN-02 / IN-03。  
+**Avoids:** Pitfall 1/2/3。
 
-### Phase 2: Authentication & Session Management
-**Rationale:** Auth is a dependency for multi-tenancy and data isolation. Must implement before any data layer work.
-**Delivers:** Google OAuth login via deep link callback, JWT session persistence, user entity
-**Addresses:** Google OAuth login (P1), Session persistence (P1), Deep link protocol handler
-**Avoids:** Pitfall 5 (security model gaps — CSP, input validation)
-**Stack:** `tauri-plugin-deep-link`, `tauri-plugin-store`, `tauri-plugin-google-auth` or manual OAuth flow
-**Research needed:** YES — OAuth flow complexity, deep link registration per platform
+### Phase 2: Contract-First Typegen Closure
+**Rationale:** 无契约单源就无法防漂移，后续边界收敛都会返工。  
+**Delivers:** `contracts_api` DTO、`ts-rs` 导出、`typegen` 任务与 drift check。  
+**Addresses:** IN-04 / IN-05。  
+**Avoids:** Pitfall 4。
 
-### Phase 3: Data Layer & Multi-Tenancy
-**Rationale:** Depends on auth (knows tenant_id). Implements the core persistence and isolation features.
-**Delivers:** libsql database setup, schema with `tenant_id` columns, migration system, tenant-scoped repository pattern
-**Addresses:** libsql database (P1), Multi-tenant data isolation (P1), Docker-compose dev infrastructure
-**Avoids:** Pitfall 4 (database migration failures — use `rusqlite_migration`, proper path handling)
-**Stack:** libsql crate, rusqlite_migration, docker-compose
-**Research needed:** Partially — libsql integration patterns, but SQLite schema design is well-understood
+### Phase 3: Runtime Boundary Convergence
+**Rationale:** 在功能不变前提下先收入口，再引入新增能力走新路径。  
+**Delivers:** `runtime_tauri` skeleton、host 瘦身第一步、新能力采用新边界。  
+**Addresses:** IN-06。  
+**Avoids:** Pitfall 5。
 
-### Phase 4: Desktop Features & Polish
-**Rationale:** Independent of auth/data — can be developed in parallel but logically follows once core app works.
-**Delivers:** System tray, native dialogs, error boundaries, toast notifications, loading states
-**Addresses:** System tray (P1), Native file dialogs, Error boundaries + toasts (P1)
-**Avoids:** UX pitfalls (no loading states, blank windows, unhelpful error messages)
-**Stack:** Tauri built-in TrayIconBuilder, `tauri-plugin-dialog`, `tauri-plugin-notification`
-**Research needed:** No — well-documented Tauri plugin APIs
+### Phase 4: Workflow Guardrails & Verify Unification
+**Rationale:** 把前 3 个阶段从“约定”变成“机器强约束”。  
+**Delivers:** `fullstack:dev` / `typegen` / `verify` 统一入口与验收映射。  
+**Addresses:** IN-05（持续化）+ IN-06（防回流）。  
+**Avoids:** Pitfall 6（文档与执行漂移）。
 
-### Phase 5: Distribution & Updates
-**Rationale:** Final phase — needed when ready to ship to users. Depends on all previous phases being stable.
-**Delivers:** Auto-updater, signing key configuration, platform-specific installers (MSI/DMG/AppImage)
-**Addresses:** Auto-updater (P2), Cross-platform build pipeline
-**Avoids:** Pitfall 6 (cross-platform build complexity — CI/CD with all target platforms)
-**Stack:** `tauri-plugin-updater`, GitHub Actions or similar CI for multi-platform builds
-**Research needed:** Partially — signing and notarization per platform
-
-### Phase 6: Advanced Features (v1.x)
-**Rationale:** Post-launch enhancements based on validated needs.
-**Delivers:** Turso cloud sync, embedded Axum REST API (for external consumers), native notifications, global shortcuts
-**Addresses:** Turso cloud sync (P2), Embedded Axum API (P3), Native notifications (P2)
-**Stack:** `tauri-plugin-libsql`, Axum routes with Tower middleware
-**Research needed:** YES — Turso sync patterns, embedded replica architecture
+### Phase 5: Decision Ledger Finalization & Forward Map
+**Rationale:** 本里程碑目标包含“决策沉淀”，不做会导致 deferred/out-of-scope 信息丢失。  
+**Delivers:** implement-now / defer / reject 全量登记、触发条件、后续 phase 映射。  
+**Addresses:** IN-07 / IN-08。  
+**Avoids:** 决策上下文在下一轮规划中失真。
 
 ### Phase Ordering Rationale
 
-- **Foundation first** (Phase 1): Tauri 2 capabilities and build config are prerequisites; mistakes here cause production-only failures that are hard to debug
-- **Auth before data** (Phase 2 → 3): Multi-tenancy requires knowing the tenant; auth must exist before tenant-scoped data access
-- **Features after core** (Phase 4): Desktop polish is independent but logically follows once the app has functional auth and data
-- **Distribution last** (Phase 5): Signing keys, installers, and update servers are only needed when ready to ship
-- **Advanced features deferred** (Phase 6): Turso sync and Axum REST API add complexity; validate core product first
+- 安全先于契约：先堵高危漏洞，避免“错误能力被更好地类型化”。
+- 契约先于边界：先统一协议，边界迁移才不会双向漂移。
+- 边界先于流程：先有结构，再把结构做成 verify 门禁。
+- 流程先于沉淀：最后固化账本，确保状态与执行一致。
+
+### Implement-now vs Defer vs Reject（显式结论）
+
+| Bucket | Items | 执行结论 |
+|---|---|---|
+| **Implement-now（v0.1.1）** | IN-01..IN-08 | 全部纳入当前 roadmap，按 Phase 1→5 实施 |
+| **Defer（后续 phase）** | DF-01 JWKS 轮换、DF-02 RBAC、DF-03 账本自动化、DF-04 契约版本协商 | 不在本里程碑实现，但必须在账本保留“升级触发条件” |
+| **Reject / Out-of-scope（本里程碑）** | OOS-01..OOS-04，及 v0.1.1 引入 tauri-plugin-axum 主路径 | 明确拒绝进入 v0.1.1，防止范围膨胀 |
+
+### Why deferred/rejected still preserved, and where tracked
+
+- **为什么必须保留：** deferred/reject 都是未来决策的输入，不保留会重复争论、重复踩坑。
+- **如何保留：** 写入决策账本（建议目录 `.planning/decisions/`，并在 `.planning/ROADMAP.md` phase 处反向链接）。
+- **记录字段最低要求：** `Status(implement/defer/reject)`、`Reason`、`Target Phase/Trigger`、`Verification/Exit Criteria`、`Source Link`。
+- **执行约束：** `verify` 阶段检查账本条目完整性，确保 deferred/reject 不是“消失的决定”。
+
+### Brief Next-Phase Outlook（防战略上下文丢失）
+
+v0.1.2 的首要候选应是 **DF-01（JWKS 缓存与轮换）+ DF-03（账本自动化）**：前者继续提升安全韧性，后者降低治理维护成本。DF-02（细粒度 RBAC）与 DF-04（契约版本协商）应在出现明确多角色/外部客户端需求后再晋升，避免提前复杂化。
 
 ### Research Flags
 
-Phases needing deeper research during planning:
-- **Phase 2 (Auth):** OAuth deep link flow varies by platform; `tauri-plugin-google-auth` is relatively new (v0.5.1). Needs validation of the plugin vs manual OAuth implementation trade-off.
-- **Phase 6 (Advanced):** Turso embedded replica patterns and `tauri-plugin-libsql` (v0.1.0) are bleeding edge. Needs proof-of-concept.
+**需要 `/gsd-research-phase` 的阶段：**
+- Phase 1：JWT/OIDC 验签细节与 token 存储分级方案（安全高风险，需设计评审）。
+- Phase 3：runtime_tauri 迁移切片策略（避免一次性迁移回归）。
+- v0.1.2 候选 DF-01：多 issuer / 多环境 JWKS 缓存轮换策略。
 
-Phases with standard patterns (skip research):
-- **Phase 1 (Foundation):** Well-documented Tauri 2 setup, moon configuration patterns exist in template
-- **Phase 3 (Data Layer):** SQLite schema design and migrations are mature; libsql is wire-compatible
-- **Phase 4 (Desktop Features):** Tauri plugin APIs are extensively documented
+**可按标准模式直接推进的阶段：**
+- Phase 2：`ts-rs` contract-first/typegen（文档充分，路径清晰）。
+- Phase 4：moon/just 任务编排与 verify 聚合（已有工具能力匹配）。
+- Phase 5：决策账本模板化与字段校验（流程问题，不需新技术探索）。
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Official docs, version compatibility verified, real-world production precedent (Reddit Mar 2026) |
-| Features | HIGH | Feature prioritization grounded in PROJECT.md requirements and Tauri 2 plugin ecosystem |
-| Architecture | HIGH | Clean Architecture is well-established; IPC vs HTTP decision clear from performance data |
-| Pitfalls | MEDIUM-HIGH | Based on Tauri GitHub issues, community reports, and documented anti-patterns; some platform-specific edge cases may surface during implementation |
+| Stack | HIGH | 关键新增栈由 Context7 + 官方文档交叉验证；版本和兼容性明确 |
+| Features | HIGH | 与 PROJECT.md 里程碑目标高度一致，implement/defer/reject 边界清晰 |
+| Architecture | HIGH | 基于仓库实证（placeholder/fat-host）+ 低风险迁移模式，路径可执行 |
+| Pitfalls | HIGH | 均有代码证据与可观测信号，且已映射到 phase 验证项 |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Google OAuth plugin maturity:** `tauri-plugin-google-auth` is v0.5.1 — evaluate whether to use it or implement manual OAuth with `tauri-plugin-deep-link`. Validate during Phase 2 planning.
-- **Tauri mobile readiness:** PROJECT.md mentions mobile-responsiveness; Tauri 2 mobile support is functional but less mature than desktop. Defer mobile to v2+.
-- **Drizzle ORM in WebView:** Using Drizzle via `sqlite-proxy` driver is documented but not mainstream. May need fallback to sqlx (Rust-side) for complex queries.
-- **Cross-platform CI/CD:** Specific GitHub Actions workflow configuration for Windows/macOS/Linux builds not researched in detail. Address during Phase 5 planning.
-- **Turso production readiness:** `tauri-plugin-libsql` is v0.1.0 — very early. Cloud sync features should be gated behind feature flag when implemented.
+- `tauri-specta` 仍为 RC：仅作为后续增强，不进入 v0.1.1 必做范围。
+- token 高敏存储（Stronghold 分级）的最终策略需在 Phase 1 设计评审定稿。
+- 双数据库物理统一不在当前里程碑；仅做契约/端口收敛并保留后续评估票据。
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [Tauri 2 Documentation](https://v2.tauri.app/) — plugin list, security model, IPC, system tray, capabilities
-- [Context7: Axum docs](/tokio-rs/axum) — middleware patterns, Tower integration
-- [Context7: SvelteKit docs](/sveltejs/kit) — adapter-static SPA configuration
-- [Svelte 5 Runes](https://svelte.dev/docs/svelte/$state) — $state, $derived, $effect
-- [libSQL GitHub](https://github.com/tursodatabase/libsql) — 16.5k stars, embedded SQLite with Turso sync
+- [STACK.md](./STACK.md) — `openidconnect`/`ts-rs`/moon/just 增量栈与迁移顺序
+- [FEATURES.md](./FEATURES.md) — IN/DF/OOS 明确边界与验收
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — contract-first + runtime 收敛策略
+- [PITFALLS.md](./PITFALLS.md) — 关键风险、检测信号、phase 映射
+- [.planning/PROJECT.md](../PROJECT.md) — 当前里程碑目标与 active requirements
 
 ### Secondary (MEDIUM confidence)
-- [Reddit: Shipped Tauri 2 + Svelte 5 + Axum](https://www.reddit.com/r/tauri/comments/1s4ah2f/) — 18MB binary, 114 API routes (Mar 2026)
-- [Vitest + Svelte Testing Patterns](https://fubits.dev/notes/2026-02-21-collection-vitest-svelte-sveltekit-testing/) — Feb 2026
-- [Rust ORMs 2026 Comparison](https://aarambhdevhub.medium.com/rust-orms-in-2026) — sqlx vs sea-orm vs diesel
-- [Building Local-First Tauri App](https://dev.to/huakun/building-a-local-first-tauri-app-with-drizzle-orm-encryption-and-turso-sync-31pn) — Drizzle + libsql + Turso patterns
-- [Multi-Tenant SaaS Architecture 2026](https://dev.to/waqarhabib/building-a-multi-tenant-saas-app-with-react-and-nodejs-in-2026-31ih) — tenant_id isolation
-
-### Tertiary (LOW confidence)
-- [tauri-plugin-google-auth v0.5.1](https://crates.io/crates/tauri-plugin-google-auth) — newer plugin, needs validation
-- [tauri-plugin-libsql v0.1.0](https://crates.io/crates/tauri-plugin-libsql) — very early stage (Feb 2026)
-- [Tauri GitHub Issues](https://github.com/tauri-apps/tauri/issues) — #14259 (fs permissions), #12312 (cross-platform compilation)
+- Context7 聚合源：`/ramosbugs/openidconnect-rs`, `/aleph-alpha/ts-rs`, `/moonrepo/moon`, `/casey/just`, `/specta-rs/tauri-specta`
 
 ---
-*Research completed: 2026-03-28*
+*Research completed: 2026-04-01*  
 *Ready for roadmap: yes*

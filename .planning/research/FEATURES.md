@@ -1,324 +1,166 @@
 # Feature Research
 
-**Domain:** Tauri 2 + SvelteKit + Axum Full-Stack Desktop Boilerplate
-**Researched:** 2026-03-28
-**Confidence:** HIGH
+**Domain:** v0.1.1（架构收敛、决策沉淀与生产闭环）里程碑特性范围
+**Researched:** 2026-04-01
+**Confidence:** HIGH（基于项目内文档与当前里程碑上下文）
 
 ## Feature Landscape
 
+> 本文仅覆盖本里程碑新增能力与“用户可感知的工程结果”（主要是模板消费者/后续 agent 的可感知结果），不重复既有脚手架能力。
+
 ### Table Stakes (Users Expect These)
 
-Features users assume exist. Missing these = product feels incomplete.
+缺失这些，会直接导致“这个模板还不能放心用于生产迭代”。
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| **Google OAuth login** | PROJECT.md explicitly requires it; desktop OAuth is standard practice in 2026 | MEDIUM | Use `tauri-plugin-google-auth` (v0.5.1) or deep-link + system browser pattern. Deep link callback via `tauri-plugin-deep-link` (v2.4.7, 1M+ downloads). |
-| **Session persistence** | Users expect to stay logged in across app restarts | LOW | Use `tauri-plugin-store` (v2.x) to persist JWT tokens. Or `tauri-plugin-stronghold` for encrypted storage of sensitive tokens. |
-| **Native file dialogs** | Every desktop app needs open/save dialogs | LOW | `tauri-plugin-dialog` (v2.x) — official plugin, supports file picker, save dialog, message boxes. Platform: desktop only. |
-| **Window state persistence** | Users expect window to remember size/position | LOW | `tauri-plugin-window-state` (v2.x) — persists size, position, maximized state. One-line integration. |
-| **Single instance lock** | Desktop apps shouldn't open multiple windows | LOW | `tauri-plugin-single-instance` (v2.x) — prevents duplicate launches, focuses existing window. |
-| **Auto-updater** | Production apps need seamless updates | MEDIUM | `tauri-plugin-updater` (v2.x) — supports static JSON endpoint or update server. Needs signing keys configured. |
-| **System tray icon** | Expected for apps that run in background | MEDIUM | Built-in Tauri 2 `TrayIconBuilder` API. Handle click events, context menu, show/hide main window. See ARCHITECTURE.md for patterns. |
-| **Mobile-first responsive layout** | PROJECT.md requires platform-agnostic, mobile-responsive | MEDIUM | Tailwind CSS v4 breakpoints + SvelteKit `adapter-static` SPA mode. Already in template base. |
-| **Error boundaries & loading states** | Production apps can't show blank screens | LOW | Svelte 5 `$state` + error boundaries. Toast notifications via `sonner-svelte` or similar. |
-| **Structured logging** | Debugging production issues requires logs | LOW | `tracing` + `tracing-subscriber` on Rust side; `tauri-plugin-log` (v2.x) for JS↔Rust log bridging. |
+| **F-TS-01 安全基线闭环（JWT 校验链路最小可用）** | 当前上下文已明确存在 `dangerous::insecure_decode` 历史决策；v0.1.1 必须把“可发布最小安全线”落地 | MEDIUM | 原子验收：关键入口不再依赖 payload-only 解码；失败路径统一返回 401/403；有回归测试。 |
+| **F-TS-02 敏感配置治理（env/secret 分级 + fail-fast）** | 生产模板默认应避免“缺配置仍启动” | LOW | 原子验收：缺少关键 secret 启动即失败；示例配置不泄露真实值；文档标注必填/可选。 |
+| **F-TS-03 路径可移植性（跨平台路径策略统一）** | 目标是跨平台模板，路径硬编码会直接破坏 Windows/macOS/Linux 一致性 | LOW | 原子验收：数据/缓存/日志路径统一通过平台 API 解析；禁用硬编码绝对路径。 |
+| **F-TS-04 Rust/TS 契约自动同步（typegen 可重复执行）** | 里程碑目标已写明“契约与类型闭环”；否则类型漂移持续发生 | MEDIUM | 原子验收：`contracts_api` 作为唯一契约源；`typegen` 一键生成并可校验 dirty diff。 |
+| **F-TS-05 运行时边界收敛（runtime_tauri 职责落地）** | 当前痛点是 native host 逻辑漂移；必须恢复清晰边界以降低后续认知成本 | MEDIUM | 原子验收：Tauri 命令入口收敛到 `runtime_tauri`；host 仅保留启动/装配；边界文档可追踪。 |
+| **F-TS-06 统一任务入口（fullstack:dev / typegen / verify）** | 模板用户和 agent 需要“一条命令跑起来/校验” | LOW | 原子验收：任务可在本地直接运行；失败信息可定位到阶段（类型/测试/安全）。 |
+| **F-TS-07 全量建议决策账本（含 deferred 与 future 摘要）** | 本里程碑核心目标之一就是“决策沉淀” | MEDIUM | 原子验收：每条建议具备状态（implement/defer/out）、原因、目标 phase、追踪链接。 |
 
 ### Differentiators (Competitive Advantage)
 
-Features that set the product apart. Not required, but valuable.
+这些不是“能不能用”的底线，但会显著提升该模板在工程治理上的竞争力。
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| **Embedded Axum server** | Full REST API inside desktop app — rare in Tauri templates. Real Reddit post (Mar 2026) shipping 18MB binary with 114 API routes. | HIGH | Axum runs in Tauri's tokio runtime. Frontend can use both `invoke()` for IPC and HTTP for complex API patterns. Unique selling point. |
-| **Local-first database with Turso sync** | Offline-capable, syncs when connected. `tauri-plugin-libsql` (v0.1.0, Feb 2026) provides libsql + encryption + Turso embedded replica. | HIGH | Local SQLite file syncs bidirectionally with Turso cloud. Drizzle ORM via `sqlite-proxy` driver works in WebView. See database schema section below. |
-| **Multi-tenant data isolation** | Boilerplate with `tenant_id` scoping ready to go — most templates skip this entirely | MEDIUM | Every table has `tenant_id` column. Query middleware auto-scopes. Row-level security pattern. |
-| **Docker-compose dev infra** | One-command local environment: Redis, DB, nginx | LOW | Already in PROJECT.md requirements. Standard docker-compose.yml. |
-| **Deep link protocol handler** | App responds to custom URLs (e.g., `myapp://callback`) | MEDIUM | `tauri-plugin-deep-link` (v2.4.7) — needed for OAuth callbacks. Also enables sharing links to your app. |
-| **Cross-platform from single codebase** | Desktop + mobile web from same SvelteKit codebase | MEDIUM | Tauri 2 supports iOS/Android. `adapter-static` SPA mode works everywhere. Template demonstrates this. |
-| **Type-safe IPC contract** | Shared Rust types via `shared_contracts` crate | MEDIUM | Template already has `shared_contracts/` crate. Frontend and backend share type definitions. Reduces bugs. |
+| **F-DIFF-01 决策账本可执行化（决策→任务→验证 三向映射）** | 不止“记录”，还能直接驱动 roadmap/phase 执行，减少重复讨论 | MEDIUM | 建议在账本中增加 requirement/phase/验证脚本字段，支持 agent 自动消费。 |
+| **F-DIFF-02 契约漂移门禁（CI 或 verify 阶段强校验）** | 把类型同步从“约定”升级为“门禁”，长期降低回归成本 | MEDIUM | `typegen` 后有未提交差异则失败；防止 Rust/TS 接口悄然分叉。 |
+| **F-DIFF-03 安全基线可观测（最小安全检查清单 + 结果文件）** | 让模板使用者看到“已硬化到什么程度”，增强可审计性 | LOW | 输出 machine-readable 安全检查结果（例如 verify 产物）。 |
+| **F-DIFF-04 未来 phase 摘要模板化（defer 也可追踪）** | deferred 事项不会在迭代中遗失，减少里程碑切换信息损失 | LOW | 每个 defer 条目必须包含触发条件（何时升级为 implement-now）。 |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
-Features that seem good but create problems.
+本里程碑明确“不做”，以避免偏离“最小改动+架构收敛”主线。
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| **Real-time sync everywhere** | "Users want live updates" | CRDT complexity, battery drain, unnecessary for most boilerplate use cases | Use Turso's `sync()` on-demand (launch, manual refresh, network reconnect). Add CRDTs only for collaborative editing features. |
-| **Complex RBAC/permissions** | "Enterprise needs role-based access" | Massive scope creep for a boilerplate; every app has different permission needs | Basic `tenant_id` isolation only for v1. Let consumers add their own RBAC layer. |
-| **Email/password auth** | "Some users don't have Google" | Doubles auth surface area, password reset flows, email verification | Google OAuth only. Add email/password when a specific project needs it. |
-| **Server-side rendering (SSR)** | "Better SEO, faster first paint" | Incompatible with Tauri's WebView model; `adapter-static` requires SPA | SPA mode with `fallback: 'index.html'`. SSR adds no value for desktop apps. |
-| **Full ORM with migrations in JS** | "Developers prefer Drizzle/Prisma DX" | Drizzle's migrator uses Node `fs` which doesn't exist in WebView | Use Drizzle via `sqlite-proxy` driver + Vite `import.meta.glob` for inlined migrations. Or use sqlx directly in Rust. |
-| **Electron-style full Node.js backend** | "Familiar Node ecosystem" | Defeats Tauri's size/performance advantage; adds Node dependency | Use Axum for backend logic. If you absolutely need Node, `tauri-plugin-js` provides kkrpc-based RPC to Bun/Node/Deno processes. |
+| **AF-01 全量安全体系重构（一次性引入复杂 RBAC/JWKS 平台化）** | “既然做安全就一步到位” | 超出 v0.1.1 收敛目标，极易造成范围爆炸与回归风险 | 先完成最小可发布基线；高级安全能力进后续 phase。 |
+| **AF-02 全仓大重构（按理想架构重排目录）** | “顺手把历史包袱一起清掉” | 与“最小改动原则”冲突，会拖慢交付并放大冲突面 | 仅做边界收敛所需局部重排，保留兼容层。 |
+| **AF-03 新增重型基础设施（额外服务编排/新中间件）** | “把未来可能需要的都预埋” | 该里程碑目标是闭环而非扩张，新增依赖提升维护负担 | 维持现有栈，只补足 `fullstack:dev/typegen/verify`。 |
+| **AF-04 以文档替代验证（只写决策不加检查）** | “先记下来以后再说” | 账本无法约束真实行为，后续仍会漂移 | 决策条目必须绑定可执行验证点或验收脚本。 |
+
+## Milestone Scope Breakdown (for requirements scoping)
+
+### Implement Now（v0.1.1 必做）
+
+| ID | Item (Atomic) | Testable Acceptance | Dependencies |
+|----|---------------|---------------------|--------------|
+| IN-01 | JWT 最小安全校验替换 payload-only 路径 | 未签名/篡改 token 被拒绝；现有鉴权流回归通过 | 现有 auth middleware、测试框架 |
+| IN-02 | 敏感配置分级与 fail-fast | 缺关键配置启动失败并给出明确错误 | 配置加载层 |
+| IN-03 | 跨平台路径策略统一 | Windows/macOS/Linux 路径构造无硬编码；相关测试通过 | runtime 初始化路径入口 |
+| IN-04 | `contracts_api` 成为单一契约源 | 契约定义变更可触发 TS 类型更新 | shared_contracts/contract crate 现状 |
+| IN-05 | `typegen` 任务落地并纳入 `verify` | 运行 `typegen` 后无脏 diff 才可通过 verify | Moon/Just 任务体系 |
+| IN-06 | `runtime_tauri` 与 host 职责收敛 | host 中业务逻辑减少到装配层；命令边界清晰 | 现有 runtime_server/runtime_tauri 结构 |
+| IN-07 | 决策账本 v1（含实现/延期/拒绝 + 原因） | 任一建议条目可回答“是否做、何时做、为何做” | 历史 phase 文档与建议来源 |
+| IN-08 | Future phase 简要摘要附着到账本 | deferred 项都有 phase 落点或触发条件 | IN-07 |
+
+### Defer（记录在账本，后续 phase 处理）
+
+| ID | Deferred Item | Why Defer in v0.1.1 | Trigger to Promote | Dependencies |
+|----|---------------|---------------------|--------------------|--------------|
+| DF-01 | 完整 JWKS 缓存与轮换策略 | 当前里程碑先补最小可发布安全线 | 多 issuer/多环境签名验证需求明确 | IN-01 稳定后 |
+| DF-02 | 细粒度 RBAC/权限模型 | 与“架构收敛”相比收益不成比例 | 出现多角色业务场景与审计需求 | IN-01 + 租户模型 |
+| DF-03 | 决策账本自动生成器（从 PR/Issue 抽取） | 非闭环必需，短期可人工维护 | 账本条目规模增长导致维护成本上升 | IN-07 数据结构稳定 |
+| DF-04 | 跨语言契约兼容矩阵（版本协商） | v0.1.1 只要求同步闭环，不做多版本协议 | 需要向外部客户端开放稳定 API | IN-04/IN-05 |
+
+### Explicitly Out of Scope（本里程碑明确不做）
+
+| ID | Out-of-Scope Item | Reason | Revisit Window |
+|----|-------------------|--------|----------------|
+| OOS-01 | 新增认证方式（如 email/password） | 与当前“安全硬化与边界收敛”目标无关，扩大攻击面与实现面 | 认证功能里程碑 |
+| OOS-02 | 业务功能扩展（新页面/新模块） | 该里程碑定位是工程闭环，不是功能扩张 | v0.1.2+ 功能里程碑 |
+| OOS-03 | 全栈技术栈替换或大规模迁移 | 违反最小改动原则，风险不可控 | 架构重构专项里程碑 |
+| OOS-04 | 引入新重型基础设施组件 | 当前已具备可运行脚手架，新增组件不直接服务本里程碑目标 | 明确性能/运维瓶颈出现后 |
 
 ## Feature Dependencies
 
 ```
-[Google OAuth Login]
-    └──requires──> [Deep Link Protocol Handler]
-                       └──requires──> [tauri-plugin-deep-link registration]
+[IN-01 JWT最小安全校验]
+    └──requires──> [现有鉴权中间件可测试化]
 
-[Session Persistence]
-    └──requires──> [OAuth Login completed]
-    └──requires──> [tauri-plugin-store or stronghold]
+[IN-04 contracts_api单一契约源]
+    └──requires──> [契约边界定义]
+    └──enables──> [IN-05 typegen门禁]
 
-[Multi-Tenant Data Isolation]
-    └──requires──> [Authentication (knows tenant_id)]
-    └──requires──> [Database Schema with tenant_id columns]
+[IN-05 typegen门禁]
+    └──requires──> [Moon/Just任务编排]
+    └──enables──> [契约漂移可检测]
 
-[Local-First Database + Turso Sync]
-    └──requires──> [libsql database setup]
-    └──requires──> [Authentication (for Turso auth token)]
-    └──enhances──> [Multi-Tenant Isolation]
+[IN-06 runtime边界收敛]
+    └──requires──> [当前命令入口清点]
+    └──enables──> [后续agent低认知改动]
 
-[System Tray]
-    └──enhances──> [Window Management (show/hide/focus)]
-
-[Auto-Updater]
-    └──requires──> [Signing keys configured]
-    └──requires──> [Update server or static JSON endpoint]
-
-[Embedded Axum Server]
-    └──enhances──> [Local-First Database (REST API layer)]
-    └──conflicts──> [Pure invoke()-only IPC (pick one pattern)]
-
-[Native Dialogs] ──independent──> [can be used without auth]
-[Window State Persistence] ──independent──> [no dependencies]
-[Single Instance] ──independent──> [no dependencies]
+[IN-07 决策账本]
+    └──requires──> [历史建议汇总]
+    └──enables──> [IN-08 future phase摘要]
 ```
 
 ### Dependency Notes
 
-- **OAuth requires deep links:** Desktop OAuth flow opens system browser, redirects back via custom URI scheme (`myapp://callback`). `tauri-plugin-deep-link` handles this. Without it, you'd need a localhost redirect server (more complex).
-- **Multi-tenancy requires auth:** Can't scope data to a tenant without knowing who the user is. Auth must come first.
-- **Local-first enhances multi-tenancy:** Each tenant's data can live in a separate libsql database file (per-tenant SQLite pattern from Turso), or share a single DB with `tenant_id` column. Both patterns work.
-- **Axum vs pure invoke():** Template has both. `invoke()` is simpler for CRUD. Axum shines for complex business logic, webhooks, or when you want a REST API that non-Tauri clients can also call. Recommendation: use `invoke()` for frontend↔Rust, Axum for any external-facing API.
+- **IN-04 → IN-05 是硬依赖：** 没有单一契约源，typegen 只能生成“某一份真相”，无法防漂移。
+- **IN-07 是管理闭环核心：** 没有决策账本，defer/out-of-scope 会在后续 phase 丢失上下文。
+- **IN-06 与 IN-01相互增强：** 运行时边界清晰后，鉴权链路更容易统一落点与测试。
 
-## MVP Definition
+## MVP Definition (for this milestone)
 
-### Launch With (v1)
+### Launch With (v0.1.1 Done)
 
-Minimum viable product — what's needed to validate the concept.
+- [ ] IN-01 JWT 最小安全校验闭环
+- [ ] IN-02 敏感配置 fail-fast
+- [ ] IN-03 路径可移植性统一
+- [ ] IN-04 `contracts_api` 单一契约源
+- [ ] IN-05 `typegen` + `verify` 门禁
+- [ ] IN-06 `runtime_tauri`/host 边界收敛
+- [ ] IN-07 决策账本（implement/defer/out）
+- [ ] IN-08 future phase 摘要沉淀
 
-- [x] Tauri 2 + SvelteKit + Axum scaffolding — **exists**
-- [x] moon build orchestration — **exists**
-- [x] Responsive mobile-first layout base — **exists**
-- [ ] Google OAuth login with deep link callback — **core requirement from PROJECT.md**
-- [ ] Session persistence (JWT in tauri-plugin-store) — **required for auth to be useful**
-- [ ] Multi-tenant data isolation (tenant_id in schema) — **core requirement from PROJECT.md**
-- [ ] libsql database with basic schema — **required for any data persistence**
-- [ ] Docker-compose for local dev (Redis, DB) — **core requirement from PROJECT.md**
-- [ ] System tray with show/hide/quit — **expected desktop feature**
-- [ ] Window state persistence — **expected desktop feature, trivial to add**
-- [ ] Single instance lock — **expected desktop feature, trivial to add**
-- [ ] Error boundaries + toast notifications — **required for production feel**
+### Add After Validation (v0.1.2+)
 
-### Add After Validation (v1.x)
-
-Features to add once core is working.
-
-- [ ] Auto-updater — **trigger: when ready to distribute to users**
-- [ ] Turso cloud sync (embedded replica) — **trigger: when offline-first is validated as needed**
-- [ ] Native notifications — **trigger: when background task alerts are needed**
-- [ ] Deep link handler for custom protocols — **trigger: when OAuth is working, extend for other URLs**
-- [ ] Global shortcuts — **trigger: when power-user features are added**
-- [ ] Structured logging with file rotation — **trigger: when debugging production issues**
+- [ ] DF-01 完整 JWKS 缓存/轮换
+- [ ] DF-02 细粒度 RBAC
+- [ ] DF-03 决策账本自动化生成
+- [ ] DF-04 契约版本协商与兼容矩阵
 
 ### Future Consideration (v2+)
 
-Features to defer until product-market fit is established.
-
-- [ ] Embedded Axum REST API — **why defer: adds complexity; invoke() suffices for boilerplate**
-- [ ] Mobile (iOS/Android) support — **why defer: Tauri mobile is maturing; desktop-first is PROJECT.md scope**
-- [ ] CRDT-based collaborative editing — **why defer: very complex, only needed for specific features**
-- [ ] In-app purchase support — **why defer: monetization feature, not boilerplate concern**
-- [ ] Biometric authentication — **why defer: mobile-only, outside desktop-first scope**
+- [ ] 更高阶安全策略平台化（多租户策略引擎）
+- [ ] 多客户端协议治理（超出 Rust/TS 双端）
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Google OAuth login | HIGH | MEDIUM | P1 |
-| Session persistence | HIGH | LOW | P1 |
-| Multi-tenant isolation | HIGH | MEDIUM | P1 |
-| libsql database | HIGH | MEDIUM | P1 |
-| System tray | MEDIUM | MEDIUM | P1 |
-| Window state persistence | MEDIUM | LOW | P1 |
-| Single instance lock | MEDIUM | LOW | P1 |
-| Docker-compose infra | MEDIUM | LOW | P1 |
-| Error boundaries + toasts | HIGH | LOW | P1 |
-| Auto-updater | MEDIUM | MEDIUM | P2 |
-| Turso cloud sync | MEDIUM | HIGH | P2 |
-| Native notifications | LOW | LOW | P2 |
-| Global shortcuts | LOW | LOW | P3 |
-| Embedded Axum API | LOW | HIGH | P3 |
-| Mobile support | LOW | HIGH | P3 |
+| IN-01 JWT 最小安全校验闭环 | HIGH | MEDIUM | P1 |
+| IN-02 敏感配置 fail-fast | HIGH | LOW | P1 |
+| IN-03 路径可移植性统一 | MEDIUM | LOW | P1 |
+| IN-04 契约单一真相源 | HIGH | MEDIUM | P1 |
+| IN-05 typegen 门禁 | HIGH | MEDIUM | P1 |
+| IN-06 runtime 边界收敛 | HIGH | MEDIUM | P1 |
+| IN-07 决策账本 v1 | HIGH | MEDIUM | P1 |
+| IN-08 future phase 摘要 | MEDIUM | LOW | P1 |
+| DF-01 完整 JWKS | MEDIUM | HIGH | P2 |
+| DF-02 细粒度 RBAC | MEDIUM | HIGH | P3 |
 
 **Priority key:**
-- P1: Must have for launch
-- P2: Should have, add when possible
-- P3: Nice to have, future consideration
-
-## Competitor Feature Analysis
-
-| Feature | Electron + Next.js | Tauri + Svelte (basic) | This Template |
-|---------|-------------------|----------------------|---------------|
-| Bundle size | 150MB+ | 8-15MB | 10-18MB (with Axum) |
-| Auth boilerplate | Roll your own | Roll your own | Google OAuth built-in |
-| Multi-tenancy | Not included | Not included | tenant_id scoping included |
-| Backend server | Node.js (large) | None (invoke only) | Embedded Axum (optional) |
-| Local database | better-sqlite3 | @tauri-apps/plugin-sql | libsql with encryption + sync |
-| Build orchestration | npm scripts | npm scripts | moon (polyglot) |
-| Desktop features | Limited native | Full Tauri plugins | Full Tauri plugins |
-| Mobile support | N/A | Experimental | Tauri 2 ready |
-
-## Desktop-Specific Feature Details
-
-### System Tray (Required for v1)
-
-Tauri 2 provides `TrayIconBuilder` API in Rust:
-
-- **Left-click:** Show/focus main window (standard behavior)
-- **Right-click:** Context menu with Show/Hide/Quit
-- **Menu events:** Handled via `on_menu_event` callback
-- **Tray icon events:** Click, DoubleClick, Enter, Move, Leave
-- **Dynamic updates:** Change icon/text based on app state (e.g., badge for unread count)
-
-Platform support: Windows, macOS, Linux. Not available on mobile.
-
-### Native Dialogs
-
-`tauri-plugin-dialog` (v2.x):
-
-- File open dialog (single/multiple, filters)
-- File save dialog
-- Message boxes (info, warning, error, question)
-- Desktop only (Android has no folder picker)
-
-### Window Management
-
-Tauri 2 built-in:
-
-- Multi-window support with labeled windows
-- Window menu (native OS menu bar)
-- Custom titlebar (for frameless windows)
-- Window events (resize, move, focus, close)
-- `tauri-plugin-window-state` for persistence
-- `tauri-plugin-positioner` for common positions
-
-### Global Shortcuts
-
-`tauri-plugin-global-shortcut` (v2.x):
-
-- Register system-wide keyboard shortcuts
-- Desktop only
-- Use case: Quick capture, app activation
-
-## Database Schema Design for Local-First
-
-### Recommended Pattern: Shared DB with tenant_id
-
-```sql
--- Every table includes tenant_id for multi-tenant isolation
-CREATE TABLE users (
-    id TEXT PRIMARY KEY,          -- UUID
-    tenant_id TEXT NOT NULL,      -- Multi-tenant isolation
-    email TEXT NOT NULL,
-    google_id TEXT UNIQUE,
-    display_name TEXT,
-    avatar_url TEXT,
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now')),
-    UNIQUE(tenant_id, email)
-);
-
-CREATE TABLE sessions (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES users(id),
-    tenant_id TEXT NOT NULL,
-    token_hash TEXT NOT NULL,
-    expires_at TEXT NOT NULL,
-    created_at TEXT DEFAULT (datetime('now'))
-);
-
--- Example business table
-CREATE TABLE items (
-    id TEXT PRIMARY KEY,
-    tenant_id TEXT NOT NULL,
-    owner_id TEXT NOT NULL REFERENCES users(id),
-    title TEXT NOT NULL,
-    content TEXT,
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now'))
-);
-
--- Indexes for tenant-scoped queries
-CREATE INDEX idx_users_tenant ON users(tenant_id);
-CREATE INDEX idx_sessions_tenant ON sessions(tenant_id);
-CREATE INDEX idx_items_tenant ON items(tenant_id);
-CREATE INDEX idx_items_owner ON items(owner_id);
-
--- Migration tracking (for Drizzle or manual migrations)
-CREATE TABLE IF NOT EXISTS __drizzle_migrations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    hash TEXT NOT NULL,
-    created_at TEXT DEFAULT (datetime('now'))
-);
-```
-
-### Alternative: Per-Tenant SQLite Files
-
-Turso's model allows each tenant to have their own database file:
-
-```
-~/.local/share/myapp/
-  ├── tenants/
-  │   ├── tenant_abc123.db
-  │   └── tenant_def456.db
-  └── global.db  (users, sessions — shared)
-```
-
-Pros: Stronger isolation, easier to sync individual tenants.
-Cons: More complex connection management, harder cross-tenant queries.
-
-**Recommendation for boilerplate:** Shared DB with `tenant_id` column. Simpler to implement, sufficient for most use cases. Per-tenant files can be added later if needed.
-
-### Migration Strategy
-
-Use Drizzle ORM's `sqlite-proxy` driver for type-safe queries + Vite's `import.meta.glob` for inlined migrations:
-
-```typescript
-// Migrations inlined at build time
-const migrations = import.meta.glob<string>("./drizzle/*.sql", {
-  eager: true,
-  query: "?raw",
-  import: "default",
-});
-
-// Run migrations via Tauri invoke
-await migrate("sqlite:myapp.db", migrations);
-
-// Drizzle queries via proxy (calls Rust through invoke())
-const db = drizzle(createDrizzleProxy("sqlite:myapp.db"), { schema });
-```
+- P1: 本里程碑必须完成
+- P2: 下个里程碑优先候选
+- P3: 明确延期
 
 ## Sources
 
-- [Tauri 2 Plugin List](https://v2.tauri.app/plugin/) — Official plugin support table with platform compatibility
-- [Tauri 2 System Tray Guide](https://v2.tauri.app/learn/system-tray/) — TrayIconBuilder API, event handling
-- [Tauri 2 Window Menu](https://v2.tauri.app/learn/window-menu/) — Native menu creation
-- [Tauri 2 Deep Linking](https://v2.tauri.app/plugin/deep-linking/) — Custom URI scheme registration
-- [tauri-plugin-google-auth v0.5.1](https://crates.io/crates/tauri-plugin-google-auth) — Google OAuth plugin (Jan 2026)
-- [tauri-plugin-libsql v0.1.0](https://crates.io/crates/tauri-plugin-libsql) — libsql + encryption + Turso sync (Feb 2026)
-- [tauri-plugin-auth-session v0.2.2](https://crates.io/crates/tauri-plugin-auth-session) — In-app OAuth for mobile (Mar 2026)
-- [Building Local-First Tauri App](https://dev.to/huakun/building-a-local-first-tauri-app-with-drizzle-orm-encryption-and-turso-sync-31pn) — Drizzle + libsql + Turso patterns (Feb 2026)
-- [Shipped Tauri 2 + Svelte 5 + Axum](https://www.reddit.com/r/tauri/comments/1s4ah2f/) — Real production app: 18MB, 114 API routes (Mar 2026)
-- [Local-First Design Patterns 2026](https://mongoose.cloud/design-patterns-local-first-2026/) — Journal + CRDT + optimistic UI patterns
-- [Tauri Authentication Guide](https://www.reddit.com/r/tauri/comments/1ozm5go/) — OAuth patterns for GitLab, GitHub, Google, Apple (Nov 2025)
-- [Supabase + Google OAuth in Tauri 2](https://medium.com/@nathancovey23/supabase-google-oauth-in-a-tauri-2-0-macos-app-with-deep-links-f8876375cb0a) — Deep link OAuth flow (Apr 2025)
-- [Multi-Tenant SaaS Architecture 2026](https://dev.to/waqarhabib/building-a-multi-tenant-saas-app-with-react-and-nodejs-in-2026-31ih) — tenant_id isolation patterns (Mar 2026)
-- [Turso: Give Each User Their Own SQLite](https://turso.tech/blog/give-each-of-your-users-their-own-sqlite-database-b74445f4) — Per-tenant SQLite pattern
+- `.planning/PROJECT.md`（v0.1.1 目标与 target features）
+- `.planning/REQUIREMENTS.md`（现有约束与 out-of-scope）
+- `.planning/ROADMAP.md`（当前 phase 结构与依赖）
+- `.planning/phases/06-google-oauth-authentication/06-CONTEXT.md`（鉴权相关历史决策）
+- `.planning/phases/07-multi-tenant-data-isolation/07-CONTEXT.md` 与 `07-RESEARCH.md`（`dangerous::insecure_decode` 历史选择）
+- `.planning/research/SUMMARY.md`、`.planning/research/ARCHITECTURE.md`（runtime_tauri 边界建议）
 
 ---
 
-*Feature research for: Tauri + SvelteKit + Axum full-stack desktop boilerplate*
-*Researched: 2026-03-28*
+*Feature research for: Milestone v0.1.1 architecture convergence*
+*Researched: 2026-04-01*
