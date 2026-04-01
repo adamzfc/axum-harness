@@ -42,7 +42,10 @@ Plans:
   2. typegen 从 Rust contracts 自动生成 TS 类型，输出到 frontend/generated/。
   3. CI/verify 在 typegen 后有未提交 diff 时失败。
   4. 前端和 server 路由引用 generated types，不再手写接口定义。
-**Plans**: TBD
+**Plans**: 2 plans in 2 waves
+Plans:
+- [ ] 02-01-PLAN.md — Contracts crates setup + typegen pipeline
+- [ ] 02-02-PLAN.md — Server migration + frontend integration + drift check
 
 ### Phase 3: Runtime 边界收敛
 **Goal**: 核心业务规则不依赖宿主，adapters 只做外部世界翻译，新增 capability 走新路径。
