@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.2.0
 milestone_name: milestone
-status: Phase 1 Plan 01 complete
-stopped_at: Phase 1 Plan 01 executed (4/4 tasks)
-last_updated: "2026-04-01T15:42:58Z"
-last_activity: 2026-04-01 — Phase 1 Plan 01 executed: directory scaffold & migration complete
+status: Phase 1 Plan 03 complete
+stopped_at: Phase 1 Plan 03 executed (1/1 task)
+last_updated: "2026-04-01T16:38:57Z"
+last_activity: 2026-04-01 — Phase 1 Plan 03 executed: Justfile rewritten with blueprint entry points
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 1
-  completed_plans: 1
+  total_plans: 3
+  completed_plans: 3
 ---
 
 # STATE: Tauri-SvelteKit-Axum Boilerplate
@@ -29,15 +29,15 @@ progress:
 ## Current Position
 
 Phase: Phase 1 (in progress)
-Plan: 01-01 complete
-Status: Phase 1 Plan 01 executed — directory scaffold & migration complete
-Last activity: 2026-04-01 — Blueprint directory tree created, workers migrated, .prototools added
+Plan: 01-03 complete
+Status: Phase 1 Plan 03 executed — Justfile rewritten, moon repo:* tasks added
+Last activity: 2026-04-01 — Blueprint-compliant Justfile with 16 commands delegating to moon
 
 ## Phase Progress
 
 | Phase | Requirements | Criteria | Status |
 |-------|-------------|----------|--------|
-| 1. 仓库目录结构与工具链对齐 | STRUCT-01, TOOL-01 | 5 | Plan 01/04 complete |
+| 1. 仓库目录结构与工具链对齐 | STRUCT-01, TOOL-01 | 5 | Plans 01,03/04 complete |
 | 2. Contracts/typegen 单一真理源 | CONTRACT-01, CONTRACT-02 | 4 | Not started |
 | 3. Runtime 边界收敛 | RUNTIME-01, RUNTIME-02, RUNTIME-03 | 4 | Not started |
 | 4. 最小功能实现 | AUTH-01, COUNTER-01, ADMIN-01, AGENT-01 | 5 | Not started |
@@ -51,6 +51,9 @@ Last activity: 2026-04-01 — Blueprint directory tree created, workers migrated
 | --reset-phase-numbers (restart at 1) | 蓝图里程碑与 v0.1.x 完全不同 | Accepted |
 | v0.1.0 phases 01-10 archived | 保留历史上下文，释放 phase namespace | Accepted |
 | v0.1.1 Phase 11-15 discarded | 被蓝图驱动的 v0.2.0 取代 | Accepted |
+| Justfile 作为 thin entry point 委托给 moon | 蓝图 D-04/D-05/D-06 约定：Just 暴露稳定入口，moon 负责编排 | Accepted |
+| 未来阶段任务用 echo stub 实现 | just --list 从第一天起完整，不用等 Phase 9 实现 | Accepted |
+| Root moon.yml 增加 repo:* 编排任务 | Justfile 的 moon run repo:* 委托模式需要对应目标任务存在 | Accepted |
 
 ## Accumulated Context (from v0.1.0)
 
@@ -75,11 +78,11 @@ Last activity: 2026-04-01 — Blueprint directory tree created, workers migrated
 
 ## Session
 
-**Last Date:** 2026-04-01T15:42:58Z
-**Stopped At:** Phase 1 Plan 01 executed
-**Resume File:** .planning/phases/01-repo-structure-toolchain/01-01-SUMMARY.md
+**Last Date:** 2026-04-01T16:38:57Z
+**Stopped At:** Phase 1 Plan 03 executed
+**Resume File:** .planning/phases/01-repo-structure-toolchain/01-03-SUMMARY.md
 
 ---
 
 *Created: 2026-04-01 — Milestone v0.2.0 started*
-*Updated: 2026-04-01 — Phase 1 Plan 01 complete: directory scaffold & migration, 4/4 tasks, 4 commits*
+*Updated: 2026-04-01 — Phase 1 Plan 03 complete: Justfile rewritten with 16 blueprint commands, moon repo:* tasks added, 1/1 task, 2 commits*
