@@ -1,20 +1,17 @@
 projects:
-  # Applications
+  # Active projects (have moon.yml or package.json)
   - 'apps/client/native'
   - 'apps/client/web/app'
-
-  # Core Rust packages
   - 'packages/core/domain'
   - 'packages/core/usecases'
-
-  # Contracts
   - 'packages/contracts/api'
-
-  # Adapters (only those with actual code)
   - 'packages/adapters/hosts/tauri'
-
-  # Servers
   - 'servers/api'
+
+  # Future registrations (when moon.yml added):
+  # - 'workers/*'
+  # - 'tools/*'
+  # - 'packages/features/*'
 
 vcs:
   client: 'git'
