@@ -38,10 +38,10 @@ Provide a runnable, tested, production-ready engineering base with Google Auth, 
 
 ### Active (v0.2.0)
 
-- [ ] 仓库目录结构对齐蓝图，建立 apps/servers/packages/crates/tools 分层边界
+- ✓ 仓库目录结构对齐蓝图，建立 apps/servers/packages/crates/tools 分层边界 — Validated in Phase 01
 - [ ] packages/contracts/api 作为 Rust 单一真理源，自动生成 TS 类型
 - [ ] Runtime 边界收敛：core 不依赖 host，adapters 不承载业务策略
-- [ ] moon + Just + proto 提供统一的 setup/dev/verify/typegen 入口
+- ✓ moon + Just + proto 提供统一的 setup/dev/verify/typegen 入口 — Validated in Phase 01
 - [ ] Google Auth 通过 adapter 接入，不污染 core
 - [ ] Counter 功能通过 feature 组合 core + contracts 实现
 - [ ] Admin Web 通过 feature + UI 组件实现
@@ -57,7 +57,7 @@ Provide a runnable, tested, production-ready engineering base with Google Auth, 
 
 ## Context
 
-**Current state:** v0.1.0 已完成 10 个 phases 的基础设施搭建（package foundation, UI styling, app pages, backend deps, database, auth, multi-tenancy, build pipeline, test suite）。v0.1.1 的架构收敛计划（Phase 11-15）已废弃，因为 docs/blueprints/agent-native-starter-v1 蓝图已大幅更新，定义了更全面的架构方向。v0.2.0 从蓝图出发，对齐目录结构、contracts 闭环、runtime 边界和最小功能实现。
+**Current state:** v0.2.0 Phase 01 (repo-structure-toolchain) complete. Blueprint directory tree scaffolded (41 dirs), moon task graph (55 repo:* tasks across 6 categories), Justfile (16 commands), .prototools (Bun + Node), Cargo workspace updated. Ready for Phase 02 (contracts/typegen single-truth-source).
 
 **Tech stack (confirmed):**
 - Desktop: Tauri v2 (确定)
@@ -115,4 +115,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-*Last updated: 2026-04-01 after starting milestone v0.2.0 (architecture blueprint alignment & core feature implementation)*
+*Last updated: 2026-04-01 after Phase 01 (repo-structure-toolchain) — directory scaffold, moon task graph, Justfile validated*
