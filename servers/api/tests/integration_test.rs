@@ -3,6 +3,7 @@
 //! Covers tenant middleware extraction, TenantAwareSurrealDb query building,
 //! and tenant init API request/response behavior.
 
+use contracts_api::{InitTenantRequest, InitTenantResponse};
 use runtime_server::ports::surreal_db::TenantAwareSurrealDb;
 
 // ─── Tenant SQL Filter Injection ────────────────────────────────────────────
@@ -143,7 +144,7 @@ fn passthrough_unknown_statement() {
 #[test]
 fn deserialize_init_tenant_request() {
     let json = r#"{"user_sub":"google-123","user_name":"Alice"}"#;
-    let req: runtime_server::routes::tenant::InitTenantRequest =
+    let req: InitTenantRequest =
         serde_json::from_str(json).expect("Failed to deserialize InitTenantRequest");
     assert_eq!(req.user_sub, "google-123");
     assert_eq!(req.user_name, "Alice");
@@ -151,7 +152,7 @@ fn deserialize_init_tenant_request() {
 
 #[test]
 fn reject_empty_user_sub() {
-    let req = runtime_server::routes::tenant::InitTenantRequest {
+    let req = InitTenantRequest {
         user_sub: String::new(),
         user_name: "Alice".into(),
     };
@@ -161,7 +162,7 @@ fn reject_empty_user_sub() {
 
 #[test]
 fn serialize_init_tenant_response() {
-    let resp = runtime_server::routes::tenant::InitTenantResponse {
+    let resp = InitTenantResponse {
         tenant_id: "tenant:abc123".into(),
         role: "owner".into(),
         created: true,
