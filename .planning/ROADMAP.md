@@ -11,7 +11,7 @@
 - [ ] **Phase 1: 仓库目录结构与工具链对齐** — 对齐蓝图目录结构，配置 moon/Just/proto 统一入口 ✓
 - [ ] **Phase 2: Contracts/typegen 单一真理源** — 建立 packages/contracts 作为 Rust→TS 自动生成源，CI drift 检查
 - [ ] **Phase 3: Runtime 边界收敛** — core vs adapters vs hosts 职责清晰化，新能力走新路径
-- [ ] **Phase 4: 最小功能实现** — Google Auth, Counter, Admin Web, Agent 对话通过 feature + adapter 模式实现
+- [x] **Phase 4: 最小功能实现** — Google Auth, Counter, Admin Web, Agent 对话通过 feature + adapter 模式实现 (completed 2026-04-02)
 - [ ] **Phase 5: Agent-Friendly 开发基建** — AGENTS.md, skills, playbooks, rubrics, eval suites
 
 ## Phase Details
@@ -99,7 +99,7 @@ Plans:
 | 1. 仓库目录结构与工具链对齐 | 4/4 | Complete | 2026-04-01 |
 | 2. Contracts/typegen 单一真理源 | 2/2 | Complete | 2026-04-01 |
 | 3. Runtime 边界收敛 | 0/4 | Planned | - |
-| 4. 最小功能实现 | 3/4 | In Progress|  |
+| 4. 最小功能实现 | 6/6 | Complete   | 2026-04-02 |
 | 5. Agent-Friendly 开发基建 | 0/TBD | Not started | - |
 
 ## Coverage Map (v0.2.0)
