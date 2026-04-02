@@ -36,8 +36,8 @@ log = { workspace = true }
 dotenvy = { workspace = true }
 
 # Database
-libsql = { workspace = true }
-async-trait = "0.1"
+storage_libsql = { workspace = true }
+async-trait = { workspace = true }
 
 # Time and error handling
 chrono = { workspace = true }

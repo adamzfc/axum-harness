@@ -1,10 +1,9 @@
 //! native-tauri — Tauri application entry point
 
 mod commands;
-mod ports;
 mod sync;
 
-use ports::lib_sql::{EmbeddedLibSql, run_tenant_migrations};
+use storage_libsql::{EmbeddedLibSql, embedded::run_tenant_migrations};
 use sync::SyncEngine;
 use sync::engine::init_sync_tables;
 use tauri::{Emitter, Manager};

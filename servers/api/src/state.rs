@@ -5,11 +5,11 @@
 
 use crate::config::{CloudDbProvider, Config};
 use crate::error::AppError;
-use crate::ports::surreal_db::run_tenant_migrations as run_surreal_migrations;
-use crate::ports::turso_db::TursoDb;
-use crate::ports::turso_db::run_tenant_migrations as run_turso_migrations;
 use moka::future::Cache;
 use std::time::Duration;
+use storage_libsql::TursoDb;
+use storage_libsql::remote::run_tenant_migrations as run_turso_migrations;
+use storage_surrealdb::run_tenant_migrations as run_surreal_migrations;
 use surrealdb::{Surreal, engine::any::Any};
 
 /// Shared application state for Axum routes.

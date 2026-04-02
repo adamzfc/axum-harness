@@ -9,7 +9,6 @@ pub mod error;
 #[cfg(feature = "http3")]
 pub mod h3_server;
 pub mod middleware;
-pub mod ports;
 pub mod routes;
 pub mod state;
 

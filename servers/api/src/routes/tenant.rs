@@ -11,9 +11,9 @@ use contracts_api::{InitTenantRequest, InitTenantResponse};
 use validator::Validate;
 
 use crate::error::{AppError, AppResult};
-use crate::ports::surreal_db::TenantAwareSurrealDb;
 use crate::state::AppState;
 use domain::ports::surreal_db::SurrealDbPort;
+use storage_surrealdb::TenantAwareSurrealDb;
 
 /// Helper: create a serde_json::Value::String from &str.
 fn json_str(s: &str) -> Value {

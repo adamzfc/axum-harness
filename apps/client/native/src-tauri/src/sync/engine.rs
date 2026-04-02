@@ -1,10 +1,10 @@
-use crate::ports::lib_sql::EmbeddedLibSql;
 use crate::sync::conflict::{ConflictRecord, ConflictStrategy, resolve_conflict};
 use chrono::{DateTime, Utc};
 use domain::ports::lib_sql::LibSqlPort;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
+use storage_libsql::EmbeddedLibSql;
 use tauri::Emitter;
 use tokio::sync::Mutex;
 use tokio::time;

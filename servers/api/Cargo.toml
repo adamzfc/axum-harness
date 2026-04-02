@@ -8,6 +8,8 @@ edition = "2024"
 domain = { workspace = true }
 usecases = { workspace = true }
 contracts_api = { workspace = true }
+storage_surrealdb = { workspace = true }
+storage_libsql = { workspace = true }
 
 # Axum HTTP framework (per D-01, D-02, D-09)
 axum = { workspace = true }
@@ -43,7 +45,6 @@ mockito = { workspace = true }
 
 # Database
 surrealdb = { workspace = true }
-libsql = { workspace = true }
 
 # Cache
 moka = { workspace = true }
