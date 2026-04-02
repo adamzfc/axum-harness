@@ -3,7 +3,7 @@ import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import { Switch } from '$lib/components';
-import { LayoutDashboard, Plus, Settings, PanelLeftClose, PanelLeftOpen } from '@jis3r/icons';
+import { LayoutDashboard, Plus, Settings, MessageSquare, PanelLeftClose, PanelLeftOpen } from '@jis3r/icons';
 import { toggleTheme, getTheme } from '$lib/stores/theme';
 import { auth, checkSession } from '$lib/stores/auth.svelte';
 import type { Snippet } from 'svelte';
@@ -35,6 +35,7 @@ onMount(async () => {
 const navItems = [
 	{ href: '/counter', label: 'Counter', icon: Plus },
 	{ href: '/admin', label: 'Admin', icon: LayoutDashboard },
+	{ href: '/agent', label: 'Agent Chat', icon: MessageSquare },
 	{ href: '/settings', label: 'Settings', icon: Settings },
 ];
 
