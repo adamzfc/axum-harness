@@ -13,6 +13,9 @@
 - [ ] **Phase 3: Runtime 边界收敛** — core vs adapters vs hosts 职责清晰化，新能力走新路径
 - [x] **Phase 4: 最小功能实现** — Google Auth, Counter, Admin Web, Agent 对话通过 feature + adapter 模式实现 (completed 2026-04-02)
 - [ ] **Phase 5: Agent-Friendly 开发基建** — AGENTS.md, skills, playbooks, rubrics, eval suites
+- [ ] **Phase 6: 连接 Auth Adapter 到 Tauri 命令** — 将 GoogleAuthAdapter 通过 AuthService trait 接入 Tauri auth commands
+- [ ] **Phase 7: 前端消费 Generated Types** — 替换 inline types 为 typegen 产出，闭环 contracts → frontend 类型链路
+- [ ] **Phase 8: Agent 双路径 + Prompts + Phase 5 验证** — Agent 页面 Tauri IPC 双路径、补全 prompts、生成 Phase 5 VERIFICATION.md
 
 ## Phase Details
 
@@ -95,6 +98,42 @@ Plans:
 - [ ] 05-01-PLAN.md — Playbooks (create-feature + update-contracts)
 - [ ] 05-02-PLAN.md — Rubrics (code-review + task-completion)
 
+### Phase 6: 连接 Auth Adapter 到 Tauri 命令
+**Goal:** 消除 AUTH-01 缺口，将 GoogleAuthAdapter 通过 feature_auth::AuthService trait 接入 Tauri auth commands，移除重复 OAuth 实现。
+**Depends on:** Phase 4
+**Requirements:** AUTH-01
+**Gap Closure:** Closes gaps from v0.2.0 audit — AUTH-01 unsatisfied, Auth Adapter Integration flow broken at host wiring
+**Success Criteria** (what must be TRUE):
+  1. runtime_tauri/commands/auth.rs 通过 feature_auth::AuthService trait 调用 GoogleAuthAdapter
+  2. auth.rs 中无重复的 OAuth/PKCE 内联实现（已移除或委托给 adapter）
+  3. Google 登录完整链路验证：start_oauth → handle_oauth_callback → get_session 全部走 adapter
+  4. `rg "GoogleAuthAdapter|feature_auth::AuthService" packages/adapters/hosts/tauri/src/commands/auth.rs` 有匹配
+**Plans:** 0 plans (gap closure phase)
+
+### Phase 7: 前端消费 Generated Types
+**Goal:** 闭环 contracts → frontend 类型链路，前端代码实际导入并使用 typegen 生成的类型。
+**Depends on:** Phase 2
+**Requirements:** CONTRACT-02
+**Gap Closure:** Closes gaps from v0.2.0 audit — CONTRACT-02 partial, Typegen→Frontend flow broken, 02-contracts→frontend integration gap
+**Success Criteria** (what must be TRUE):
+  1. frontend ipc/auth.ts 等文件导入 generated/ 中的 TokenPair, OAuthCallback, UserSession 等类型
+  2. 不再存在与 generated types 重复的 inline 类型定义 (UserProfile, AuthSession)
+  3. `moon run repo:typegen` 后前端类型引用不报错
+  4. 合约变更时前端类型消费链路会正确 break（而非静默漂移）
+**Plans:** 0 plans (gap closure phase)
+
+### Phase 8: Agent 双路径 + Prompts + Phase 5 验证
+**Goal:** Agent 页面支持 Tauri IPC 双路径，补全 .agents/prompts/ 内容，生成 Phase 5 VERIFICATION.md。
+**Depends on:** Phase 4, Phase 5
+**Requirements:** AGENT-01, AGENT-DEV-01
+**Gap Closure:** Closes gaps from v0.2.0 audit — AGENT-01 partial (no Tauri IPC), AGENT-DEV-01 unsatisfied (prompts missing), Agent Desktop Mode flow broken, 04→05 integration gap
+**Success Criteria** (what must be TRUE):
+  1. Agent 页面检测 window.__TAURI__，在 Tauri 环境走 IPC invoke，浏览器环境走 HTTP fetch
+  2. .agents/prompts/ 包含 add-feature, add-host, refactor-boundary 等标准 prompt 模板
+  3. Phase 5 存在 VERIFICATION.md 且通过验证
+  4. Agent Desktop Mode E2E flow 完整（Tauri 桌面模式无需外部 API server）
+**Plans:** 0 plans (gap closure phase)
+
 ## Progress Table
 
 | Phase | Plans Complete | Status | Completed |
@@ -104,6 +143,9 @@ Plans:
 | 3. Runtime 边界收敛 | 0/4 | Planned | - |
 | 4. 最小功能实现 | 6/6 | Complete   | 2026-04-02 |
 | 5. Agent-Friendly 开发基建 | 0/TBD | Not started | - |
+| 6. 连接 Auth Adapter 到 Tauri 命令 | 0/TBD | Gap Closure | - |
+| 7. 前端消费 Generated Types | 0/TBD | Gap Closure | - |
+| 8. Agent 双路径 + Prompts + Phase 5 验证 | 0/TBD | Gap Closure | - |
 
 ## Coverage Map (v0.2.0)
 
@@ -119,8 +161,25 @@ Plans:
 | AUTH-01 | Phase 4 | Completed (Plans 01-03) |
 | COUNTER-01 | Phase 4 | Completed (Plans 02-03) |
 | ADMIN-01 | Phase 4 | Completed (Plans 02-03) |
-| AGENT-01 | Phase 4 | Pending |
-| AGENT-DEV-01 | Phase 5 | Pending |
+| AGENT-01 | Phase 4/8 | Partial (needs Tauri IPC dual-path) |
+| AGENT-DEV-01 | Phase 5/8 | Pending |
+
+**Coverage: 12/12 v0.2.0 requirements mapped ✓**
+
+## Gap Closure Phases (from v0.2.0 audit)
+
+| Gap | REQ-ID | Closure Phase | Status |
+|-----|--------|---------------|--------|
+| AUTH-01: GoogleAuthAdapter not wired | AUTH-01 | Phase 6 | Pending |
+| Auth Adapter Integration flow broken | AUTH-01 | Phase 6 | Pending |
+| Generated types orphaned | CONTRACT-02 | Phase 7 | Pending |
+| Typegen → Frontend flow broken | CONTRACT-02 | Phase 7 | Pending |
+| 02-contracts → frontend integration gap | CONTRACT-01, CONTRACT-02 | Phase 7 | Pending |
+| Agent page HTTP-only | AGENT-01 | Phase 8 | Pending |
+| .agents/prompts/ empty | AGENT-DEV-01 | Phase 8 | Pending |
+| Phase 5 no VERIFICATION.md | AGENT-DEV-01 | Phase 8 | Pending |
+| 04→05 integration gap | AGENT-DEV-01 | Phase 8 | Pending |
+| runtime_tauri bypasses feature trait | RUNTIME-03 | Phase 3 | Noted (tech debt) |
 
 **Coverage: 12/12 v0.2.0 requirements mapped ✓**
 

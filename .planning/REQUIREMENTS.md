@@ -24,10 +24,10 @@
 
 ### 最小功能实现
 
-- [x] **AUTH-01**: 用户可以通过 Google 账号登录，auth 通过 adapter 接入不污染 core
+- [ ] **AUTH-01**: 用户可以通过 Google 账号登录，auth 通过 adapter 接入不污染 core
 - [x] **COUNTER-01**: 用户可以使用计数器功能（increment/decrement/reset），验证前后端通信
 - [x] **ADMIN-01**: 用户可以访问管理后台界面，包含基本统计卡片
-- [x] **AGENT-01**: 用户可以通过导入 OpenAI 兼容的 API key 与产品内 agent 进行对话
+- [ ] **AGENT-01**: 用户可以通过导入 OpenAI 兼容的 API key 与产品内 agent 进行对话（桌面模式需 Tauri IPC 双路径）
 
 ### Agent-Friendly 开发基建
 
@@ -68,15 +68,15 @@
 | STRUCT-01 | Phase 1 | Pending |
 | TOOL-01 | Phase 1 | Pending |
 | CONTRACT-01 | Phase 2 | Plan 02-01 complete |
-| CONTRACT-02 | Phase 2 | Plan 02-01 complete |
+| CONTRACT-02 | Phase 2/7 | Partial (generated types not consumed) |
 | RUNTIME-01 | Phase 3 | Complete |
 | RUNTIME-02 | Phase 3 | Complete |
 | RUNTIME-03 | Phase 3 | Complete |
-| AUTH-01 | Phase 4 | Complete |
+| AUTH-01 | Phase 4/6 | Pending (adapter wiring needed) |
 | COUNTER-01 | Phase 4 | Complete |
 | ADMIN-01 | Phase 4 | Complete |
-| AGENT-01 | Phase 4 | Complete |
-| AGENT-DEV-01 | Phase 5 | Pending |
+| AGENT-01 | Phase 4/8 | Partial (Tauri IPC dual-path needed) |
+| AGENT-DEV-01 | Phase 5/8 | Pending (prompts missing, no VERIFICATION.md) |
 
 **Coverage:**
 - v0.2.0 requirements: 12 total
