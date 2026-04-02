@@ -73,7 +73,12 @@ Plans:
   3. 用户可以访问管理后台，包含基本统计卡片。
   4. 用户可以通过 API key 与 agent 对话，agent 可以操作产品功能。
   5. 所有功能通过 feature 模块实现，使用 contracts 类型。
-**Plans**: TBD
+**Plans**: 4 plans in 4 waves
+Plans:
+- [ ] 04-01-PLAN.md — Auth refactor: adapter-google + feature-auth crates (Wave 1)
+- [ ] 04-02-PLAN.md — Counter + Admin features: traits + LibSQL implementations (Wave 2)
+- [ ] 04-03-PLAN.md — Counter + Admin wiring: Tauri commands + Axum routes + frontend (Wave 3)
+- [ ] 04-04-PLAN.md — Agent chat: contracts + service + streaming + UI (Wave 4)
 
 ### Phase 5: Agent-Friendly 开发基建
 **Goal**: Agent 能读取规则、发现工具、执行任务、验证结果。
@@ -94,7 +99,7 @@ Plans:
 | 1. 仓库目录结构与工具链对齐 | 4/4 | Complete | 2026-04-01 |
 | 2. Contracts/typegen 单一真理源 | 1/2 | In progress | - |
 | 3. Runtime 边界收敛 | 0/4 | Planned | - |
-| 4. 最小功能实现 | 0/TBD | Not started | - |
+| 4. 最小功能实现 | 0/4 | Planned | - |
 | 5. Agent-Friendly 开发基建 | 0/TBD | Not started | - |
 
 ## Coverage Map (v0.2.0)
