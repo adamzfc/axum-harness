@@ -20,7 +20,7 @@
 
 - [x] **RUNTIME-01**: core/domain 不依赖任何 host/protocol/chain，业务规则完全隔离
 - [x] **RUNTIME-02**: adapters/hosts/tauri (runtime_tauri) 承载 Tauri command 桥接职责，native host 仅保留 builder/bootstrap
-- [ ] **RUNTIME-03**: 新增 capability 通过 feature 模块组合 core + contracts + adapters 实现，不绕过边界
+- [x] **RUNTIME-03**: 新增 capability 通过 feature 模块组合 core + contracts + adapters 实现，不绕过边界
 
 ### 最小功能实现
 
@@ -71,7 +71,7 @@
 | CONTRACT-02 | Phase 2 | Plan 02-01 complete |
 | RUNTIME-01 | Phase 3 | Complete |
 | RUNTIME-02 | Phase 3 | Complete |
-| RUNTIME-03 | Phase 3 | Pending |
+| RUNTIME-03 | Phase 3 | Complete |
 | AUTH-01 | Phase 4 | Pending |
 | COUNTER-01 | Phase 4 | Pending |
 | ADMIN-01 | Phase 4 | Pending |

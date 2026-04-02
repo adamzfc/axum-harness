@@ -60,8 +60,8 @@ Plans:
 Plans:
 - [x] 03-01-PLAN.md — Port implementations migration to packages/adapters/storage/
 - [x] 03-02-PLAN.md — usecases decoupling from contracts_api
-- [ ] 03-03-PLAN.md — runtime_tauri command bridge + native-tauri refactor
-- [ ] 03-04-PLAN.md — Boundary enforcement (deny.toml, CI check, agent rubric)
+- [x] 03-03-PLAN.md — runtime_tauri command bridge + native-tauri refactor
+- [x] 03-04-PLAN.md — Boundary enforcement (deny.toml, CI check, agent rubric)
 
 ### Phase 4: 最小功能实现
 **Goal**: 用户可以登录、使用计数器、访问 Admin、与 Agent 对话。
