@@ -59,7 +59,7 @@ Plans:
 **Plans**: 4 plans in 3 waves
 Plans:
 - [ ] 03-01-PLAN.md — Port implementations migration to packages/adapters/storage/
-- [ ] 03-02-PLAN.md — usecases decoupling from contracts_api
+- [x] 03-02-PLAN.md — usecases decoupling from contracts_api
 - [ ] 03-03-PLAN.md — runtime_tauri command bridge + native-tauri refactor
 - [ ] 03-04-PLAN.md — Boundary enforcement (deny.toml, CI check, agent rubric)
 
