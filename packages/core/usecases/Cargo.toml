@@ -5,6 +5,8 @@ edition = "2021"
 
 [dependencies]
 domain = { workspace = true }
+feature-counter = { workspace = true }
+feature-admin = { workspace = true }
 async-trait = "0.1"
 serde = { workspace = true }
 serde_json = { workspace = true }

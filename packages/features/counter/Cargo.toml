@@ -1,0 +1,14 @@
+[package]
+name = "feature-counter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+domain = { workspace = true }
+contracts_api = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }

@@ -3,6 +3,29 @@
 version = 4
 
 [[package]]
+name = "adapter-google"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "base64 0.22.1",
+ "chrono",
+ "contracts_auth",
+ "domain",
+ "rand 0.8.5",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tauri",
+ "tauri-plugin-opener",
+ "tauri-plugin-store",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "addr"
 version = "0.15.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2046,6 +2069,48 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e6853b52649d4ac5c0bd02320cddc5ba956bdb407c4b75a2c6b75bf51500f8c"
 dependencies = [
  "simd-adler32",
+]
+
+[[package]]
+name = "feature-admin"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "domain",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tracing",
+]
+
+[[package]]
+name = "feature-auth"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "contracts_auth",
+ "domain",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tracing",
+ "usecases",
+]
+
+[[package]]
+name = "feature-counter"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "contracts_api",
+ "domain",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tracing",
 ]
 
 [[package]]
@@ -8853,6 +8918,8 @@ dependencies = [
  "async-trait",
  "chrono",
  "domain",
+ "feature-admin",
+ "feature-counter",
  "serde",
  "serde_json",
  "thiserror 2.0.18",

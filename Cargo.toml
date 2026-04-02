@@ -13,6 +13,8 @@ members = [
     "packages/adapters/storage/libsql",
     "packages/adapters/auth/google",
     "packages/features/auth",
+    "packages/features/counter",
+    "packages/features/admin",
 ]
 resolver = "2"
 
@@ -28,6 +30,8 @@ storage_libsql = { path = "packages/adapters/storage/libsql" }
 runtime_tauri = { path = "packages/adapters/hosts/tauri" }
 adapter-google = { path = "packages/adapters/auth/google" }
 feature-auth = { path = "packages/features/auth" }
+feature-counter = { path = "packages/features/counter" }
+feature-admin = { path = "packages/features/admin" }
 
 # Tauri
 tauri = { version = "2.10.3", features = ["tray-icon"] }
