@@ -40,7 +40,7 @@ Provide a runnable, tested, production-ready engineering base with Google Auth, 
 
 - ✓ 仓库目录结构对齐蓝图，建立 apps/servers/packages/crates/tools 分层边界 — Validated in Phase 01
 - ✓ packages/contracts/api 作为 Rust 单一真理源，自动生成 TS 类型 — Validated in Phase 02
-- [ ] Runtime 边界收敛：core 不依赖 host，adapters 不承载业务策略
+- ✓ Runtime 边界收敛：core 不依赖 host，adapters 不承载业务策略 — Validated in Phase 03
 - ✓ moon + Just + proto 提供统一的 setup/dev/verify/typegen 入口 — Validated in Phase 01
 - [ ] Google Auth 通过 adapter 接入，不污染 core
 - [ ] Counter 功能通过 feature 组合 core + contracts 实现
@@ -57,7 +57,7 @@ Provide a runnable, tested, production-ready engineering base with Google Auth, 
 
 ## Context
 
-**Current state:** v0.2.0 Phase 04 (backend-dependencies-build-optimization) complete. Axum middleware stack (tower/tower-http/hyper) configured as workspace dependencies, release profile optimized with panic="abort", runtime_server crate wired to workspace deps, Axum HTTP server implemented with CORS/Trace/Timeout middleware, /healthz and /readyz endpoints, cargo-bloat monitoring task. Ready for Phase 05.
+**Current state:** v0.2.0 Phase 03 (runtime-boundary-convergence) complete. Storage adapter crates (surrealdb, libsql) migrated to packages/adapters/storage/, usecases hexagonal boundary enforced (no contracts_api dependency), Tauri command bridge established (runtime_tauri exports commands, native-tauri is thin bootstrap), boundary enforcement mechanisms in place (deny.toml, CI boundary-check task, agent rubric). Ready for Phase 04 (最小功能实现).
 
 **Tech stack (confirmed):**
 - Desktop: Tauri v2 (确定)
@@ -115,4 +115,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-*Last updated: 2026-04-02 after Phase 04 (backend-dependencies-build-optimization) — Axum middleware stack, workspace deps, server implementation, health checks*
+*Last updated: 2026-04-02 after Phase 03 (runtime-boundary-convergence) — storage adapter migration, usecases boundary, Tauri command bridge, boundary enforcement*
