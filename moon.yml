@@ -151,6 +151,25 @@ tasks:
   test-agent:
     command: 'echo "Agent tests — Phase 5 implementation"'
 
+  boundary-check:
+    command:
+      - 'echo "=== Checking domain dependencies ==="'
+      - 'cargo tree -p domain --depth 1 2>/dev/null | grep -v "domain" | grep -v "^\s*$" | grep -v "async-trait" | grep -v "serde" | grep -v "serde_json" | grep -E "(storage_|runtime_|contracts_)" && echo "FAIL: domain depends on illegal crate" && exit 1 || echo "OK: domain boundary clean"'
+      - 'echo "=== Checking usecases dependencies ==="'
+      - 'cargo tree -p usecases --depth 1 2>/dev/null | grep -v "usecases" | grep -v "^\s*$" | grep -v "async-trait" | grep -v "serde" | grep -v "serde_json" | grep -v "chrono" | grep -v "thiserror" | grep -E "(storage_|runtime_|contracts_)" && echo "FAIL: usecases depends on illegal crate" && exit 1 || echo "OK: usecases boundary clean"'
+      - 'echo "=== Checking contracts_api dependencies ==="'
+      - 'cargo tree -p contracts_api --depth 1 2>/dev/null | grep -v "contracts_api" | grep -v "^\s*$" | grep -v "serde" | grep -v "ts-rs" | grep -v "utoipa" | grep -v "validator" | grep -E "(domain|usecases|storage_|runtime_)" && echo "FAIL: contracts_api depends on illegal crate" && exit 1 || echo "OK: contracts_api boundary clean"'
+      - 'echo "All boundary checks passed"'
+    inputs:
+      - "Cargo.toml"
+      - "packages/*/Cargo.toml"
+      - "packages/**/Cargo.toml"
+      - "servers/*/Cargo.toml"
+    deps:
+      - "~:setup"
+    options:
+      runFromWorkspaceRoot: true
+
   verify:
     deps:
       - 'fmt'
@@ -158,6 +177,7 @@ tasks:
       - 'typecheck'
       - 'contracts-check'
       - 'test-unit'
+      - '~:boundary-check'
 
   # ── Codegen ────────────────────────────────────────────────────────
   typegen:
