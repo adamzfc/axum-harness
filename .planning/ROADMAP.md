@@ -56,7 +56,12 @@ Plans:
   2. adapters/hosts/tauri (runtime_tauri) 承载 Tauri command 桥接，native host 仅保留 builder/bootstrap。
   3. 新增 capability 通过 feature 模块组合实现，不绕过 contracts/adapters 边界。
   4. 目录边界红线有 CI 或 agent rubric 强制检查。
-**Plans**: TBD
+**Plans**: 4 plans in 3 waves
+Plans:
+- [ ] 03-01-PLAN.md — Port implementations migration to packages/adapters/storage/
+- [ ] 03-02-PLAN.md — usecases decoupling from contracts_api
+- [ ] 03-03-PLAN.md — runtime_tauri command bridge + native-tauri refactor
+- [ ] 03-04-PLAN.md — Boundary enforcement (deny.toml, CI check, agent rubric)
 
 ### Phase 4: 最小功能实现
 **Goal**: 用户可以登录、使用计数器、访问 Admin、与 Agent 对话。
@@ -88,7 +93,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. 仓库目录结构与工具链对齐 | 4/4 | Complete | 2026-04-01 |
 | 2. Contracts/typegen 单一真理源 | 1/2 | In progress | - |
-| 3. Runtime 边界收敛 | 0/TBD | Not started | - |
+| 3. Runtime 边界收敛 | 0/4 | Planned | - |
 | 4. 最小功能实现 | 0/TBD | Not started | - |
 | 5. Agent-Friendly 开发基建 | 0/TBD | Not started | - |
 
