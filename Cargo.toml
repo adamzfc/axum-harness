@@ -9,6 +9,7 @@ members = [
     "packages/contracts/auth",
     "packages/contracts/events",
     "packages/adapters/hosts/tauri",
+    "packages/adapters/storage/surrealdb",
 ]
 resolver = "2"
 
@@ -19,6 +20,7 @@ usecases = { path = "packages/core/usecases" }
 contracts_api = { path = "packages/contracts/api" }
 contracts_auth = { path = "packages/contracts/auth" }
 contracts_events = { path = "packages/contracts/events" }
+storage_surrealdb = { path = "packages/adapters/storage/surrealdb" }
 
 # Tauri
 tauri = { version = "2.10.3", features = ["tray-icon"] }
@@ -90,6 +92,9 @@ jsonwebtoken = "10.3.0"
 sha2 = "0.10"
 base64 = "0.22"
 rand = "0.8"
+
+# Async trait
+async-trait = "0.1"
 
 # Utilities
 url = "2"
