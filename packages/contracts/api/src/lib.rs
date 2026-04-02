@@ -38,6 +38,38 @@ pub struct InitTenantResponse {
     pub created: bool,
 }
 
+/// Chat message (user or assistant).
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export, export_to = "api/")]
+pub struct ChatMessage {
+    pub id: String,
+    pub conversation_id: String,
+    /// "user" | "assistant" | "system" | "tool"
+    pub role: String,
+    pub content: String,
+    pub tool_calls: Option<Vec<ToolCall>>,
+    pub created_at: String,
+}
+
+/// Tool call in a chat message.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export, export_to = "api/")]
+pub struct ToolCall {
+    pub id: String,
+    pub name: String,
+    pub arguments: serde_json::Value,
+    pub result: Option<String>,
+}
+
+/// Agent configuration (user-provided API key + endpoint).
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export, export_to = "api/")]
+pub struct AgentConfig {
+    pub api_key: String,
+    pub base_url: String,
+    pub model: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -55,5 +87,20 @@ mod tests {
     #[test]
     fn export_init_tenant_response() {
         InitTenantResponse::export().unwrap();
+    }
+
+    #[test]
+    fn export_chat_message() {
+        ChatMessage::export().unwrap();
+    }
+
+    #[test]
+    fn export_tool_call() {
+        ToolCall::export().unwrap();
+    }
+
+    #[test]
+    fn export_agent_config() {
+        AgentConfig::export().unwrap();
     }
 }

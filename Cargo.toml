@@ -15,6 +15,7 @@ members = [
     "packages/features/auth",
     "packages/features/counter",
     "packages/features/admin",
+    "packages/features/agent",
 ]
 resolver = "2"
 
@@ -32,6 +33,7 @@ adapter-google = { path = "packages/adapters/auth/google" }
 feature-auth = { path = "packages/features/auth" }
 feature-counter = { path = "packages/features/counter" }
 feature-admin = { path = "packages/features/admin" }
+feature-agent = { path = "packages/features/agent" }
 
 # Tauri
 tauri = { version = "2.10.3", features = ["tray-icon"] }
@@ -109,6 +111,7 @@ rand = "0.8"
 async-trait = "0.1"
 
 # Utilities
+futures-util = "0.3"
 url = "2"
 uuid = { version = "1.23.0", features = ["v4", "v7", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
