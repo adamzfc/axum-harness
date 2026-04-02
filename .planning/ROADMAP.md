@@ -76,7 +76,7 @@ Plans:
 **Plans**: 4 plans in 4 waves
 Plans:
 - [x] 04-01-PLAN.md — Auth refactor: adapter-google + feature-auth crates (Wave 1)
-- [ ] 04-02-PLAN.md — Counter + Admin features: traits + LibSQL implementations (Wave 2)
+- [x] 04-02-PLAN.md — Counter + Admin features: traits + LibSQL implementations (Wave 2)
 - [ ] 04-03-PLAN.md — Counter + Admin wiring: Tauri commands + Axum routes + frontend (Wave 3)
 - [ ] 04-04-PLAN.md — Agent chat: contracts + service + streaming + UI (Wave 4)
 
