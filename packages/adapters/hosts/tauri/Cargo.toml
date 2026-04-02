@@ -6,6 +6,9 @@ edition = "2021"
 [dependencies]
 domain = { workspace = true }
 usecases = { workspace = true }
+feature-counter = { workspace = true }
+feature-admin = { workspace = true }
+storage_libsql = { workspace = true }
 tauri = { workspace = true }
 tauri-plugin-store = { workspace = true }
 tauri-plugin-opener = { workspace = true }
