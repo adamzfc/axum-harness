@@ -1,8 +1,7 @@
 use adapter_google::GoogleAuthAdapter;
 use async_trait::async_trait;
-use feature_auth::{
-    AuthError as FeatureAuthError, AuthResult, AuthService, SessionInfo, UserProfile,
-};
+use feature_auth::AuthService;
+use feature_auth::{AuthError as FeatureAuthError, AuthResult, SessionInfo, UserProfile};
 use tauri::AppHandle;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -53,7 +52,7 @@ impl TauriAuthService {
 }
 
 #[async_trait]
-impl AuthService for TauriAuthService {
+impl feature_auth::AuthService for TauriAuthService {
     async fn start_login(&self) -> Result<(), FeatureAuthError> {
         self.adapter
             .start_login(&self.app)
