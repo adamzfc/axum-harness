@@ -77,7 +77,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Auth refactor: adapter-google + feature-auth crates (Wave 1)
 - [x] 04-02-PLAN.md — Counter + Admin features: traits + LibSQL implementations (Wave 2)
-- [ ] 04-03-PLAN.md — Counter + Admin wiring: Tauri commands + Axum routes + frontend (Wave 3)
+- [x] 04-03-PLAN.md — Counter + Admin wiring: Tauri commands + Axum routes + frontend (Wave 3)
 - [ ] 04-04-PLAN.md — Agent chat: contracts + service + streaming + UI (Wave 4)
 
 ### Phase 5: Agent-Friendly 开发基建
@@ -97,9 +97,9 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. 仓库目录结构与工具链对齐 | 4/4 | Complete | 2026-04-01 |
-| 2. Contracts/typegen 单一真理源 | 1/2 | In progress | - |
+| 2. Contracts/typegen 单一真理源 | 2/2 | Complete | 2026-04-01 |
 | 3. Runtime 边界收敛 | 0/4 | Planned | - |
-| 4. 最小功能实现 | 1/4 | In Progress|  |
+| 4. 最小功能实现 | 3/4 | In Progress|  |
 | 5. Agent-Friendly 开发基建 | 0/TBD | Not started | - |
 
 ## Coverage Map (v0.2.0)
@@ -113,9 +113,9 @@ Plans:
 | RUNTIME-01 | Phase 3 | Pending |
 | RUNTIME-02 | Phase 3 | Pending |
 | RUNTIME-03 | Phase 3 | Pending |
-| AUTH-01 | Phase 4 | Pending |
-| COUNTER-01 | Phase 4 | Pending |
-| ADMIN-01 | Phase 4 | Pending |
+| AUTH-01 | Phase 4 | Completed (Plans 01-03) |
+| COUNTER-01 | Phase 4 | Completed (Plans 02-03) |
+| ADMIN-01 | Phase 4 | Completed (Plans 02-03) |
 | AGENT-01 | Phase 4 | Pending |
 | AGENT-DEV-01 | Phase 5 | Pending |
 
