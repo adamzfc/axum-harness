@@ -82,6 +82,15 @@ None - no external service configuration required.
 - usecases 六角形边界已强制，可以安全地在 Phase 04 中添加新 usecases 代码
 - 下一步：继续 Phase 03 剩余计划（RUNTIME-02, RUNTIME-03）
 
+## Self-Check: PASSED
+
+- [x] SUMMARY.md exists at `.planning/phases/03-runtime-boundary-convergence/03-02-SUMMARY.md`
+- [x] `packages/core/usecases/Cargo.toml` exists and does NOT contain `contracts_api`
+- [x] Commit `c0e6465` exists: `feat(03-02): remove contracts_api dependency from usecases crate`
+- [x] Commit `d9c695d` exists: `docs(03-02): complete remove-contracts_api-from-usecases plan`
+- [x] cargo check -p usecases passes
+- [x] cargo test -p usecases passes (4/4)
+
 ---
 *Phase: 03-runtime-boundary-convergence*
 *Completed: 2026-04-02*
