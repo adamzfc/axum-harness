@@ -22,6 +22,16 @@ pub struct OAuthCallback {
     pub state: String,
 }
 
+/// User profile information from OAuth provider.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export, export_to = "auth/")]
+pub struct UserProfile {
+    pub email: String,
+    pub name: String,
+    pub picture: String,
+    pub sub: String,
+}
+
 /// Authenticated user session info.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, TS)]
 #[ts(export, export_to = "auth/")]
@@ -43,6 +53,11 @@ mod tests {
     #[test]
     fn export_oauth_callback() {
         OAuthCallback::export().unwrap();
+    }
+
+    #[test]
+    fn export_user_profile() {
+        UserProfile::export().unwrap();
     }
 
     #[test]
