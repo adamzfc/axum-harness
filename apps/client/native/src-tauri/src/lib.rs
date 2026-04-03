@@ -3,7 +3,7 @@
 mod commands;
 mod sync;
 
-use runtime_tauri::commands::{admin, auth, config, counter};
+use runtime_tauri::commands::{admin, agent, auth, config, counter};
 
 use domain::ports::lib_sql::LibSqlPort;
 use storage_libsql::{EmbeddedLibSql, embedded::run_tenant_migrations};
@@ -95,6 +95,7 @@ pub fn run() {
             counter::counter_reset,
             counter::counter_get_value,
             admin::admin_get_dashboard_stats,
+            agent::agent_chat,
             commands::sync::sync_start,
             commands::sync::sync_stop,
             commands::sync::sync_once,
