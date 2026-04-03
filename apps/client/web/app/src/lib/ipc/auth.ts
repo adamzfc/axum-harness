@@ -1,17 +1,15 @@
 import { invoke } from '@tauri-apps/api/core';
+import type { UserProfile } from '$lib/generated/auth/UserProfile';
+import type { TokenPair } from '$lib/generated/auth/TokenPair';
 
-export interface UserProfile {
-	email: string;
-	name: string;
-	picture: string;
-	sub: string;
-}
-
+/**
+ * Full auth session combining generated TokenPair + UserProfile.
+ * This is a frontend composition type — not defined in contracts
+ * because it aggregates multiple contract types for client-side use.
+ */
 export interface AuthSession {
-	access_token: string;
-	refresh_token: string;
+	tokens: TokenPair;
 	id_token: string;
-	expires_at: number;
 	user: UserProfile;
 }
 
@@ -30,9 +28,7 @@ export async function getSession(): Promise<AuthSession | null> {
 export async function clearAuthStore(): Promise<void> {
 	const { Store } = await import('@tauri-apps/plugin-store');
 	const store = await Store.load('auth.json');
-	await store.delete('access_token');
-	await store.delete('refresh_token');
+	await store.delete('tokens');
 	await store.delete('id_token');
-	await store.delete('expires_at');
 	await store.delete('user');
 }
