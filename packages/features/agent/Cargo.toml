@@ -1,7 +1,7 @@
 [package]
 name = "feature-agent"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 contracts_api = { workspace = true }
@@ -9,3 +9,6 @@ serde = { workspace = true }
 async-trait = { workspace = true }
 thiserror = { workspace = true }
 futures-util = "0.3"
+
+[lints]
+workspace = true

@@ -111,9 +111,7 @@ impl GoogleAuthAdapter {
     /// 4. Starts TCP listener for redirect callback
     /// 5. Opens system browser with authorization URL
     pub async fn start_login(&self, app: &AppHandle) -> Result<(), AuthError> {
-        start_oauth(app.clone())
-            .await
-            .map_err(|e| AuthError::Network(e))
+        start_oauth(app.clone()).await.map_err(AuthError::Network)
     }
 
     /// Handle the OAuth callback URL.
@@ -126,7 +124,7 @@ impl GoogleAuthAdapter {
     ) -> Result<AuthSession, AuthError> {
         handle_oauth_callback(app.clone(), url.to_string())
             .await
-            .map_err(|e| AuthError::TokenExchange(e))
+            .map_err(AuthError::TokenExchange)
     }
 
     /// Get the current auth session from the Tauri store.
@@ -213,14 +211,14 @@ pub async fn start_oauth(app: AppHandle) -> Result<(), String> {
             tracing::debug!(first_line = %request.lines().next().unwrap_or(""), "received HTTP request");
 
             // Extract first line: "GET /oauth/callback?code=...&state=... HTTP/1.1"
-            if let Some(first_line) = request.lines().next() {
-                if let Some(path) = first_line.split_whitespace().nth(1) {
-                    let callback_url = format!("http://127.0.0.1:1420{path}");
-                    tracing::info!(%callback_url, "emitting oauth-callback event");
-                    // Use custom event name to avoid conflicts with tauri-plugin-deep-link
-                    if let Err(e) = app_for_callback.emit("oauth-callback", &callback_url) {
-                        tracing::error!(%e, "failed to emit oauth-callback event");
-                    }
+            if let Some(first_line) = request.lines().next()
+                && let Some(path) = first_line.split_whitespace().nth(1)
+            {
+                let callback_url = format!("http://127.0.0.1:1420{path}");
+                tracing::info!(%callback_url, "emitting oauth-callback event");
+                // Use custom event name to avoid conflicts with tauri-plugin-deep-link
+                if let Err(e) = app_for_callback.emit("oauth-callback", &callback_url) {
+                    tracing::error!(%e, "failed to emit oauth-callback event");
                 }
             }
             // Return HTML so the browser tab shows confirmation
@@ -502,17 +500,15 @@ pub fn start_refresh_timer(app: AppHandle) {
 
                 let app2 = app.clone();
                 tauri::async_runtime::spawn(async move {
-                    tokio::time::sleep(std::time::Duration::from_secs(next_delay.max(0))).await;
+                    tokio::time::sleep(std::time::Duration::from_secs(next_delay)).await;
                     // Re-read refresh_token in case it was rotated
-                    if let Ok(store) = app2.store("auth.json") {
-                        if let Some(rt) = store
+                    if let Ok(store) = app2.store("auth.json")
+                        && let Some(rt) = store
                             .get("refresh_token")
                             .and_then(|v| v.as_str().map(String::from))
-                        {
-                            if refresh_access_token(&app2, &rt).await.is_err() {
-                                clear_session_and_notify(&app2);
-                            }
-                        }
+                        && refresh_access_token(&app2, &rt).await.is_err()
+                    {
+                        clear_session_and_notify(&app2);
                     }
                 });
             }

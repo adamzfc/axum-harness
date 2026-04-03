@@ -19,7 +19,7 @@ pub fn router() -> Router<AppState> {
             "/agent/conversations",
             get(list_conversations).post(create_conversation),
         )
-        .route("/agent/conversations/:id/messages", get(get_messages))
+        .route("/agent/conversations/{id}/messages", get(get_messages))
         .route("/agent/chat", post(chat_handler))
 }
 

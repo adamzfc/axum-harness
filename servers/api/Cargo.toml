@@ -82,7 +82,15 @@ utoipa-swagger-ui = { version = "9", features = ["axum"] }
 [dev-dependencies]
 http-body-util = "0.1"
 tower = { workspace = true, features = ["util"] }
+proptest = { workspace = true }
+testcontainers = { workspace = true }
+testcontainers-modules = { version = "0.15", features = ["postgres"] }
+tracing-test = { workspace = true }
+trybuild = { workspace = true }
 
 [features]
 default = []
 http3 = ["dep:quinn", "dep:h3", "dep:rcgen"]
+
+[lints]
+workspace = true

@@ -1,3 +1,15 @@
-# clippy 配置
+# clippy 配置 — v0.2.0 starter template
+#
+# 策略说明：
+# - 作为 starter 模板，允许 stub 代码、预留接口、dead code 存在
+# - workspace.lints.clippy 中配置各 lint 的默认级别（allow/warn/deny）
+# - moon.yml 中 cargo clippy 不使用 -D warnings，让 workspace lints 生效
+# - 后续开发中可按需将 warn 升级为 deny
+#
+# 当前策略：
+#   dead_code / unused_imports / unused_variables → allow（stub 代码）
+#   result_large_err → allow（外部库类型无法控制）
+#   derivable_impls / redundant_closure / collapsible_if 等 → warn（提示但不阻断）
+
 too-many-arguments-threshold = 8
 type-complexity-threshold = 300

@@ -40,7 +40,7 @@ impl Default for SyncConfig {
 }
 
 /// Statistics about the sync state.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SyncStats {
     pub last_sync: Option<DateTime<Utc>>,
     pub total_pushes: u64,
@@ -48,19 +48,6 @@ pub struct SyncStats {
     pub total_conflicts: u64,
     pub total_errors: u64,
     pub is_syncing: bool,
-}
-
-impl Default for SyncStats {
-    fn default() -> Self {
-        Self {
-            last_sync: None,
-            total_pushes: 0,
-            total_pulls: 0,
-            total_conflicts: 0,
-            total_errors: 0,
-            is_syncing: false,
-        }
-    }
 }
 
 /// Error type for sync operations.

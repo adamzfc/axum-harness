@@ -29,12 +29,10 @@ impl<P: LibSqlPort, T: TenantService, C: CounterService> AdminService
     for LibSqlAdminService<P, T, C>
 {
     async fn get_dashboard_stats(&self) -> Result<DashboardStats, AdminError> {
-        let tenants = self.tenant_service.list_tenants().await.map_err(|e| {
-            AdminError::Database(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                e.to_string(),
-            )))
-        })?;
+        let tenants =
+            self.tenant_service.list_tenants().await.map_err(|e| {
+                AdminError::Database(Box::new(std::io::Error::other(e.to_string())))
+            })?;
         let counter_value = self
             .counter_service
             .get_value()

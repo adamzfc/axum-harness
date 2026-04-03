@@ -1,10 +1,10 @@
 //! Cross-module integration tests for runtime_server.
 //!
-//! Covers tenant middleware extraction, TenantAwareSurrealDb query building,
-//! and tenant init API request/response behavior.
+//! Covers tenant SQL filter injection, tenant init API request/response behavior,
+//! and router construction.
 
 use contracts_api::{InitTenantRequest, InitTenantResponse};
-use runtime_server::ports::surreal_db::TenantAwareSurrealDb;
+use storage_surrealdb::TenantAwareSurrealDb;
 
 // ─── Tenant SQL Filter Injection ────────────────────────────────────────────
 
@@ -225,4 +225,71 @@ fn inject_select_with_fetch() {
     let result = TenantAwareSurrealDb::inject_tenant_filter(sql);
     assert!(result.contains("WHERE tenant_id = $tenant_id"));
     assert!(result.contains("FETCH user"));
+}
+
+// ─── Proptest: property-based tests for tenant filter injection ─────
+
+use proptest::prelude::*;
+
+proptest! {
+    #[test]
+    fn proptest_inject_preserves_original_sql_structure(
+        sql in prop_oneof![
+            Just("SELECT * FROM counter".to_string()),
+            Just("SELECT * FROM tenant WHERE id = $id".to_string()),
+            Just("SELECT * FROM user_tenant ORDER BY created_at DESC".to_string()),
+            Just("SELECT * FROM counter LIMIT 10".to_string()),
+            Just("CREATE counter SET name = $name, count = 0".to_string()),
+            Just("CREATE counter SET name = $name RETURN AFTER".to_string()),
+            Just("UPDATE counter SET count += 1 WHERE id = $id".to_string()),
+            Just("UPDATE counter SET count = 0".to_string()),
+            Just("DELETE FROM counter WHERE id = $id".to_string()),
+            Just("DELETE FROM counter".to_string()),
+            Just("INFO FOR DB".to_string()),
+            Just("SHOW TABLES".to_string()),
+            Just("EXPLAIN SELECT * FROM counter".to_string()),
+        ]
+    ) {
+        let result = TenantAwareSurrealDb::inject_tenant_filter(&sql);
+        if sql.starts_with("SELECT") {
+            prop_assert!(result.contains("SELECT"));
+        }
+        if sql.starts_with("CREATE") {
+            prop_assert!(result.contains("CREATE"));
+        }
+        if sql.starts_with("UPDATE") {
+            prop_assert!(result.contains("UPDATE"));
+        }
+        if sql.starts_with("DELETE") {
+            prop_assert!(result.contains("DELETE"));
+        }
+    }
+
+    #[test]
+    fn proptest_inject_always_contains_tenant_filter_for_known_statements(
+        sql in prop_oneof![
+            Just("SELECT * FROM counter".to_string()),
+            Just("CREATE counter SET name = $name".to_string()),
+            Just("UPDATE counter SET count = 0".to_string()),
+            Just("DELETE FROM counter".to_string()),
+        ]
+    ) {
+        let result = TenantAwareSurrealDb::inject_tenant_filter(&sql);
+        prop_assert!(
+            result.contains("tenant_id = $tenant_id"),
+            "Expected tenant filter in: {result}"
+        );
+    }
+
+    #[test]
+    fn proptest_unknown_statement_passes_through(
+        sql in prop_oneof![
+            Just("INFO FOR DB".to_string()),
+            Just("SHOW TABLES".to_string()),
+            Just("EXPLAIN SELECT * FROM counter".to_string()),
+        ]
+    ) {
+        let result = TenantAwareSurrealDb::inject_tenant_filter(&sql);
+        prop_assert_eq!(result, sql);
+    }
 }

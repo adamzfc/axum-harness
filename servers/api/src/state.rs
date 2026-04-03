@@ -66,18 +66,18 @@ impl AppState {
         // Embedded libsql for local features (counter, admin)
         let embedded_db = EmbeddedLibSql::new(":memory:")
             .await
-            .map_err(|e| AppError::Database(e))?;
+            .map_err(AppError::Database)?;
         embedded_db
             .execute(usecases::counter_service::COUNTER_MIGRATION, vec![])
             .await
-            .map_err(|e| AppError::Database(e))?;
+            .map_err(AppError::Database)?;
 
         // Run agent migrations (conversations + messages tables)
         for migration in usecases::agent_service::AGENT_MIGRATIONS {
             embedded_db
                 .execute(migration, vec![])
                 .await
-                .map_err(|e| AppError::Database(e))?;
+                .map_err(AppError::Database)?;
         }
 
         // Moka cache — 10k entries, 5min TTL (per D-10/D-11)
@@ -110,11 +110,11 @@ impl AppState {
             CloudDbProvider::Turso => {
                 let turso = TursoDb::new(&config.database.url, &config.database.auth_token)
                     .await
-                    .map_err(|e| AppError::Database(e.into()))?;
+                    .map_err(AppError::Database)?;
 
                 run_turso_migrations(&turso)
                     .await
-                    .map_err(|e| AppError::Database(e.into()))?;
+                    .map_err(AppError::Database)?;
 
                 Some(turso)
             }

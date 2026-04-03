@@ -26,18 +26,13 @@ pub struct ServerConfig {
     pub request_timeout_secs: u64,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
 pub enum CloudDbProvider {
     #[serde(rename = "surrealdb")]
+    #[default]
     SurrealDB,
     #[serde(rename = "turso")]
     Turso,
-}
-
-impl Default for CloudDbProvider {
-    fn default() -> Self {
-        Self::SurrealDB
-    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

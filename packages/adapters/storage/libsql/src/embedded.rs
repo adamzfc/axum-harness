@@ -75,7 +75,7 @@ impl LibSqlPort for EmbeddedLibSql {
         while let Some(row) = rows.next().await? {
             let mut map = serde_json::Map::new();
             for i in 0..row.column_count() {
-                let name = row.column_name(i as i32).unwrap_or_default();
+                let name = row.column_name(i).unwrap_or_default();
                 let value = match row.get_value(i)? {
                     libsql::Value::Null => serde_json::Value::Null,
                     libsql::Value::Integer(n) => serde_json::json!(n),

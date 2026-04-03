@@ -17,7 +17,26 @@ members = [
     "packages/features/admin",
     "packages/features/agent",
 ]
-resolver = "2"
+resolver = "3"
+
+# ── Workspace Lints ──────────────────────────────────────────
+# Starter template: allow stub code, unused items, and dead code
+# These will be tightened as the project matures
+[workspace.lints.clippy]
+# Allow stub/placeholder code
+result_large_err = "allow"
+derivable_impls = "warn"    # warn, not deny — stub code may need manual Default
+redundant_closure = "warn"
+collapsible_if = "warn"
+io_other_error = "warn"
+unnecessary_cast = "warn"
+unnecessary_min_or_max = "warn"
+useless_conversion = "warn"
+
+[workspace.lints.rust]
+dead_code = "allow"
+unused_imports = "allow"
+unused_variables = "allow"
 
 [workspace.dependencies]
 # Internal crates
@@ -89,6 +108,13 @@ tracing-error = "0.2"
 # Testing
 mockito = "1"
 
+# Testing infrastructure (2026 harness)
+proptest = "1"
+testcontainers = "0.27"
+testcontainers-modules = { version = "0.15", features = ["postgres"] }
+tracing-test = "0.2"
+trybuild = "1"
+
 # HTTP client utilities
 http-body-util = "0.1"
 
@@ -143,3 +169,13 @@ panic = "abort"
 
 [profile.dev]
 panic = "unwind"
+
+# ── Coverage Profile ─────────────────────────────────────────
+# Third-party dependencies don't need full debug info for coverage
+# This significantly reduces build size and time
+[profile.dev.package."*"]
+debug = 0
+
+[profile.dev.package]
+# Keep debug info for our own crates to get accurate coverage
+# (workspace crates inherit from default profile)

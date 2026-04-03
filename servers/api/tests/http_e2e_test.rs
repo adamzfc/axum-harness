@@ -1,7 +1,7 @@
-//! HTTP end-to-end tests for runtime_server.
+//! HTTP End-to-End tests for runtime_server.
 //!
 //! Uses axum::Router + tower::ServiceExt::oneshot to simulate real HTTP requests
-//! without needing a running server or SurrealDB connection.
+//! without needing a running server. SurrealDB runs in-memory for isolation.
 
 use axum::{
     body::Body,
@@ -12,6 +12,7 @@ use moka::future::Cache;
 use runtime_server::config::{CloudDbProvider, Config};
 use runtime_server::create_router;
 use runtime_server::state::AppState;
+use storage_surrealdb::{TenantAwareSurrealDb, run_tenant_migrations};
 use surrealdb::{Surreal, engine::any::connect};
 use tower::ServiceExt;
 
@@ -20,14 +21,10 @@ async fn make_test_state() -> AppState {
     let db: Surreal<_> = connect("mem://").await.unwrap();
     db.use_ns("test").use_db("test").await.unwrap();
 
-    runtime_server::ports::surreal_db::run_tenant_migrations(&db)
-        .await
-        .unwrap();
+    run_tenant_migrations(&db).await.unwrap();
 
     let cache: Cache<String, String> = Cache::builder().max_capacity(10_000).build();
-
     let http_client = reqwest::Client::new();
-
     let config = Config::default();
 
     AppState {
@@ -37,6 +34,7 @@ async fn make_test_state() -> AppState {
         config,
         turso_db: None,
         db_provider: CloudDbProvider::SurrealDB,
+        embedded_db: None,
     }
 }
 
@@ -55,7 +53,7 @@ async fn make_test_state_file() -> AppState {
         .await
         .expect("Failed to use ns/db");
 
-    runtime_server::ports::surreal_db::run_tenant_migrations(&db)
+    run_tenant_migrations(&db)
         .await
         .expect("Failed to run migrations");
 
@@ -81,6 +79,7 @@ async fn make_test_state_file() -> AppState {
         config,
         turso_db: None,
         db_provider: CloudDbProvider::SurrealDB,
+        embedded_db: None,
     }
 }
 
@@ -252,9 +251,7 @@ async fn diagnostic_db_create_works() {
     let db: Surreal<_> = connect(&db_url).await.unwrap();
     db.use_ns("test").use_db("test").await.unwrap();
 
-    runtime_server::ports::surreal_db::run_tenant_migrations(&db)
-        .await
-        .unwrap();
+    run_tenant_migrations(&db).await.unwrap();
 
     // Test CREATE with parameters
     let mut resp = db
@@ -273,7 +270,6 @@ async fn diagnostic_db_create_works() {
 
     // Test via TenantAwareSurrealDb (admin mode) - the path used by handler
     use domain::ports::surreal_db::SurrealDbPort;
-    use runtime_server::ports::surreal_db::TenantAwareSurrealDb;
     use std::collections::BTreeMap;
 
     let admin_db = TenantAwareSurrealDb::new_admin(db.clone());
