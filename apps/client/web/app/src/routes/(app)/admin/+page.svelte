@@ -1,8 +1,9 @@
 <script lang="ts">
 import { Card } from '$lib/components';
 import { onMount } from 'svelte';
+import type { AdminDashboardStats } from '$lib/generated/api/AdminDashboardStats';
 
-let stats = $state({ tenant_count: 0, counter_value: 0, last_login: null as string | null, app_version: '0.0.0' });
+let stats = $state<AdminDashboardStats>({ tenant_count: 0, counter_value: 0, last_login: null, app_version: '0.0.0' });
 let loading = $state(true);
 
 const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__;
