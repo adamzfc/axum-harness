@@ -57,6 +57,7 @@ pub struct ChatMessage {
 pub struct ToolCall {
     pub id: String,
     pub name: String,
+    #[ts(type = "any")]
     pub arguments: serde_json::Value,
     pub result: Option<String>,
 }
