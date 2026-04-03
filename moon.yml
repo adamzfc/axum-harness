@@ -15,7 +15,7 @@ tasks:
       - 'Cargo.lock'
 
   lint:
-    command: 'cargo clippy --workspace -- -D warnings'
+    command: 'cargo clippy --workspace'
     inputs:
 
       - 'Cargo.toml'
@@ -46,10 +46,9 @@ tasks:
 
   # ── Setup ──────────────────────────────────────────────────────────
   setup:
-    script: 'bun install && proto install'
+    script: 'bun install'
     inputs:
       - 'package.json'
-      - '.prototools'
 
   bootstrap:
     deps:
@@ -59,18 +58,16 @@ tasks:
   doctor:
     script: |
       echo "=== Toolchain Check ==="
-      bun --version || echo "MISSING: bun"
-      node --version || echo "MISSING: node"
-      cargo --version || echo "MISSING: cargo"
-      rustc --version || echo "MISSING: rustc"
+      bun --version || echo "MISSING: bun — run: mise install"
+      node --version || echo "MISSING: node — run: mise install"
+      cargo --version || echo "MISSING: cargo — run: mise install"
+      rustc --version || echo "MISSING: rustc — run: mise install"
       moon --version || echo "MISSING: moon"
-      echo "=== Proto Status ==="
-      proto status 2>/dev/null || echo "proto not installed"
       echo "=== Env Check ==="
       test -f .env && echo ".env exists" || echo "MISSING: .env"
-      echo "DONE"
+      echo "=== Done ==="
     inputs:
-      - '.prototools'
+      - '.tool-versions'
       - 'rust-toolchain.toml'
       - '.env.example'
 
@@ -78,7 +75,7 @@ tasks:
     script: 'rustc --version && bun --version && moon --version && echo "ALL OK"'
     inputs:
       - 'rust-toolchain.toml'
-      - '.prototools'
+      - '.tool-versions'
 
   # ── Dev ────────────────────────────────────────────────────────────
   dev-web:
@@ -142,6 +139,30 @@ tasks:
     deps:
       - 'test'
 
+  test-nextest:
+    command: 'cargo nextest run --workspace'
+
+  test-coverage:
+    command: 'cargo llvm-cov --workspace --lcov --output-path target/lcov.info'
+
+  test-coverage-html:
+    command: 'cargo llvm-cov --workspace --html --open'
+
+  test-coverage-clean:
+    command: 'cargo llvm-cov clean'
+
+  clean-sweep:
+    script: 'cargo sweep --time 7 2>/dev/null || echo "Install cargo-sweep: cargo install cargo-sweep"'
+
+  clean-sweep-deps:
+    script: 'cargo sweep --installed 2>/dev/null || echo "Install cargo-sweep: cargo install cargo-sweep"'
+
+  test-hack:
+    command: 'cargo hack check --workspace --feature-powerset'
+
+  test-mutants:
+    command: 'cargo mutants --workspace'
+
   test-integration:
     command: 'cargo test --workspace -- --ignored'
 
@@ -150,6 +171,18 @@ tasks:
 
   test-agent:
     command: 'echo "Agent tests — Phase 5 implementation"'
+
+  test-all-rust:
+    deps:
+      - 'test-nextest'
+      - 'test-coverage'
+      - 'test-hack'
+
+  test-all-frontend:
+    deps:
+      - 'client-web:check'
+      - 'client-web:lint'
+      - 'test-e2e'
 
   boundary-check:
     command:

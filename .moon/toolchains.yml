@@ -1,6 +1,7 @@
+# Toolchain configuration for moon tasks
+# Tool versions are managed by mise (.tool-versions)
 rust:
-  # 使用 rust-toolchain.toml 管理的版本，不重复指定
+  # Managed by rust-toolchain.toml
 node:
-  # 复用本地已安装的 Node.js 版本（当前 v25.x）
-  # 不锁定具体版本，避免 moon 重复安装
+  # Managed by mise — use system bun as package manager
   packageManager: 'bun'

@@ -22,6 +22,9 @@ target/
 # --- moonrepo ---
 .moon/cache/
 
+# --- mise (tool versions cache) ---
+.mise/
+
 # --- Node / Bun / Frontend ---
 node_modules/
 **/node_modules/
@@ -38,4 +41,6 @@ node_modules/
 # --- Tauri generated ---
 apps/client/native/src-tauri/target/
 apps/client/native/src-tauri/gen/
--e \n# ts-rs intermediate output\npackages/contracts/*/bindings/
+
+# ts-rs intermediate output
+packages/contracts/*/bindings/
