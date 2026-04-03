@@ -134,7 +134,7 @@ Plans:
   4. Agent Desktop Mode E2E flow 完整（Tauri 桌面模式无需外部 API server）
 **Plans:** 3 plans in 3 waves
 Plans:
-- [ ] 08-01-PLAN.md — IPC dual-path: lib/ipc/agent.ts + Rust agent_chat command + page refactor
+- [x] 08-01-PLAN.md — IPC dual-path: lib/ipc/agent.ts + Rust agent_chat command + page refactor
 - [ ] 08-02-PLAN.md — Prompts templates + Phase 5 VERIFICATION.md
 - [ ] 08-03-PLAN.md — Desktop Mode E2E verification (has human checkpoint)
 

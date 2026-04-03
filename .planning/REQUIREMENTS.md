@@ -27,7 +27,7 @@
 - [ ] **AUTH-01**: 用户可以通过 Google 账号登录，auth 通过 adapter 接入不污染 core
 - [x] **COUNTER-01**: 用户可以使用计数器功能（increment/decrement/reset），验证前后端通信
 - [x] **ADMIN-01**: 用户可以访问管理后台界面，包含基本统计卡片
-- [ ] **AGENT-01**: 用户可以通过导入 OpenAI 兼容的 API key 与产品内 agent 进行对话（桌面模式需 Tauri IPC 双路径）
+- [x] **AGENT-01**: 用户可以通过导入 OpenAI 兼容的 API key 与产品内 agent 进行对话（桌面模式需 Tauri IPC 双路径）
 
 ### Agent-Friendly 开发基建
 
