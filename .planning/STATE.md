@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v0.2.0
-milestone_name: milestone
-status: complete
-stopped_at: Completed Phase 5 — Agent-Friendly 开发基建
-last_updated: "2026-04-02T16:00:00.000Z"
-last_activity: 2026-04-02
+milestone_name: audit)
+status: executing
+stopped_at: Completed 04-06-PLAN.md
+last_updated: "2026-04-03T00:17:28.401Z"
+last_activity: 2026-04-03
 progress:
-  total_phases: 5
+  total_phases: 8
   completed_phases: 5
-  total_plans: 18
-  completed_plans: 18
+  total_plans: 21
+  completed_plans: 19
 ---
 
 # STATE: Tauri-SvelteKit-Axum Boilerplate
@@ -21,17 +21,17 @@ progress:
 ## Project Reference
 
 - **Core value:** Agent-Native Cross-Platform Application Engineering Base
-- **Current focus:** Phase 05 — agent-friendly 开发基建 (COMPLETE)
+- **Current focus:** Phase 07 — frontend-type-consumption
 - **Stack:** Tauri v2, SvelteKit 2 + Svelte 5, Axum 0.8.x, Bun, moon, proto, Just
 - **Architecture reference:** docs/blueprints/agent-native-starter-v1/
 - **Granularity:** fine
 
 ## Current Position
 
-Phase: 05 (agent-friendly 开发基建) — COMPLETE
-Plan: 2 of 2
-Status: All plans executed and verified
-Last activity: 2026-04-02
+Phase: 07 (frontend-type-consumption) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-04-03
 
 ## Phase Progress
 
@@ -61,6 +61,7 @@ Last activity: 2026-04-02
 | repo:contracts-check 同时验证 frontend generated/ | 确保前端类型同步不漂移 | Accepted |
 | Tauri 命令使用 AppHandle + Manager::state 避免 runtime_tauri↔native-tauri 循环依赖 | AppState 定义在 native-tauri，runtime_tauri 无法导入 | Accepted |
 | Axum AppState 增加 embedded_db 字段用于 counter/admin | 服务器 SurrealDB 不实现 LibSqlPort，需要独立嵌入式数据库 | Accepted |
+| ts-rs i64 字段使用 #[ts(type = "number")] 避免 bigint | bigint 不能 JSON 序列化，前端需要 number 类型 | Accepted |
 
 ## Accumulated Context (from v0.1.0)
 
@@ -85,10 +86,10 @@ Last activity: 2026-04-02
 
 ## Session
 
-**Last Date:** 2026-04-02T15:40:11.622Z
-**Stopped At:** Completed 04-06-PLAN.md
+**Last Date:** 2026-04-03T00:18:00Z
+**Stopped At:** Completed 07-01-PLAN.md
 **Resume File:** None
-**Next:** Execute 04-04-PLAN.md (Agent conversation feature)
+**Next:** Execute 07-02-PLAN.md (frontend type consumption)
 
 ---
 

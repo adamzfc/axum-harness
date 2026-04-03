@@ -120,7 +120,7 @@ Plans:
   2. 不再存在与 generated types 重复的 inline 类型定义 (UserProfile, AuthSession)
   3. `moon run repo:typegen` 后前端类型引用不报错
   4. 合约变更时前端类型消费链路会正确 break（而非静默漂移）
-**Plans:** 0 plans (gap closure phase)
+**Plans:** 1/3 plans executed
 
 ### Phase 8: Agent 双路径 + Prompts + Phase 5 验证
 **Goal:** Agent 页面支持 Tauri IPC 双路径，补全 .agents/prompts/ 内容，生成 Phase 5 VERIFICATION.md。
@@ -144,7 +144,7 @@ Plans:
 | 4. 最小功能实现 | 6/6 | Complete   | 2026-04-02 |
 | 5. Agent-Friendly 开发基建 | 0/TBD | Not started | - |
 | 6. 连接 Auth Adapter 到 Tauri 命令 | 0/TBD | Gap Closure | - |
-| 7. 前端消费 Generated Types | 0/TBD | Gap Closure | - |
+| 7. 前端消费 Generated Types | 1/3 | In Progress|  |
 | 8. Agent 双路径 + Prompts + Phase 5 验证 | 0/TBD | Gap Closure | - |
 
 ## Coverage Map (v0.2.0)
