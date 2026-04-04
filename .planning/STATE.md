@@ -1,37 +1,36 @@
 ---
 gsd_state_version: 1.0
 milestone: v0.2.0
-milestone_name: audit)
-status: verifying
-stopped_at: Completed 08-agent-dualpath-prompts-08-03-PLAN.md
-last_updated: "2026-04-03T01:45:43.077Z"
-last_activity: 2026-04-03
+milestone_name: 架构蓝图对齐与核心功能实现
+status: milestone_complete
+stopped_at: v0.2.0 milestone archived
+last_updated: "2026-04-04T00:00:00.000Z"
+last_activity: 2026-04-04
 progress:
   total_phases: 8
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 24
   completed_plans: 24
 ---
 
 # STATE: Tauri-SvelteKit-Axum Boilerplate
 
-**Last updated:** 2026-04-02
-**Phase:** 08
+**Last updated:** 2026-04-04
+**Milestone:** v0.2.0 ✅ SHIPPED
 
 ## Project Reference
 
 - **Core value:** Agent-Native Cross-Platform Application Engineering Base
-- **Current focus:** Phase 08 — agent-dualpath-prompts
+- **Current focus:** Planning next milestone
 - **Stack:** Tauri v2, SvelteKit 2 + Svelte 5, Axum 0.8.x, Bun, moon, proto, Just
 - **Architecture reference:** docs/blueprints/agent-native-starter-v1/
 - **Granularity:** fine
 
 ## Current Position
 
-Phase: 08 (agent-dualpath-prompts) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-04-03
+Milestone: v0.2.0 — SHIPPED
+Status: Archived to .planning/milestones/v0.2.0-*
+Last activity: 2026-04-04
 
 ## Phase Progress
 
@@ -40,8 +39,10 @@ Last activity: 2026-04-03
 | 1. 仓库目录结构与工具链对齐 | STRUCT-01, TOOL-01 | 5 | ✓ Complete (4/4 plans) |
 | 2. Contracts/typegen 单一真理源 | CONTRACT-01, CONTRACT-02 | 4 | ✓ Complete (2/2 plans) |
 | 3. Runtime 边界收敛 | RUNTIME-01, RUNTIME-02, RUNTIME-03 | 4 | ✓ Complete (4/4 plans) |
-| 4. 最小功能实现 | AUTH-01, COUNTER-01, ADMIN-01, AGENT-01 | 5 | ✓ Complete (4/4 plans) |
+| 4. 最小功能实现 | AUTH-01, COUNTER-01, ADMIN-01, AGENT-01 | 5 | ✓ Complete (6/6 plans) |
 | 5. Agent-Friendly 开发基建 | AGENT-DEV-01 | 5 | ✓ Complete (2/2 plans) |
+| 7. 前端消费 Generated Types | CONTRACT-02 | 3 | ✓ Complete (3/3 plans) |
+| 8. Agent 双路径 + Prompts + Phase 5 验证 | AGENT-01, AGENT-DEV-01 | 3 | ✓ Complete (3/3 plans) |
 
 ## Key Decisions
 
@@ -61,7 +62,8 @@ Last activity: 2026-04-03
 | repo:contracts-check 同时验证 frontend generated/ | 确保前端类型同步不漂移 | Accepted |
 | Tauri 命令使用 AppHandle + Manager::state 避免 runtime_tauri↔native-tauri 循环依赖 | AppState 定义在 native-tauri，runtime_tauri 无法导入 | Accepted |
 | Axum AppState 增加 embedded_db 字段用于 counter/admin | 服务器 SurrealDB 不实现 LibSqlPort，需要独立嵌入式数据库 | Accepted |
-| ts-rs i64 字段使用 #[ts(type = "number")] 避免 bigint | bigint 不能 JSON 序列化，前端需要 number 类型 | Accepted |
+| ts-rs i64 字段使用 #[ts(type = "number")] 避免 bigint | bigint 不能 JSON 序列化，前端需要 number 类型 | ✓ Shipped |
+| Agent 页面 Tauri IPC 双路径 | Desktop 环境无需外部 API server | ✓ Shipped |
 
 ## Accumulated Context (from v0.1.0)
 
@@ -77,19 +79,19 @@ Last activity: 2026-04-03
 
 ## Session Continuity
 
-- **Roadmap file:** `.planning/ROADMAP.md`
-- **Requirements file:** `.planning/REQUIREMENTS.md`
+- **Roadmap file:** `.planning/ROADMAP.md` (collapsed, v0.2.0 archived)
+- **Requirements file:** Deleted — fresh one for next milestone via `/gsd-new-milestone`
 - **Research files:** `.planning/research/SUMMARY.md`, `.planning/research/STACK.md`, `.planning/research/ARCHITECTURE.md`, `.planning/research/FEATURES.md`, `.planning/research/PITFALLS.md`
 - **Blueprint docs:** `docs/blueprints/agent-native-starter-v1/` (19 files)
-- **Archived phases:** `.planning/milestones/v0.1.0-phases/`
-- **Next command:** `/gsd-plan-phase 1`
+- **Archived milestones:** `.planning/milestones/v0.1.0-phases/`, `.planning/milestones/v0.2.0-*`
+- **Next command:** `/gsd-new-milestone`
 
 ## Session
 
-**Last Date:** 2026-04-03T01:45:43.074Z
-**Stopped At:** Completed 08-agent-dualpath-prompts-08-03-PLAN.md
+**Last Date:** 2026-04-04T00:00:00.000Z
+**Stopped At:** v0.2.0 milestone archived
 **Resume File:** None
-**Next:** Execute 07-02-PLAN.md (frontend type consumption)
+**Next:** Start next milestone via `/gsd-new-milestone`
 
 ---
 
