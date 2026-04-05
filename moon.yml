@@ -56,20 +56,12 @@ tasks:
       - 'doctor'
 
   doctor:
-    script: |
-      echo "=== Toolchain Check ==="
-      bun --version || echo "MISSING: bun — run: mise install"
-      node --version || echo "MISSING: node — run: mise install"
-      cargo --version || echo "MISSING: cargo — run: mise install"
-      rustc --version || echo "MISSING: rustc — run: mise install"
-      moon --version || echo "MISSING: moon"
-      echo "=== Env Check ==="
-      test -f .env && echo ".env exists" || echo "MISSING: .env"
-      echo "=== Done ==="
+    script: 'bun run scripts/doctor.mjs'
     inputs:
       - '.tool-versions'
       - 'rust-toolchain.toml'
       - '.env.example'
+      - 'scripts/doctor.mjs'
 
   toolchain-check:
     script: 'rustc --version && bun --version && moon --version && echo "ALL OK"'
@@ -84,36 +76,18 @@ tasks:
       - 'apps/client/web/app/**/*'
 
   dev-desktop:
-    script: |
-      # Start Axum API server in background
-      cargo run -p runtime_server &
-      API_PID=$!
-
-      # Wait for API server to be ready
-      echo "Waiting for API server..."
-      for i in $(seq 1 30); do
-        if rtk nc -z localhost 3001 2>/dev/null; then
-          echo "API server ready on port 3001"
-          break
-        fi
-        sleep 1
-      done
-
-      # Start Tauri dev (blocking)
-      cd apps/client/native/src-tauri && cargo tauri dev
-      Tauri_EXIT=$?
-
-      # Cleanup API server
-      kill $API_PID 2>/dev/null
-      exit $Tauri_EXIT
+    script: 'bun run scripts/dev-desktop.mjs'
     inputs:
       - 'apps/client/native/**/*'
       - 'servers/api/**/*'
+      - 'scripts/dev-desktop.mjs'
 
   dev-desktop-win:
-    command: 'cd apps/client/native/src-tauri && cargo tauri dev'
+    script: 'bun run scripts/dev-desktop.mjs'
     inputs:
       - 'apps/client/native/**/*'
+      - 'servers/api/**/*'
+      - 'scripts/dev-desktop.mjs'
 
   dev-api:
     command: 'cargo run -p runtime_server'
@@ -177,10 +151,20 @@ tasks:
     command: 'cargo llvm-cov clean'
 
   clean-sweep:
-    script: 'cargo sweep --time 7 2>/dev/null || echo "Install cargo-sweep: cargo install cargo-sweep"'
+    script: |
+      bun -e "
+        const { spawnSync } = require('child_process');
+        const r = spawnSync('cargo', ['sweep', '--time', '7'], { stdio: 'inherit', shell: process.platform === 'win32' });
+        if (r.status !== 0) console.log('Install cargo-sweep: cargo install cargo-sweep');
+      "
 
   clean-sweep-deps:
-    script: 'cargo sweep --installed 2>/dev/null || echo "Install cargo-sweep: cargo install cargo-sweep"'
+    script: |
+      bun -e "
+        const { spawnSync } = require('child_process');
+        const r = spawnSync('cargo', ['sweep', '--installed'], { stdio: 'inherit', shell: process.platform === 'win32' });
+        if (r.status !== 0) console.log('Install cargo-sweep: cargo install cargo-sweep');
+      "
 
   test-hack:
     command: 'cargo hack check --workspace --feature-powerset'
@@ -221,19 +205,13 @@ tasks:
       - 'test-desktop'
 
   boundary-check:
-    command:
-      - 'echo "=== Checking domain dependencies ==="'
-      - 'cargo tree -p domain --depth 1 2>/dev/null | grep -v "domain" | grep -v "^\s*$" | grep -v "async-trait" | grep -v "serde" | grep -v "serde_json" | grep -E "(storage_|runtime_|contracts_)" && echo "FAIL: domain depends on illegal crate" && exit 1 || echo "OK: domain boundary clean"'
-      - 'echo "=== Checking usecases dependencies ==="'
-      - 'cargo tree -p usecases --depth 1 2>/dev/null | grep -v "usecases" | grep -v "^\s*$" | grep -v "async-trait" | grep -v "serde" | grep -v "serde_json" | grep -v "chrono" | grep -v "thiserror" | grep -E "(storage_|runtime_|contracts_)" && echo "FAIL: usecases depends on illegal crate" && exit 1 || echo "OK: usecases boundary clean"'
-      - 'echo "=== Checking contracts_api dependencies ==="'
-      - 'cargo tree -p contracts_api --depth 1 2>/dev/null | grep -v "contracts_api" | grep -v "^\s*$" | grep -v "serde" | grep -v "ts-rs" | grep -v "utoipa" | grep -v "validator" | grep -E "(domain|usecases|storage_|runtime_)" && echo "FAIL: contracts_api depends on illegal crate" && exit 1 || echo "OK: contracts_api boundary clean"'
-      - 'echo "All boundary checks passed"'
+    script: 'bun run scripts/boundary-check.mjs'
     inputs:
       - "Cargo.toml"
       - "packages/*/Cargo.toml"
       - "packages/**/Cargo.toml"
       - "servers/*/Cargo.toml"
+      - "scripts/boundary-check.mjs"
     deps:
       - "~:setup"
     options:
@@ -250,20 +228,11 @@ tasks:
 
   # ── Codegen ────────────────────────────────────────────────────────
   typegen:
-    script: |
-      cargo test -p contracts_api -p contracts_auth -p contracts_events 2>&1 || true
-      rm -rf packages/contracts/generated/api packages/contracts/generated/auth packages/contracts/generated/events
-      cp -r packages/contracts/api/bindings/api packages/contracts/generated/api 2>/dev/null || true
-      cp -r packages/contracts/auth/bindings/auth packages/contracts/generated/auth 2>/dev/null || true
-      cp -r packages/contracts/events/bindings/events packages/contracts/generated/events 2>/dev/null || true
-      echo "=== Syncing to frontend ==="
-      mkdir -p apps/client/web/app/src/lib/generated
-      cp -r packages/contracts/generated/* apps/client/web/app/src/lib/generated/ 2>/dev/null || true
-      echo "=== Typegen complete ==="
-      ls -la apps/client/web/app/src/lib/generated/ 2>/dev/null || echo "No generated files yet"
+    script: 'bun run scripts/typegen.mjs'
     inputs:
       - 'packages/contracts/**/src/**'
       - 'packages/contracts/**/Cargo.toml'
+      - 'scripts/typegen.mjs'
 
   openapi-gen:
     command: 'echo "OpenAPI gen — Phase 2 implementation"'
@@ -301,7 +270,12 @@ tasks:
 
   # ── Security ───────────────────────────────────────────────────────
   audit-rust:
-    script: 'cargo audit 2>/dev/null || echo "Install cargo-audit: cargo install cargo-audit"'
+    script: |
+      bun -e "
+        const { spawnSync } = require('child_process');
+        const r = spawnSync('cargo', ['audit'], { stdio: 'inherit', shell: process.platform === 'win32' });
+        if (r.status !== 0) console.log('Install cargo-audit: cargo install cargo-audit');
+      "
 
   audit-bun:
     script: 'bun audit || true'

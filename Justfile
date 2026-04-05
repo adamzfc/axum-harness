@@ -32,10 +32,7 @@ doctor:
 
 # 安装覆盖率工具（一次性）
 setup-coverage:
-    @which cargo-llvm-cov >/dev/null 2>&1 || cargo install cargo-llvm-cov
-    @which cargo-sweep  >/dev/null 2>&1 || cargo install cargo-sweep
-    @rustup component add llvm-tools 2>/dev/null || true
-    @echo "Coverage tools ready"
+    @bun -e "const { spawnSync } = require('child_process'); ['cargo-llvm-cov', 'cargo-sweep'].forEach(t => { const r = spawnSync(process.platform === 'win32' ? 'where' : 'which', [t], { shell: process.platform === 'win32' }); if (r.status !== 0) spawnSync('cargo', ['install', t.replace('cargo-', '')], { stdio: 'inherit', shell: process.platform === 'win32' }); }); spawnSync('rustup', ['component', 'add', 'llvm-tools'], { stdio: 'inherit', shell: process.platform === 'win32' }); console.log('Coverage tools ready');"
 
 # ── 开发 ───────────────────────────────────────────────────
 
@@ -177,7 +174,7 @@ generate-service BIN_PATH='' ENV_FILE='' USER='root' GROUP='root':
 # ── 内部工具（不暴露给人类/Agent 直接调用）─────────────────
 
 _require TOOL CMD:
-    @which {{TOOL}} >/dev/null 2>&1 || (echo "Missing {{TOOL}} — install with: {{CMD}}" && exit 1)
+    @bun -e "const { spawnSync } = require('child_process'); const t = '{{TOOL}}'; const r = spawnSync(process.platform === 'win32' ? 'where' : 'which', [t], { shell: process.platform === 'win32' }); if (r.status !== 0) { console.log('Missing {{TOOL}} — install with: {{CMD}}'); process.exit(1); }"
 
 _deploy-api-check:
     @systemctl is-active --quiet axum-api.service && echo "API service is running" || echo "API service will be started"

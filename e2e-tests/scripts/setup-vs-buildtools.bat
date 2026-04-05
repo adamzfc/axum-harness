@@ -6,26 +6,70 @@ REM ============================================
 
 echo === 配置 Visual Studio Build Tools 环境 ===
 
-REM 设置 Build Tools 路径
-set "VS_BUILDTOOLS_PATH=D:\dev-storage\Microsoft Visual Studio\18\BuildTools"
+REM 动态查找 Visual Studio Build Tools 路径
+set "VS_BUILDTOOLS_PATH="
+
+REM 方法 1: 使用 vswhere.exe (Visual Studio Installer 自带)
+set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+if exist "%VSWHERE%" (
+    for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2^>nul`) do (
+        set "VS_INSTALL_DIR=%%i"
+    )
+    if defined VS_INSTALL_DIR (
+        set "VS_BUILDTOOLS_PATH=%VS_INSTALL_DIR%\VC\Auxiliary\Build"
+    )
+)
+
+REM 方法 2: 如果 vswhere 失败，尝试常见路径
+if not defined VS_BUILDTOOLS_PATH (
+    if exist "%ProgramFiles%\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" (
+        set "VS_BUILDTOOLS_PATH=%ProgramFiles%\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build"
+    )
+)
+
+if not defined VS_BUILDTOOLS_PATH (
+    if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" (
+        set "VS_BUILDTOOLS_PATH=%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build"
+    )
+)
+
+if not defined VS_BUILDTOOLS_PATH (
+    if exist "%ProgramFiles%\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" (
+        set "VS_BUILDTOOLS_PATH=%ProgramFiles%\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build"
+    )
+)
 
 REM 检查 vcvarsall.bat 是否存在
-if exist "%VS_BUILDTOOLS_PATH%\VC\Auxiliary\Build\vcvarsall.bat" (
-    echo ✅ 找到 vcvarsall.bat
+if defined VS_BUILDTOOLS_PATH (
+    if exist "%VS_BUILDTOOLS_PATH%\vcvarsall.bat" (
+        echo ✅ 找到 vcvarsall.bat
+        echo 📍 路径: %VS_BUILDTOOLS_PATH%
+    ) else (
+        echo ❌ 未找到 vcvarsall.bat
+        echo 已查找路径: %VS_BUILDTOOLS_PATH%
+        echo.
+        echo 💡 请确保已安装 Visual Studio Build Tools 并包含 C++ 工具链
+        echo    下载地址: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+        pause
+        exit /b 1
+    )
 ) else (
-    echo ❌ 未找到 vcvarsall.bat
-    echo 路径: %VS_BUILDTOOLS_PATH%\VC\Auxiliary\Build\vcvarsall.bat
+    echo ❌ 未找到 Visual Studio Build Tools
+    echo.
+    echo 💡 请安装 Visual Studio Build Tools:
+    echo    1. 下载: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+    echo    2. 安装时选择 "Desktop development with C++"
+    echo    3. 重新运行此脚本
     pause
     exit /b 1
 )
 
 REM 调用 vcvarsall.bat 配置 x64 环境
 echo 📦 正在配置 x64 编译环境...
-call "%VS_BUILDTOOLS_PATH%\VC\Auxiliary\Build\vcvarsall.bat" x64
+call "%VS_BUILDTOOLS_PATH%\vcvarsall.bat" x64
 
 echo ✅ MSVC 工具链已配置完成
 echo 📍 工具链路径: %VS_BUILDTOOLS_PATH%
-echo 📍 MSVC 版本: 14.50.35717
 
 REM 验证 cl.exe 是否可用
 where cl.exe >nul 2>&1

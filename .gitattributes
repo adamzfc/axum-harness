@@ -1,0 +1,41 @@
+# Auto-detect line endings based on platform
+* text=auto
+
+# Shell scripts must always use LF line endings
+*.sh text eol=lf
+
+# Batch files must always use CRLF line endings
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# PowerShell scripts must always use CRLF line endings
+*.ps1 text eol=crlf
+
+# Native line endings for source code
+*.rs text
+*.ts text
+*.js text
+*.mjs text
+*.cjs text
+*.json text
+*.toml text
+*.yml text
+*.yaml text
+*.md text
+*.svelte text
+*.css text
+*.html text
+
+# Binary files are not text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.wasm binary
+*.plist binary
