@@ -6,7 +6,7 @@ mod sync;
 use runtime_tauri::commands::{admin, agent, auth, config, counter};
 
 use domain::ports::lib_sql::LibSqlPort;
-use storage_libsql::{EmbeddedLibSql, embedded::run_tenant_migrations};
+use storage_turso::{EmbeddedTurso, embedded::run_tenant_migrations};
 use sync::SyncEngine;
 use sync::engine::init_sync_tables;
 use tauri::{Emitter, Manager};
@@ -14,7 +14,7 @@ use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 /// Shared application state managed by Tauri.
 pub struct AppState {
-    pub db: EmbeddedLibSql,
+    pub db: EmbeddedTurso,
 }
 
 /// Initialize observability: tracing-subscriber (terminal) + LogTracer (bridges log → tracing).
@@ -40,7 +40,7 @@ pub fn run() {
     // Initialize the embedded libsql database
     let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
     let db = rt.block_on(async {
-        let db = EmbeddedLibSql::new(":memory:")
+        let db = EmbeddedTurso::new(":memory:")
             .await
             .expect("Failed to initialize embedded libsql");
         run_tenant_migrations(&db)
@@ -72,7 +72,6 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::default().build())
-        .plugin(tauri_plugin_libsql::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(log_plugin)

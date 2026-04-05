@@ -2,7 +2,7 @@
 
 use feature_agent::AgentService;
 use futures_util::StreamExt;
-use storage_libsql::EmbeddedLibSql;
+use storage_turso::EmbeddedTurso;
 use tauri::{AppHandle, Manager, ipc::Channel};
 
 #[tauri::command]
@@ -15,7 +15,7 @@ pub async fn agent_chat(
     model: String,
     channel: Channel<String>,
 ) -> Result<(), String> {
-    let db = app.state::<EmbeddedLibSql>().inner().clone();
+    let db = app.state::<EmbeddedTurso>().inner().clone();
     let http_client = reqwest::Client::new();
     let service = usecases::agent_service::LibSqlAgentService::new(db, http_client);
 

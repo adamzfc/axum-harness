@@ -10,6 +10,7 @@ members = [
     "packages/adapters/hosts/tauri",
     "packages/adapters/storage/surrealdb",
     "packages/adapters/storage/libsql",
+    "packages/adapters/storage/turso",
     "packages/adapters/auth/google",
     "packages/features/auth",
     "packages/features/counter",
@@ -49,6 +50,7 @@ contracts_auth = { path = "packages/contracts/auth" }
 contracts_events = { path = "packages/contracts/events" }
 storage_surrealdb = { path = "packages/adapters/storage/surrealdb" }
 storage_libsql = { path = "packages/adapters/storage/libsql" }
+storage_turso = { path = "packages/adapters/storage/turso" }
 runtime_tauri = { path = "packages/adapters/hosts/tauri" }
 adapter-google = { path = "packages/adapters/auth/google" }
 feature-auth = { path = "packages/features/auth" }

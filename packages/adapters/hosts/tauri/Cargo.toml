@@ -13,7 +13,7 @@ contracts_auth = { workspace = true }
 feature-counter = { workspace = true }
 feature-admin = { workspace = true }
 feature-agent = { workspace = true }
-storage_libsql = { workspace = true }
+storage_turso = { workspace = true }
 tauri = { workspace = true }
 tauri-plugin-store = { workspace = true }
 tauri-plugin-opener = { workspace = true }

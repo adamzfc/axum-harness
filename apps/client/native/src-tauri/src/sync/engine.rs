@@ -4,7 +4,7 @@ use domain::ports::lib_sql::LibSqlPort;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
-use storage_libsql::EmbeddedLibSql;
+use storage_turso::EmbeddedTurso;
 use tauri::Emitter;
 use tokio::sync::Mutex;
 use tokio::time;
@@ -74,7 +74,7 @@ pub enum SyncError {
 
 /// Core sync engine managing push/pull operations between local libsql and remote.
 pub struct SyncEngine {
-    local_db: EmbeddedLibSql,
+    local_db: EmbeddedTurso,
     remote_url: String,
     auth_token: String,
     config: SyncConfig,
@@ -86,7 +86,7 @@ pub struct SyncEngine {
 impl SyncEngine {
     /// Create a new sync engine.
     pub fn new(
-        local_db: EmbeddedLibSql,
+        local_db: EmbeddedTurso,
         remote_url: String,
         auth_token: String,
         config: SyncConfig,
@@ -611,7 +611,7 @@ fn exponential_backoff(attempt: u32) -> Duration {
 ///
 /// Creates the sync_frames table for tracking unsynced changes.
 /// Safe to call multiple times (uses IF NOT EXISTS).
-pub async fn init_sync_tables(db: &EmbeddedLibSql) -> Result<(), SyncError> {
+pub async fn init_sync_tables(db: &EmbeddedTurso) -> Result<(), SyncError> {
     db.execute(
         "
         CREATE TABLE IF NOT EXISTS sync_frames (
