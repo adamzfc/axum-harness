@@ -10,6 +10,7 @@ usecases = { workspace = true }
 adapter-google = { workspace = true }
 feature-auth = { workspace = true }
 contracts_auth = { workspace = true }
+contracts_api = { workspace = true }
 feature-counter = { workspace = true }
 feature-admin = { workspace = true }
 feature-agent = { workspace = true }

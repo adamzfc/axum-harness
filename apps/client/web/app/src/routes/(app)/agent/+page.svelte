@@ -4,26 +4,20 @@
 	import { Plus, Send } from '@jis3r/icons';
 	import type { ChatMessage } from '$lib/generated/api/ChatMessage';
 	import type { AgentConfig } from '$lib/generated/api/AgentConfig';
-	import { agentChatStream } from '$lib/ipc/agent';
-
-	type Conversation = {
-		id: string;
-		title: string;
-		created_at?: string;
-	};
-
-	const API_BASE = 'http://localhost:3001';
+	import {
+		agentChatStream,
+		createConversation as createConversationRecord,
+		getConversationMessages,
+		listConversations,
+		type Conversation
+	} from '$lib/ipc/agent';
 
 	let conversations = $state<Conversation[]>([]);
 	let activeConversation = $state<string | null>(null);
 	let messages = $state<ChatMessage[]>([]);
 	let inputText = $state('');
 	let streaming = $state(false);
-
-	function getRuntimeApiBase() {
-		if (typeof window === 'undefined') return API_BASE;
-		return API_BASE;
-	}
+	let loadError = $state<string | null>(null);
 
 	async function loadSettings(): Promise<AgentConfig> {
 		const defaults: AgentConfig = {
@@ -54,10 +48,14 @@
 	}
 
 	async function loadConversations() {
-		const resp = await fetch(`${getRuntimeApiBase()}/api/agent/conversations`);
-		const data = (await resp.json()) as Conversation[] | { error?: string };
-		if (!Array.isArray(data)) return;
-		conversations = data;
+		try {
+			conversations = await listConversations();
+			loadError = null;
+		} catch (error) {
+			loadError = error instanceof Error ? error.message : String(error);
+			conversations = [];
+			return;
+		}
 
 		if (!activeConversation && conversations.length > 0) {
 			await selectConversation(conversations[0].id);
@@ -65,24 +63,28 @@
 	}
 
 	async function createConversation() {
-		const resp = await fetch(`${getRuntimeApiBase()}/api/agent/conversations`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ title: `Chat ${conversations.length + 1}` })
-		});
+		try {
+			const conv = await createConversationRecord(`Chat ${conversations.length + 1}`);
+			if (!conv?.id) return;
 
-		const conv = (await resp.json()) as Conversation;
-		if (!conv?.id) return;
-
-		await loadConversations();
-		await selectConversation(conv.id);
+			loadError = null;
+			await loadConversations();
+			await selectConversation(conv.id);
+		} catch (error) {
+			loadError = error instanceof Error ? error.message : String(error);
+		}
 	}
 
 	async function selectConversation(id: string) {
 		activeConversation = id;
-		const resp = await fetch(`${getRuntimeApiBase()}/api/agent/conversations/${id}/messages`);
-		const data = (await resp.json()) as ChatMessage[] | { error?: string };
-		messages = Array.isArray(data) ? data : [];
+
+		try {
+			messages = await getConversationMessages(id);
+			loadError = null;
+		} catch (error) {
+			loadError = error instanceof Error ? error.message : String(error);
+			messages = [];
+		}
 	}
 
 	function appendAssistantChunk(chunk: string) {
@@ -199,6 +201,12 @@
 	</aside>
 
 	<main class="flex-1 flex flex-col">
+		{#if loadError}
+			<div class="border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+				{loadError}
+			</div>
+		{/if}
+
 		{#if !activeConversation}
 			<div class="flex-1 flex items-center justify-center text-[var(--color-text-muted)]">
 				Select or create a conversation to start chatting

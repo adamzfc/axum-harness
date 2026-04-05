@@ -1,14 +1,91 @@
-/**
- * Dual-path agent client — Tauri IPC (Channel streaming) or HTTP SSE fallback.
- *
- * Runtime detection: `(window as { __TAURI__?: unknown }).__TAURI__`
- * - Tauri path: invoke('agent_chat', { channel }) via Tauri 2 Channel API
- * - Browser path: fetch() + SSE parsing (compatible with existing Axum backend)
- */
-
 import { invoke, Channel } from '@tauri-apps/api/core';
+import type { ChatMessage } from '$lib/generated/api/ChatMessage';
 
 const API_BASE = 'http://localhost:3001';
+
+export type Conversation = {
+	id: string;
+	title: string;
+	created_at?: string;
+};
+
+function isTauriRuntime() {
+	return typeof window !== 'undefined' && !!(window as { __TAURI__?: unknown }).__TAURI__;
+}
+
+function shouldPreferIpc() {
+	return typeof window !== 'undefined';
+}
+
+async function parseJson<T>(response: Response): Promise<T> {
+	const data = (await response.json()) as T | { error?: string };
+
+	if (!response.ok) {
+		throw new Error(`Agent request failed with status ${response.status}`);
+	}
+
+	if (
+		typeof data === 'object' &&
+		data !== null &&
+		'error' in data &&
+		typeof data.error === 'string' &&
+		data.error.length > 0
+	) {
+		throw new Error(data.error);
+	}
+
+	return data as T;
+}
+
+export async function listConversations(): Promise<Conversation[]> {
+	if (shouldPreferIpc()) {
+		try {
+			return await invoke('agent_list_conversations');
+		} catch (error) {
+			if (isTauriRuntime()) {
+				throw error;
+			}
+		}
+	}
+
+	const response = await fetch(`${API_BASE}/api/agent/conversations`);
+	return parseJson<Conversation[]>(response);
+}
+
+export async function createConversation(title: string): Promise<Conversation> {
+	if (shouldPreferIpc()) {
+		try {
+			return await invoke('agent_create_conversation', { title });
+		} catch (error) {
+			if (isTauriRuntime()) {
+				throw error;
+			}
+		}
+	}
+
+	const response = await fetch(`${API_BASE}/api/agent/conversations`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ title })
+	});
+
+	return parseJson<Conversation>(response);
+}
+
+export async function getConversationMessages(id: string): Promise<ChatMessage[]> {
+	if (shouldPreferIpc()) {
+		try {
+			return await invoke('agent_get_messages', { id });
+		} catch (error) {
+			if (isTauriRuntime()) {
+				throw error;
+			}
+		}
+	}
+
+	const response = await fetch(`${API_BASE}/api/agent/conversations/${id}/messages`);
+	return parseJson<ChatMessage[]>(response);
+}
 
 export async function* agentChatStream(params: {
 	conversationId: string;
@@ -17,9 +94,7 @@ export async function* agentChatStream(params: {
 	baseUrl: string;
 	model: string;
 }): AsyncGenerator<string, void, unknown> {
-	const isTauri = typeof window !== 'undefined' && !!(window as { __TAURI__?: unknown }).__TAURI__;
-
-	if (isTauri) {
+	if (isTauriRuntime()) {
 		yield* tauriPath(params);
 	} else {
 		yield* browserPath(params);
