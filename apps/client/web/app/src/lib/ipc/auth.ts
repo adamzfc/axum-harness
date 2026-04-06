@@ -25,6 +25,10 @@ export async function getSession(): Promise<AuthSession | null> {
 	return invoke('get_session');
 }
 
+export async function logout(): Promise<void> {
+	return invoke('logout');
+}
+
 export async function clearAuthStore(): Promise<void> {
 	const { Store } = await import('@tauri-apps/plugin-store');
 	const store = await Store.load('auth.json');

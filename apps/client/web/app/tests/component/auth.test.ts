@@ -9,6 +9,7 @@ vi.mock('@tauri-apps/api/event', () => ({
 vi.mock('$lib/ipc/auth', () => ({
 	getSession: vi.fn(() => Promise.resolve(null)),
 	startOAuth: vi.fn(() => Promise.resolve()),
+	logout: vi.fn(() => Promise.resolve()),
 	clearAuthStore: vi.fn(() => Promise.resolve()),
 	handleOAuthCallback: vi.fn()
 }));
@@ -82,6 +83,8 @@ describe('Auth Store', () => {
 
 	it('signOut clears auth state', async () => {
 		const { auth, setSession, signOut } = await import('$lib/stores/auth.svelte');
+		const { logout, clearAuthStore } = await import('$lib/ipc/auth');
+		const { goto } = await import('$app/navigation');
 
 		// First set a session
 		const mockSession: AuthSession = {
@@ -103,9 +106,51 @@ describe('Auth Store', () => {
 
 		// Then sign out
 		await signOut();
+		expect(logout).toHaveBeenCalledOnce();
+		expect(clearAuthStore).toHaveBeenCalledOnce();
 		expect(auth.isAuthenticated).toBe(false);
 		expect(auth.currentUser).toBeNull();
 		expect(auth.tokenExpiresAt).toBe(0);
+		expect(goto).toHaveBeenCalledWith('/login');
+	});
+
+	it('signOut still clears local auth store when remote logout fails', async () => {
+		const { auth, setSession, signOut } = await import('$lib/stores/auth.svelte');
+		const { logout, clearAuthStore } = await import('$lib/ipc/auth');
+		const { goto } = await import('$app/navigation');
+		const callOrder: string[] = [];
+
+		vi.mocked(logout).mockImplementationOnce(async () => {
+			callOrder.push('logout');
+			throw new Error('remote failed');
+		});
+		vi.mocked(clearAuthStore).mockImplementationOnce(async () => {
+			callOrder.push('clear');
+		});
+
+		setSession({
+			tokens: {
+				access_token: 'token',
+				refresh_token: 'refresh-token',
+				expires_in: Math.floor(Date.now() / 1000) + 3600
+			},
+			id_token: 'id-token',
+			user: {
+				email: 'test@test.com',
+				name: 'Test',
+				picture: 'https://example.com/avatar.png',
+				sub: 'google-123'
+			}
+		});
+
+		await signOut();
+
+		expect(callOrder).toEqual(['logout', 'clear']);
+		expect(auth.isAuthenticated).toBe(false);
+		expect(auth.currentUser).toBeNull();
+		expect(auth.tokenExpiresAt).toBe(0);
+		expect(auth.authError).toBeNull();
+		expect(goto).toHaveBeenCalledWith('/login');
 	});
 
 	it('markExpired clears auth state without redirect', async () => {

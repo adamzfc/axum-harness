@@ -96,6 +96,7 @@ pub fn run() {
             auth::start_oauth,
             auth::handle_oauth_callback,
             auth::get_session,
+            auth::logout,
             auth::quit_app,
             config::get_config,
             counter::counter_increment,

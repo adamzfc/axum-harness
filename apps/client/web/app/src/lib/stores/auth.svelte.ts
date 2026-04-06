@@ -1,6 +1,6 @@
 import { goto } from '$app/navigation';
 import { listen } from '@tauri-apps/api/event';
-import { getSession, startOAuth, clearAuthStore, type AuthSession } from '$lib/ipc/auth';
+import { getSession, startOAuth, clearAuthStore, logout, type AuthSession } from '$lib/ipc/auth';
 import type { UserProfile } from '$lib/generated/auth/UserProfile';
 
 export const auth = $state({
@@ -80,11 +80,49 @@ export function resetAuthLoading(): void {
  * Sign out: clear store, reset state, redirect to login.
  */
 export async function signOut(): Promise<void> {
-	await clearAuthStore();
+	try {
+		await logout();
+	} catch {
+		// remote logout best-effort; local cleanup must still run
+	} finally {
+		await clearAuthStore();
+	}
+
 	auth.isAuthenticated = false;
 	auth.currentUser = null;
 	auth.tokenExpiresAt = 0;
 	auth.authError = null;
+
+	const fallbackRoute = '/login';
+	let target: '/' | '/login' = fallbackRoute;
+	const protectedPrefixes = ['/counter', '/admin', '/agent', '/settings'];
+
+	if (typeof window !== 'undefined') {
+		const referrer = document.referrer;
+		if (referrer) {
+			try {
+				const referrerUrl = new URL(referrer);
+				const isProtectedRoute = protectedPrefixes.some((prefix) =>
+					referrerUrl.pathname.startsWith(prefix)
+				);
+				if (referrerUrl.origin === window.location.origin && !isProtectedRoute) {
+					if (referrerUrl.pathname === '/') {
+						target = '/';
+					} else if (referrerUrl.pathname === '/login') {
+						target = '/login';
+					}
+				}
+			} catch {
+				// fallback to /login
+			}
+		}
+	}
+
+	if (target === '/') {
+		await goto('/');
+		return;
+	}
+
 	await goto('/login');
 }
 

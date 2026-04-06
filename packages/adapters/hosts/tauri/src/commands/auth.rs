@@ -143,6 +143,12 @@ pub async fn get_session(app: AppHandle) -> Result<Option<AuthSession>, String> 
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub async fn logout(app: AppHandle) -> Result<(), String> {
+    let service = TauriAuthService::new(app);
+    service.logout().await.map_err(|e| e.to_string())
+}
+
 pub fn start_refresh_timer(app: AppHandle) {
     let adapter = GoogleAuthAdapter::new();
     adapter.start_timer(app);
