@@ -1,12 +1,40 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { Button, Card, Input } from '$lib/components';
+	import { signOut } from '$lib/stores/auth.svelte';
 
 	let apiKey = $state('');
 	let baseUrl = $state('https://api.openai.com/v1');
 	let model = $state('gpt-4o-mini');
 	let saving = $state(false);
 	let saved = $state(false);
+	let testingConnection = $state(false);
+
+	type CheckStatus = 'pass' | 'fail';
+	type ConnectionResult = {
+		label: 'API key' | 'Base URL' | 'Model';
+		status: CheckStatus;
+		nextStep: string;
+	};
+
+	let connectionResults = $state<ConnectionResult[] | null>(null);
+
+	function pass(label: ConnectionResult['label'], nextStep: string): ConnectionResult {
+		return { label, status: 'pass', nextStep };
+	}
+
+	function fail(label: ConnectionResult['label'], nextStep: string): ConnectionResult {
+		return { label, status: 'fail', nextStep };
+	}
+
+	function formatBaseUrlModelsEndpoint(url: string): string {
+		return `${url.replace(/\/$/, '')}/models`;
+	}
+
+	function sanitizeError(error: unknown, currentApiKey: string): string {
+		const raw = error instanceof Error ? error.message : String(error);
+		if (!currentApiKey.trim()) return raw;
+		return raw.split(currentApiKey.trim()).join('[redacted-api-key]');
+	}
 
 	async function loadSettings() {
 		try {
@@ -49,9 +77,91 @@
 		}
 	}
 
-	onMount(() => {
-		loadSettings();
-	});
+	async function testConnection() {
+		testingConnection = true;
+		connectionResults = null;
+
+		const results: ConnectionResult[] = [];
+		const trimmedApiKey = apiKey.trim();
+		const trimmedBaseUrl = baseUrl.trim();
+		const trimmedModel = model.trim();
+
+		if (!trimmedApiKey) {
+			results.push(fail('API key', 'Enter your API key before retrying.'));
+		} else if (!trimmedApiKey.startsWith('sk-')) {
+			results.push(fail('API key', 'API key usually starts with "sk-". Confirm provider format.'));
+		} else {
+			results.push(pass('API key', 'API key format looks valid.'));
+		}
+
+		let modelsPayload: unknown = null;
+		let baseUrlIsReachable = false;
+
+		try {
+			new URL(trimmedBaseUrl);
+
+			const controller = new AbortController();
+			const timeout = setTimeout(() => controller.abort(), 5000);
+
+			try {
+				const response = await fetch(formatBaseUrlModelsEndpoint(trimmedBaseUrl), {
+					method: 'GET',
+					headers: {
+						Authorization: `Bearer ${trimmedApiKey}`,
+						'Content-Type': 'application/json'
+					},
+					signal: controller.signal
+				});
+
+				if (!response.ok) {
+					results.push(
+						fail('Base URL', `Request failed with status ${response.status}. Verify Base URL and API key.`)
+					);
+				} else {
+					baseUrlIsReachable = true;
+					modelsPayload = await response.json();
+					results.push(pass('Base URL', 'Base URL is reachable and responded successfully.'));
+				}
+			} finally {
+				clearTimeout(timeout);
+			}
+		} catch (error) {
+			results.push(
+				fail(
+					'Base URL',
+					`Cannot reach Base URL. ${sanitizeError(error, trimmedApiKey)}. Check URL format and network.`
+				)
+			);
+		}
+
+		if (!trimmedModel) {
+			results.push(fail('Model', 'Enter a model name before retrying.'));
+		} else if (!baseUrlIsReachable) {
+			results.push(fail('Model', 'Fix API key/Base URL first, then retry model check.'));
+		} else {
+			const modelIds = Array.isArray((modelsPayload as { data?: unknown[] } | null)?.data)
+				? (((modelsPayload as { data: Array<{ id?: string }> }).data ?? [])
+					.map((item) => item?.id)
+					.filter((id): id is string => typeof id === 'string'))
+				: [];
+
+			if (modelIds.includes(trimmedModel)) {
+				results.push(pass('Model', 'Model is available on the target endpoint.'));
+			} else {
+				results.push(
+					fail(
+						'Model',
+						`Model "${trimmedModel}" was not found. Pick one from /models and retry.`
+					)
+				);
+			}
+		}
+
+		connectionResults = results;
+		testingConnection = false;
+	}
+
+	void loadSettings();
 </script>
 
 <div class="p-4 md:p-6 max-w-lg mx-auto space-y-6">
@@ -81,8 +191,32 @@
 			<Input id="model" bind:value={model} placeholder="gpt-4o-mini" class="mt-1" />
 		</div>
 
-		<Button variant="primary" onclick={saveSettings} disabled={saving}>
-			{saving ? 'Saving...' : saved ? 'Saved!' : 'Save Settings'}
-		</Button>
+		<div class="flex flex-wrap items-center gap-2">
+			<Button variant="primary" onclick={saveSettings} disabled={saving}>
+				{saving ? 'Saving...' : saved ? 'Saved!' : 'Save Settings'}
+			</Button>
+			<Button variant="secondary" onclick={testConnection} disabled={testingConnection}>
+				{testingConnection ? 'Testing...' : 'Test Connection'}
+			</Button>
+			<Button variant="secondary" onclick={signOut}>Logout</Button>
+		</div>
+
+		{#if connectionResults}
+			<div class="space-y-2 pt-2">
+				{#each connectionResults as result (result.label)}
+					<div class="rounded-md border border-[var(--color-border)] p-3" data-testid={`connection-${result.label}`}>
+						<div class="flex items-center justify-between gap-2">
+							<p class="text-sm font-medium text-[var(--color-text)]">{result.label}</p>
+							<span
+								class={`text-xs font-medium uppercase ${result.status === 'pass' ? 'text-green-600' : 'text-red-600'}`}
+							>
+								{result.status}
+							</span>
+						</div>
+						<p class="mt-1 text-xs text-[var(--color-text-muted)]">{result.nextStep}</p>
+					</div>
+				{/each}
+			</div>
+		{/if}
 	</Card>
 </div>
