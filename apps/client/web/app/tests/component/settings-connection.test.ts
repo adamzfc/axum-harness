@@ -85,8 +85,8 @@ describe('Settings connection diagnostics', () => {
 
 		await waitFor(() => {
 			expect(getByText('API key')).toBeTruthy();
-			expect(getByText('Model')).toBeTruthy();
 			expect(getByTestId('connection-Base URL')).toBeTruthy();
+			expect(getByTestId('connection-Model')).toBeTruthy();
 			expect(getByText(/usually starts with "sk-"/i)).toBeTruthy();
 			expect(getByText(/Base URL is reachable/i)).toBeTruthy();
 			expect(getByText(/was not found/i)).toBeTruthy();
