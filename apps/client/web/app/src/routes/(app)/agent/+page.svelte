@@ -18,6 +18,8 @@
 	let inputText = $state('');
 	let streaming = $state(false);
 	let loadError = $state<string | null>(null);
+	const settingsReadGuidance =
+		'Could not read settings.json. Open Settings and re-save API key, Base URL, and Model.';
 
 	async function loadSettings(): Promise<AgentConfig> {
 		const defaults: AgentConfig = {
@@ -41,16 +43,19 @@
 				};
 			}
 		} catch {
-			// ignore settings read errors and fallback to defaults
+			loadError = settingsReadGuidance;
 		}
 
 		return defaults;
 	}
 
 	async function loadConversations() {
+		const previousError = loadError;
+		const shouldKeepSettingsGuidance = previousError === settingsReadGuidance;
+
 		try {
 			conversations = await listConversations();
-			loadError = null;
+			loadError = shouldKeepSettingsGuidance ? previousError : null;
 		} catch (error) {
 			loadError = error instanceof Error ? error.message : String(error);
 			conversations = [];
@@ -68,8 +73,10 @@
 			if (!conv?.id) return;
 
 			loadError = null;
+			activeConversation = conv.id;
+			messages = [];
+			inputText = '';
 			await loadConversations();
-			await selectConversation(conv.id);
 		} catch (error) {
 			loadError = error instanceof Error ? error.message : String(error);
 		}
