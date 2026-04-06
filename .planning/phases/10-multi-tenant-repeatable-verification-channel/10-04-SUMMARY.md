@@ -67,7 +67,7 @@ Each task was committed atomically:
 1. **Task 1: Add tenant-scoped counter operations in usecase layer (RED)** - `354d85f` (test)
 2. **Task 1: Add tenant-scoped counter operations in usecase layer (GREEN)** - `85f9eb2` (feat)
 3. **Task 2: Wire API counter handlers to TenantId and add HTTP isolation regression** - `0964fc3` (feat)
-4. **Task 3: Re-run Web and Desktop tenant isolation regressions against tenant-scoped backend** - `PENDING` (chore)
+4. **Task 3: Re-run Web and Desktop tenant isolation regressions against tenant-scoped backend** - `6013168` (chore)
 
 _Note: Task 1 is TDD and intentionally produced separate RED/GREEN commits._
 
@@ -122,3 +122,8 @@ None - no external service configuration required.
 ## Known Stubs
 
 None.
+
+## Self-Check: PASSED
+
+- FOUND: `.planning/phases/10-multi-tenant-repeatable-verification-channel/10-04-SUMMARY.md`
+- FOUND commits: `354d85f`, `85f9eb2`, `0964fc3`, `6013168`

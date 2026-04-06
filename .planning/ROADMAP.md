@@ -26,7 +26,7 @@
 </details>
 
 - [x] **Phase 9: 功能正确性基线修复** - 修复认证/计数器/Agent 关键交互缺陷，建立可回归的用户行为基线（3/3 plans, completed 2026-04-06）
-- [ ] **Phase 10: 多租户可重复验证通道** - 建立双租户可复现测试与 CI 诊断证据输出
+- [x] **Phase 10: 多租户可重复验证通道** - 建立双租户可复现测试与 CI 诊断证据输出（3 plans） (completed 2026-04-06)
 - [ ] **Phase 11: Windows 桌面 E2E 门禁固化** - 将稳定、可重复、可审计的 Windows desktop E2E 设为合并硬门禁
 - [ ] **Phase 12: 缺陷生命周期与回归强制闭环** - 固化严重级、状态、责任人与 P0/P1 修复回归义务
 - [ ] **Phase 13: 跨平台放行证据与质量摘要** - 形成 Windows+macOS 同构建证据放行与发布质量总览
@@ -58,7 +58,11 @@ Plans:
   1. Tester can switch between at least two tenants in a repeatable harness without manual environment patching.
   2. Counter mutations in tenant-1 do not alter tenant-2 values, and isolation remains true across repeated runs.
   3. Maintainer can run automated multi-tenant tests in CI and retrieve artifacts sufficient to diagnose failures.
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [x] 10-01-PLAN.md — 固定双租户映射与可重复初始化 harness
+- [x] 10-02-PLAN.md — tenant-1/tenant-2 隔离断言与重复运行回归
+- [x] 10-03-PLAN.md — CI 最小诊断包与 job 级 artifact 输出
 
 ### Phase 11: Windows 桌面 E2E 门禁固化
 **Goal**: 受保护分支的合并决策可由 Windows desktop E2E required check 直接约束。
@@ -103,7 +107,7 @@ Plans:
 | 7. 前端消费 Generated Types | v0.2.0 | 3/3 | Complete | 2026-04-03 |
 | 8. Agent 双路径 + Prompts + Phase 5 验证 | v0.2.0 | 3/3 | Complete | 2026-04-03 |
 | 9. 功能正确性基线修复 | v0.2.1 | 3/3 | Complete | 2026-04-06 |
-| 10. 多租户可重复验证通道 | v0.2.1 | 0/0 | Not started | - |
+| 10. 多租户可重复验证通道 | v0.2.1 | 4/4 | Complete   | 2026-04-06 |
 | 11. Windows 桌面 E2E 门禁固化 | v0.2.1 | 0/0 | Not started | - |
 | 12. 缺陷生命周期与回归强制闭环 | v0.2.1 | 0/0 | Not started | - |
 | 13. 跨平台放行证据与质量摘要 | v0.2.1 | 0/0 | Not started | - |

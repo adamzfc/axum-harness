@@ -26,7 +26,7 @@
 ### Multi-tenant Verification
 
 - [ ] **MTEN-01**: Tester can switch between at least two tenants in a repeatable test harness.
-- [ ] **MTEN-02**: Tester can verify counter values are tenant-scoped, where tenant-1 changes do not alter tenant-2 values.
+- [x] **MTEN-02**: Tester can verify counter values are tenant-scoped, where tenant-1 changes do not alter tenant-2 values.
 - [ ] **MTEN-03**: Maintainer can run automated multi-tenant tests in CI and collect artifacts for diagnosis.
 
 ### Functional Bug Fixes
@@ -68,7 +68,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-02 | Phase 9 | Validated |
 | AUTH-03 | Phase 9 | Validated |
 | MTEN-01 | Phase 10 | Pending |
-| MTEN-02 | Phase 10 | Pending |
+| MTEN-02 | Phase 10 | Complete |
 | MTEN-03 | Phase 10 | Pending |
 | COUNTER-02 | Phase 9 | Validated |
 | AGENT-02 | Phase 9 | Validated |
