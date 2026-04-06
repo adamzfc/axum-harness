@@ -87,6 +87,26 @@ test.describe('Counter Page (E2E)', () => {
 		await expect(counterDisplay).toContainText('0');
 	});
 
+	test('persists counter value after reload', async ({ page }) => {
+		const url = page.url();
+		if (url.includes('/login')) {
+			return;
+		}
+
+		const counterDisplay = page.locator('.font-mono');
+		const buttons = page.locator('button');
+
+		await buttons.nth(1).click();
+		await buttons.nth(1).click();
+		await buttons.nth(0).click();
+
+		const valueBeforeReload = (await counterDisplay.textContent())?.trim();
+		expect(valueBeforeReload).toBeTruthy();
+
+		await page.reload({ waitUntil: 'networkidle' });
+		await expect(counterDisplay).toContainText(valueBeforeReload ?? '');
+	});
+
 	test('counter page is responsive on mobile', async ({ page }) => {
 		await page.setViewportSize({ width: 375, height: 667 });
 		// Re-navigate after viewport change
