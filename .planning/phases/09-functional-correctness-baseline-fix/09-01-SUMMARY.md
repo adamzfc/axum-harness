@@ -65,8 +65,9 @@ completed: 2026-04-06
 
 ## Task Commits
 
-1. **Task 1: Add explicit logout command and frontend dual-path sign-out** - `46ad92b` (feat)
+1. **Task 1: Add explicit logout command and frontend dual-path sign-out** - `2c69d32` (feat)
 2. **Task 2: Implement Settings logout + Test Connection tri-state diagnostics** - `c7eda1e` (feat)
+3. **Task 2 follow-up: Stabilize settings diagnostics test selectors** - `0c27aed` (test)
 
 ## Files Created/Modified
 - `packages/adapters/hosts/tauri/src/commands/auth.rs` - added `#[tauri::command] logout` entrypoint.
