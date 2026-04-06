@@ -3,70 +3,127 @@
 use crate::state::AppState;
 use axum::{
     Json, Router,
-    extract::State,
+    extract::{Extension, State},
+    http::StatusCode,
     routing::{get, post},
 };
+use domain::ports::TenantId;
 use feature_counter::CounterService;
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/counter/increment", post(increment))
-        .route("/counter/decrement", post(decrement))
-        .route("/counter/reset", post(reset))
-        .route("/counter/value", get(get_value))
+        .route("/api/counter/increment", post(increment))
+        .route("/api/counter/decrement", post(decrement))
+        .route("/api/counter/reset", post(reset))
+        .route("/api/counter/value", get(get_value))
 }
 
-fn get_db(state: &AppState) -> Result<storage_libsql::EmbeddedLibSql, Json<serde_json::Value>> {
-    state
-        .embedded_db
-        .clone()
-        .ok_or_else(|| Json(serde_json::json!({ "error": "Embedded database not initialized" })))
+fn get_db(
+    state: &AppState,
+) -> Result<storage_libsql::EmbeddedLibSql, (StatusCode, Json<serde_json::Value>)> {
+    state.embedded_db.clone().ok_or_else(|| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": "Embedded database not initialized" })),
+        )
+    })
 }
 
-async fn increment(State(state): State<AppState>) -> Json<serde_json::Value> {
+fn get_tenant(
+    tenant: Option<Extension<TenantId>>,
+) -> Result<TenantId, (StatusCode, Json<serde_json::Value>)> {
+    tenant.map(|Extension(id)| id).ok_or_else(|| {
+        (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({ "error": "Missing tenant context" })),
+        )
+    })
+}
+
+async fn increment(
+    State(state): State<AppState>,
+    tenant: Option<Extension<TenantId>>,
+) -> (StatusCode, Json<serde_json::Value>) {
     let db = match get_db(&state) {
         Ok(db) => db,
         Err(e) => return e,
     };
+    let tenant_id = match get_tenant(tenant) {
+        Ok(id) => id,
+        Err(e) => return e,
+    };
     let service = usecases::counter_service::LibSqlCounterService::new(db);
-    match service.increment().await {
-        Ok(value) => Json(serde_json::json!({ "value": value })),
-        Err(e) => Json(serde_json::json!({ "error": e.to_string() })),
+    match service.increment_for_tenant(&tenant_id).await {
+        Ok(value) => (StatusCode::OK, Json(serde_json::json!({ "value": value }))),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        ),
     }
 }
 
-async fn decrement(State(state): State<AppState>) -> Json<serde_json::Value> {
+async fn decrement(
+    State(state): State<AppState>,
+    tenant: Option<Extension<TenantId>>,
+) -> (StatusCode, Json<serde_json::Value>) {
     let db = match get_db(&state) {
         Ok(db) => db,
         Err(e) => return e,
     };
+    let tenant_id = match get_tenant(tenant) {
+        Ok(id) => id,
+        Err(e) => return e,
+    };
     let service = usecases::counter_service::LibSqlCounterService::new(db);
-    match service.decrement().await {
-        Ok(value) => Json(serde_json::json!({ "value": value })),
-        Err(e) => Json(serde_json::json!({ "error": e.to_string() })),
+    match service.decrement_for_tenant(&tenant_id).await {
+        Ok(value) => (StatusCode::OK, Json(serde_json::json!({ "value": value }))),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        ),
     }
 }
 
-async fn reset(State(state): State<AppState>) -> Json<serde_json::Value> {
+async fn reset(
+    State(state): State<AppState>,
+    tenant: Option<Extension<TenantId>>,
+) -> (StatusCode, Json<serde_json::Value>) {
     let db = match get_db(&state) {
         Ok(db) => db,
         Err(e) => return e,
     };
+    let tenant_id = match get_tenant(tenant) {
+        Ok(id) => id,
+        Err(e) => return e,
+    };
     let service = usecases::counter_service::LibSqlCounterService::new(db);
-    match service.reset().await {
-        Ok(value) => Json(serde_json::json!({ "value": value })),
-        Err(e) => Json(serde_json::json!({ "error": e.to_string() })),
+    match service.reset_for_tenant(&tenant_id).await {
+        Ok(value) => (StatusCode::OK, Json(serde_json::json!({ "value": value }))),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        ),
     }
 }
 
-async fn get_value(State(state): State<AppState>) -> Json<serde_json::Value> {
+async fn get_value(
+    State(state): State<AppState>,
+    tenant: Option<Extension<TenantId>>,
+) -> (StatusCode, Json<serde_json::Value>) {
     let db = match get_db(&state) {
         Ok(db) => db,
         Err(e) => return e,
     };
+    let tenant_id = match get_tenant(tenant) {
+        Ok(id) => id,
+        Err(e) => return e,
+    };
     let service = usecases::counter_service::LibSqlCounterService::new(db);
-    match service.get_value().await {
-        Ok(value) => Json(serde_json::json!({ "value": value })),
-        Err(e) => Json(serde_json::json!({ "error": e.to_string() })),
+    match service.get_value_for_tenant(&tenant_id).await {
+        Ok(value) => (StatusCode::OK, Json(serde_json::json!({ "value": value }))),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        ),
     }
 }

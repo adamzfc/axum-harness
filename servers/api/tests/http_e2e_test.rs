@@ -11,7 +11,9 @@ use http_body_util::BodyExt;
 use moka::future::Cache;
 use runtime_server::config::{CloudDbProvider, Config};
 use runtime_server::create_router;
+use runtime_server::routes;
 use runtime_server::state::AppState;
+use storage_libsql::EmbeddedLibSql;
 use storage_surrealdb::{TenantAwareSurrealDb, run_tenant_migrations};
 use surrealdb::{Surreal, engine::any::connect};
 use tower::ServiceExt;
@@ -80,6 +82,52 @@ async fn make_test_state_file() -> AppState {
         turso_db: None,
         db_provider: CloudDbProvider::SurrealDB,
         embedded_db: None,
+    }
+}
+
+/// Create a test AppState with file-based SurrealDB + embedded libsql.
+/// Used for counter route end-to-end tests.
+async fn make_test_state_with_counter() -> AppState {
+    let temp_dir = std::env::temp_dir().join(format!("counter_test_{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&temp_dir).expect("Failed to create temp dir");
+
+    let db_url = format!("rocksdb://{}", temp_dir.display());
+    let db: Surreal<_> = connect(&db_url)
+        .await
+        .expect("Failed to connect to RocksDB");
+    db.use_ns("test")
+        .use_db("test")
+        .await
+        .expect("Failed to use ns/db");
+
+    run_tenant_migrations(&db)
+        .await
+        .expect("Failed to run migrations");
+
+    let libsql_path = temp_dir.join("counter.db");
+    let embedded_db = EmbeddedLibSql::new(libsql_path.to_str().expect("non-utf8 path"))
+        .await
+        .expect("Failed to initialize embedded libsql");
+    domain::ports::lib_sql::LibSqlPort::execute(
+        &embedded_db,
+        usecases::counter_service::COUNTER_MIGRATION,
+        vec![],
+    )
+    .await
+    .expect("Failed to run counter migration");
+
+    let cache: Cache<String, String> = Cache::builder().max_capacity(10_000).build();
+    let http_client = reqwest::Client::new();
+    let config = Config::default();
+
+    AppState {
+        db,
+        cache,
+        http_client,
+        config,
+        turso_db: None,
+        db_provider: CloudDbProvider::SurrealDB,
+        embedded_db: Some(embedded_db),
     }
 }
 
@@ -810,4 +858,203 @@ async fn tenant_init_idempotent_with_same_token() {
     let body2: serde_json::Value = body_to_json(resp2).await;
     assert_eq!(body2.get("tenant_id").unwrap(), &tenant_id_1);
     assert_eq!(body2.get("created").unwrap(), false);
+}
+
+// ─── Counter Tenant Isolation ────────────────────────────────────────────────
+
+#[tokio::test]
+async fn counter_routes_return_401_when_tenant_context_missing() {
+    let state = make_test_state_with_counter().await;
+    let app = routes::counter::router().with_state(state);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/counter/value")
+                .method(http::Method::GET)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    let body: serde_json::Value = body_to_json(response).await;
+    assert_eq!(
+        body.get("error").and_then(|v| v.as_str()),
+        Some("Missing tenant context")
+    );
+}
+
+#[tokio::test]
+async fn counter_mutation_isolated_between_two_tenants() {
+    let state = make_test_state_with_counter().await;
+    let app = create_router(state);
+
+    let token_a = make_test_token("counter-tenant-a");
+    let token_b = make_test_token("counter-tenant-b");
+
+    // deterministic baseline
+    for token in [&token_a, &token_b] {
+        let reset_resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/counter/reset")
+                    .method(http::Method::POST)
+                    .header(http::header::AUTHORIZATION, format!("Bearer {token}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(reset_resp.status(), StatusCode::OK);
+    }
+
+    let inc_resp = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/counter/increment")
+                .method(http::Method::POST)
+                .header(http::header::AUTHORIZATION, format!("Bearer {token_a}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(inc_resp.status(), StatusCode::OK);
+    let inc_body: serde_json::Value = body_to_json(inc_resp).await;
+    assert_eq!(inc_body.get("value").and_then(|v| v.as_i64()), Some(1));
+
+    let read_a = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/counter/value")
+                .method(http::Method::GET)
+                .header(http::header::AUTHORIZATION, format!("Bearer {token_a}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(read_a.status(), StatusCode::OK);
+    let body_a: serde_json::Value = body_to_json(read_a).await;
+
+    let read_b = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/counter/value")
+                .method(http::Method::GET)
+                .header(http::header::AUTHORIZATION, format!("Bearer {token_b}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(read_b.status(), StatusCode::OK);
+    let body_b: serde_json::Value = body_to_json(read_b).await;
+
+    let value_a = body_a.get("value").and_then(|v| v.as_i64());
+    let value_b = body_b.get("value").and_then(|v| v.as_i64());
+    assert_eq!(
+        value_a,
+        Some(1),
+        "tenant-A expected value 1 after increment"
+    );
+    assert_eq!(
+        value_b,
+        Some(0),
+        "tenant-B leaked value after tenant-A mutation; expected 0, got {:?}",
+        value_b
+    );
+}
+
+#[tokio::test]
+async fn counter_isolation_repeated_run_stays_stable() {
+    let state = make_test_state_with_counter().await;
+    let app = create_router(state);
+
+    let token_a = make_test_token("counter-repeat-a");
+    let token_b = make_test_token("counter-repeat-b");
+
+    for run in 1..=2 {
+        for token in [&token_a, &token_b] {
+            let reset_resp = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .uri("/api/counter/reset")
+                        .method(http::Method::POST)
+                        .header(http::header::AUTHORIZATION, format!("Bearer {token}"))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(
+                reset_resp.status(),
+                StatusCode::OK,
+                "run-{run} reset should succeed"
+            );
+        }
+
+        let inc_resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/counter/increment")
+                    .method(http::Method::POST)
+                    .header(http::header::AUTHORIZATION, format!("Bearer {token_a}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            inc_resp.status(),
+            StatusCode::OK,
+            "run-{run} increment failed"
+        );
+
+        let read_a = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/counter/value")
+                    .method(http::Method::GET)
+                    .header(http::header::AUTHORIZATION, format!("Bearer {token_a}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let body_a: serde_json::Value = body_to_json(read_a).await;
+
+        let read_b = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/counter/value")
+                    .method(http::Method::GET)
+                    .header(http::header::AUTHORIZATION, format!("Bearer {token_b}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let body_b: serde_json::Value = body_to_json(read_b).await;
+
+        assert_eq!(
+            body_a.get("value").and_then(|v| v.as_i64()),
+            Some(1),
+            "run-{run} tenant-A value mismatch"
+        );
+        assert_eq!(
+            body_b.get("value").and_then(|v| v.as_i64()),
+            Some(0),
+            "run-{run} tenant-B value mismatch"
+        );
+    }
 }
