@@ -25,7 +25,7 @@
 
 </details>
 
-- [ ] **Phase 9: 功能正确性基线修复** - 修复认证/计数器/Agent 关键交互缺陷，建立可回归的用户行为基线
+- [x] **Phase 9: 功能正确性基线修复** - 修复认证/计数器/Agent 关键交互缺陷，建立可回归的用户行为基线（3/3 plans, completed 2026-04-06）
 - [ ] **Phase 10: 多租户可重复验证通道** - 建立双租户可复现测试与 CI 诊断证据输出
 - [ ] **Phase 11: Windows 桌面 E2E 门禁固化** - 将稳定、可重复、可审计的 Windows desktop E2E 设为合并硬门禁
 - [ ] **Phase 12: 缺陷生命周期与回归强制闭环** - 固化严重级、状态、责任人与 P0/P1 修复回归义务
@@ -102,7 +102,7 @@ Plans:
 | 6. 连接 Auth Adapter 到 Tauri 命令 | v0.2.0 | 0/0 | Gap (tech debt) | - |
 | 7. 前端消费 Generated Types | v0.2.0 | 3/3 | Complete | 2026-04-03 |
 | 8. Agent 双路径 + Prompts + Phase 5 验证 | v0.2.0 | 3/3 | Complete | 2026-04-03 |
-| 9. 功能正确性基线修复 | v0.2.1 | 0/0 | Not started | - |
+| 9. 功能正确性基线修复 | v0.2.1 | 3/3 | Complete | 2026-04-06 |
 | 10. 多租户可重复验证通道 | v0.2.1 | 0/0 | Not started | - |
 | 11. Windows 桌面 E2E 门禁固化 | v0.2.1 | 0/0 | Not started | - |
 | 12. 缺陷生命周期与回归强制闭环 | v0.2.1 | 0/0 | Not started | - |
@@ -110,4 +110,4 @@ Plans:
 
 ---
 
-*Ready for phase planning: `/gsd-plan-phase 9`*
+*Ready for next phase: `/gsd-discuss-phase 10` or `/gsd-plan-phase 10`*

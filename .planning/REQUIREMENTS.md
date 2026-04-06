@@ -20,8 +20,8 @@
 
 ### Authentication & Session
 
-- [ ] **AUTH-02**: Signed-in user can click a visible Google logout action to sign out.
-- [ ] **AUTH-03**: Signed-in user returns to unauthenticated state after logout with session credentials cleared across desktop and browser paths.
+- [x] **AUTH-02**: Signed-in user can click a visible Google logout action to sign out. — validated in Phase 9
+- [x] **AUTH-03**: Signed-in user returns to unauthenticated state after logout with session credentials cleared across desktop and browser paths. — validated in Phase 9
 
 ### Multi-tenant Verification
 
@@ -31,10 +31,10 @@
 
 ### Functional Bug Fixes
 
-- [ ] **COUNTER-02**: User can increment and decrement the counter and observe correct value changes in UI and persisted state.
-- [ ] **AGENT-02**: User can click New Chat and start a new conversation thread.
-- [ ] **AGENT-03**: User can click New Chat without resetting saved API key, base URL, and model settings.
-- [ ] **AGENT-04**: User can click a connectivity-test action to validate API key, base URL, and model reachability with actionable result feedback.
+- [x] **COUNTER-02**: User can increment and decrement the counter and observe correct value changes in UI and persisted state. — validated in Phase 9
+- [x] **AGENT-02**: User can click New Chat and start a new conversation thread. — validated in Phase 9
+- [x] **AGENT-03**: User can click New Chat without resetting saved API key, base URL, and model settings. — validated in Phase 9
+- [x] **AGENT-04**: User can click a connectivity-test action to validate API key, base URL, and model reachability with actionable result feedback. — validated in Phase 9
 
 ## v0.2.x Requirements (Deferred)
 
@@ -65,15 +65,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BUG-01 | Phase 12 | Pending |
 | BUG-02 | Phase 12 | Pending |
 | BUG-03 | Phase 12 | Pending |
-| AUTH-02 | Phase 9 | Pending |
-| AUTH-03 | Phase 9 | Pending |
+| AUTH-02 | Phase 9 | Validated |
+| AUTH-03 | Phase 9 | Validated |
 | MTEN-01 | Phase 10 | Pending |
 | MTEN-02 | Phase 10 | Pending |
 | MTEN-03 | Phase 10 | Pending |
-| COUNTER-02 | Phase 9 | Pending |
-| AGENT-02 | Phase 9 | Pending |
-| AGENT-03 | Phase 9 | Pending |
-| AGENT-04 | Phase 9 | Pending |
+| COUNTER-02 | Phase 9 | Validated |
+| AGENT-02 | Phase 9 | Validated |
+| AGENT-03 | Phase 9 | Validated |
+| AGENT-04 | Phase 9 | Validated |
 
 **Coverage:**
 - v0.2.1 requirements: 15 total
@@ -83,4 +83,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 ---
 
 *Requirements defined: 2026-04-06*
-*Last updated: 2026-04-06 after v0.2.1 roadmap mapping*
+*Last updated: 2026-04-06 after Phase 9 verification*
