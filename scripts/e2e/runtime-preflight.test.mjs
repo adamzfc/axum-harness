@@ -32,7 +32,7 @@ test('preflight fails when required svelte types are missing', () => {
 	});
 
 	assert.notEqual(result.status, 0);
-	assert.match(result.stderr + result.stdout, /\.svelte-kit\/types/i);
+	assert.match(result.stderr + result.stdout, /\.svelte-kit[\\/]types/i);
 });
 
 test('preflight fails when required ports are occupied', () => {
@@ -52,7 +52,7 @@ test('preflight passes when runtime, ports, and types are healthy', () => {
 		E2E_PREFLIGHT_TEST_MODE: '1',
 		E2E_PREFLIGHT_READYZ_STATUS: 'ok',
 		E2E_PREFLIGHT_TYPES_STATUS: 'ok',
-		E2E_PREFLIGHT_PORTS_STATUS: 'free'
+		E2E_PREFLIGHT_PORTS_STATUS: 'busy:3001'
 	});
 
 	assert.equal(result.status, 0, result.stderr || result.stdout);
