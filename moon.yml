@@ -183,7 +183,10 @@ tasks:
     command: 'cargo build -p native-tauri --profile e2e --features e2e-testing'
     inputs:
       - 'apps/client/native/**/*'
-      - 'packages/**/*'
+      - 'packages/contracts/**/*'
+      - 'packages/domain/**/*'
+      - 'packages/usecases/**/*'
+      - 'servers/api/**/*'
       - 'Cargo.toml'
       - 'Cargo.lock'
     outputs:
