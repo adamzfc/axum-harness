@@ -1,14 +1,24 @@
 import { test as base, expect, type Page } from '@playwright/test';
 
+const APP_BASE_URL = 'http://localhost:5173';
+
+function sleep(ms: number) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /** Trigger mock OAuth deep-link event on the page. */
 export async function triggerMockOAuth(page: Page, mockCode: string = 'mock_auth_code') {
-	await page.evaluate((code) => {
-		window.dispatchEvent(
-			new CustomEvent('deep-link://new-url', {
-				detail: `/callback?code=${code}&state=mock_state`
-			})
-		);
-	}, mockCode);
+	const callbackUrl = `http://localhost:5173/oauth/callback?code=${mockCode}&state=mock_state`;
+	await (page as any).evaluate(
+		`(async () => {
+			const callbackUrl = ${JSON.stringify(callbackUrl)};
+			window.dispatchEvent(new CustomEvent('deep-link://new-url', { detail: '/callback?code=' + ${JSON.stringify(mockCode)} + '&state=mock_state' }));
+			const tauri = window.__TAURI__;
+			if (tauri?.event?.emit) {
+				await tauri.event.emit('oauth-callback', callbackUrl);
+			}
+		})();`
+	);
 }
 
 /** Verify user is logged in by URL guard behavior. */
@@ -25,9 +35,9 @@ export async function verifyLoggedOut(page: Page) {
 export const test = base.extend<{ mockLogin: void }>({
 	mockLogin: [
 		async ({ page }, use) => {
-			await page.goto('/login');
+			await (page as any).goto(`${APP_BASE_URL}/login`);
 			await triggerMockOAuth(page);
-			await page.waitForTimeout(1000);
+			await sleep(1000);
 			await use();
 		},
 		{ auto: false }

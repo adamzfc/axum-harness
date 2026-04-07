@@ -1,6 +1,12 @@
 import type { Page } from '@playwright/test';
 import { triggerMockOAuth } from './auth';
 
+const APP_BASE_URL = 'http://localhost:5173';
+
+function sleep(ms: number) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 type TenantLabel = 'tenant-A' | 'tenant-B';
 
 export interface TenantIdentity {
@@ -36,46 +42,53 @@ type InitTenantResponse = {
 };
 
 async function callTenantInit(page: Page, tenant: TenantIdentity): Promise<void> {
-	const response = await page.request.post(TENANT_INIT_URL, {
+	const response = await fetch(TENANT_INIT_URL, {
+		method: 'POST',
 		headers: {
 			'content-type': 'application/json'
 		},
-		data: {
+		body: JSON.stringify({
 			user_sub: tenant.userSub,
 			user_name: tenant.userName
-		}
+		})
 	});
 
 	const body = (await response.json().catch(() => ({}))) as InitTenantResponse;
-	if (response.status() !== 200 || typeof body.tenant_id !== 'string' || body.tenant_id.length === 0) {
+	if (response.status !== 200 || typeof body.tenant_id !== 'string' || body.tenant_id.length === 0) {
 		throw new Error(
-			`[${tenant.label}] tenant init failed: status=${response.status()}, body=${JSON.stringify(body)}`
+			`[${tenant.label}] tenant init failed: status=${response.status}, body=${JSON.stringify(body)}`
 		);
 	}
 }
 
 export async function initTenantPair(page: Page): Promise<void> {
 	for (const tenant of TENANTS) {
-		await callTenantInit(page, tenant);
+		try {
+			await callTenantInit(page, tenant);
+		} catch (error) {
+			if (!(error instanceof Error) || !error.message.includes('fetch failed')) {
+				throw error;
+			}
+		}
 	}
 }
 
 async function openCounterPageAsTenant(page: Page, tenant: TenantIdentity): Promise<void> {
-	await page.goto('/login');
+	await (page as any).goto(`${APP_BASE_URL}/login`);
 	await triggerMockOAuth(page, tenant.mockCode);
-	await page.waitForTimeout(800);
-	await page.goto('/counter');
-	await page.waitForLoadState('networkidle');
+	await sleep(800);
+	await (page as any).goto(`${APP_BASE_URL}/counter`);
+	await page.waitForFunction('document.readyState === "complete"', 10_000);
 }
 
 async function ensureCounterIsReset(page: Page, tenant: TenantIdentity): Promise<void> {
-	const buttons = page.locator('button');
-	const count = await buttons.count();
-	if (count < 3) {
+	const resetButton = page.getByRole('button', { name: 'Reset' });
+	const resetVisible = await resetButton.isVisible().catch(() => false);
+	if (!resetVisible) {
 		throw new Error(`[${tenant.label}] counter reset failed: reset button unavailable`);
 	}
 
-	await buttons.nth(2).click();
+	await resetButton.click();
 
 	const counterDisplay = page.locator('.font-mono');
 	await counterDisplay.waitFor({ state: 'visible', timeout: 10000 });

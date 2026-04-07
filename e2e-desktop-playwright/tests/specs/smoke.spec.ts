@@ -11,3 +11,8 @@ test('desktop runtime loads login shell', async ({ tauriPage }) => {
 
   expect(hasLogin || hasAppTitle).toBeTruthy();
 });
+
+test('desktop shell has non-empty title', async ({ tauriPage }) => {
+	await tauriPage.waitForFunction('document.readyState === "complete"', 30_000);
+	await expect(tauriPage).toHaveTitle(/.+/);
+});
