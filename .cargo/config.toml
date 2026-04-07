@@ -4,8 +4,7 @@
 
 # ── Global Build Settings ─────────────────────────────────────
 [build]
-# Use all CPU cores for parallel compilation (default, but explicit is better)
-jobs = 0
+# Let Cargo auto-detect parallelism (uses all available cores by default)
 
 # sccache wrapper — skipped due to windows-sys compatibility issue on Rust 1.94
 # Once sccache compiles successfully, uncomment the line below:

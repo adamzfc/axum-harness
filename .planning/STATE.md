@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.2.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-07T13:10:33.236Z"
-last_activity: 2026-04-07 -- Phase 14.1 planning complete
+last_updated: "2026-04-07T13:31:43.639Z"
+last_activity: 2026-04-07 -- Phase 14.1 execution started
 progress:
   total_phases: 7
   completed_phases: 3
@@ -21,17 +21,17 @@ progress:
 ## Project Reference
 
 - **Core value:** Agent-Native Cross-Platform Application Engineering Base
-- **Current focus:** Phase 14 — d-dev-rust-templates-tauri-sveltekit-axum-moon-template-docs
+- **Current focus:** Phase 14.1 — deferred-items-cargo-e2e-e2e
 - **Stack:** Tauri v2, SvelteKit 2 + Svelte 5, Axum 0.8.x, Bun, moon, proto, Just
 - **Architecture reference:** docs/blueprints/agent-native-starter-v1/
 - **Granularity:** fine
 
 ## Current Position
 
-Phase: 14 (d-dev-rust-templates-tauri-sveltekit-axum-moon-template-docs) — EXECUTING
-Plan: 1 of 5
-Status: Ready to execute
-Last activity: 2026-04-07 -- Phase 14.1 planning complete
+Phase: 14.1 (deferred-items-cargo-e2e-e2e) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 14.1
+Last activity: 2026-04-07 -- Phase 14.1 execution started
 
 ## Milestone Focus
 

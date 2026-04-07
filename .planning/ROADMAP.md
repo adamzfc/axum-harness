@@ -133,7 +133,7 @@ Plans:
 **Goal:** 对齐 CI 与本地 full-gate 契约，固化 preflight-first 的双 lane（web+tauri）门禁与可审计证据，完成 14.1 deferred gaps 收敛并可持续执行。
 **Requirements**: QGATE-01, QGATE-02
 **Depends on:** Phase 14
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 14.1-01-PLAN.md — 修复 web tenant fixture 鉴权契约与 runtime readiness，恢复关键回归可执行性

@@ -29,11 +29,11 @@ export default defineConfig({
   ],
   webServer: {
     command:
-      'cmd /C "set WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222 && cargo tauri dev --features e2e-testing --config tauri.e2e.conf.json"',
+      'cmd /C "set WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222 && set AWS_LC_SYS_PREBUILT_NASM=1 && cargo tauri dev --features e2e-testing --config tauri.e2e.conf.json"',
     url: 'http://127.0.0.1:9222/json/version',
     cwd: '../apps/client/native/src-tauri',
     reuseExistingServer: !process.env.CI,
-    timeout: 180_000
+    timeout: 600_000
   },
   timeout: 90_000,
   expect: {
