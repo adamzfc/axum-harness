@@ -5,6 +5,7 @@ import {
 	TENANT_B,
 	resetTenantPairCounter
 } from '../fixtures/tenant';
+import { ensureApiReady } from '../fixtures/runtime';
 
 test.describe('Tenant Isolation (E2E)', () => {
 	test.describe.configure({ mode: 'serial' });
@@ -12,6 +13,7 @@ test.describe('Tenant Isolation (E2E)', () => {
 	const TENANT_A_MUTATIONS = 2;
 
 	test.beforeEach(async ({ page }) => {
+		await ensureApiReady();
 		await resetTenantPairCounter(page);
 	});
 
