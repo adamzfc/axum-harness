@@ -17,10 +17,10 @@ created: 2026-04-07
 
 | Property | Value |
 |----------|-------|
-| **Framework** | Playwright 1.58.2 + WDIO 9 + Cargo test |
-| **Config file** | `apps/client/web/app/playwright.config.ts`, `e2e-tests/wdio.conf.mjs`, `e2e-desktop-playwright/playwright.config.ts` |
+| **Framework** | Playwright 1.58.2 + Cargo test |
+| **Config file** | `apps/client/web/app/playwright.config.ts`, `e2e-desktop-playwright/playwright.config.ts` |
 | **Quick run command** | `bun run --cwd e2e-desktop-playwright test:smoke` |
-| **Full suite command** | `bun run --cwd e2e-tests test:ci && bun run --cwd apps/client/web/app test:e2e && bun run --cwd e2e-desktop-playwright test:ci` |
+| **Full suite command** | `bun run --cwd apps/client/web/app test:e2e && bun run --cwd e2e-desktop-playwright test:ci` |
 | **Estimated runtime** | ~1200 seconds |
 
 ---
@@ -42,7 +42,7 @@ created: 2026-04-07
 | 14-01-02 | 01 | 1 | QGATE-01 | T-14-02 | tauri smoke can attach without changing product logic | e2e smoke | `bun run --cwd e2e-desktop-playwright test:smoke` | ✅ | ⬜ pending |
 | 14-02-01 | 02 | 2 | QGATE-01 | T-14-03 | login and counter migrated with fixture parity | e2e | `bun run --cwd e2e-desktop-playwright test:phase1` | ✅ | ⬜ pending |
 | 14-03-01 | 03 | 3 | QGATE-02 | T-14-04 | CI contains macOS tauri observer lane and diagnostics | workflow lint | `grep -n "desktop-e2e-playwright-tauri\|macos-latest\|upload-artifact" .github/workflows/e2e-tests.yml` | ✅ | ⬜ pending |
-| 14-03-02 | 03 | 3 | QGATE-01,QGATE-02 | T-14-05 | full repository E2E gate script runs all three tracks | integration | `bun run e2e:full` | ✅ | ⬜ pending |
+| 14-03-02 | 03 | 3 | QGATE-01,QGATE-02 | T-14-05 | full repository E2E gate script runs web + tauri tracks | integration | `just test-e2e-full` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 

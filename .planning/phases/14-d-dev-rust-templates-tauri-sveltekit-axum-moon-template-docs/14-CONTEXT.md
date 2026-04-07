@@ -26,6 +26,7 @@
 ### CI 迁移策略
 - **D-05:** CI 先新增 `desktop-e2e-playwright-tauri` 的 **macOS 观察通道**，作为过渡期可观测能力；不立即替代现有主通道。
 - **D-06:** 过渡期保持现有 `desktop-e2e`（WDIO）与 `web-e2e`（Playwright）并行运行，直到达到稳定性判定门槛再讨论 WDIO 退场。
+- **D-06-override (user decision):** 自 14-05 起正式终止并行策略，WDIO lane 退场，仓库与 CI 仅保留 web Playwright + tauri-playwright 双通道。
 
 ### E2E 跑通验收口径
 - **D-07:** “跑通 E2E”锁定为**仓库所有 E2E 项目全绿**（而非仅迁移范围）：包含现有 WDIO 全部规范、现有 Playwright 全项目矩阵、以及新增 tauri-playwright 迁移用例。
@@ -95,6 +96,7 @@
 - Tauri 层：`Cargo.toml`、`src/lib.rs`、`capabilities/default.json`（插件与权限接入）。
 - E2E 新套件层：新增独立目录（建议 `e2e-desktop-playwright/`）及其 config/fixtures/specs。
 - CI 层：`.github/workflows/e2e-tests.yml` 新增 tauri-playwright macOS job，并与现有 job 并行。
+- CI 层（最新边界）：`.github/workflows/e2e-tests.yml` 已收敛为 web + tauri-playwright 双通道；`desktop-e2e` WDIO job 已退役。
 - 兼容层：复用 `apps/client/web/app/tests/fixtures/*` 与 `e2e-tests/helpers/tenant.mjs` 的既有行为语义。
 
 </code_context>
