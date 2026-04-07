@@ -178,6 +178,17 @@ tasks:
   test-e2e:
     script: 'cd apps/client/web/app && bun run test:e2e'
 
+  # Build desktop binary once (cached for subsequent E2E runs)
+  build-desktop-bin:
+    command: 'cargo build -p native-tauri --profile e2e --features e2e-testing'
+    inputs:
+      - 'apps/client/native/**/*'
+      - 'packages/**/*'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+    outputs:
+      - 'target/e2e/native-tauri.exe'
+
   test-desktop:
     script: 'cd e2e-desktop-playwright && bun run test:desktop:core'
     inputs:
@@ -186,6 +197,7 @@ tasks:
       - 'apps/client/native/**/*'
       - 'apps/client/web/app/**/*'
     deps:
+      - '~:build-desktop-bin'
       - '~:setup'
 
   test-e2e-full:

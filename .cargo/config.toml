@@ -1,0 +1,35 @@
+# ── Cargo Configuration for Maximum Compilation Speed (2026) ──
+# Based on: Rust 1.94, nnethercote's Dec 2025 compiler speed guide,
+#           Rust compiler performance survey 2025, and official Cargo docs
+
+# ── Global Build Settings ─────────────────────────────────────
+[build]
+# Use all CPU cores for parallel compilation (default, but explicit is better)
+jobs = 0
+
+# sccache wrapper — skipped due to windows-sys compatibility issue on Rust 1.94
+# Once sccache compiles successfully, uncomment the line below:
+# rustc-wrapper = "sccache"
+
+# Redirect all build output to D drive to save C disk space
+target-dir = "D:/dev-storage/cache/cargo-target/tauri-sveltekit-axum-moon-template"
+
+# Auto-clean unused cache files weekly (new in Cargo 1.90+)
+# Prevents ~/.cargo/registry from growing indefinitely
+[cache]
+auto-clean-frequency = "1 week"
+
+# ── Windows: Use LLD Linker (2x faster linking) ─────────────
+# Rust 1.90+ uses LLD by default on Linux, but Windows still uses MSVC linker
+# LLD (rust-lld) ships with Rust toolchain, no extra installation needed
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld.exe"
+
+# ── Network: Use Sparse Registry Protocol ───────────────────
+# Already default since Cargo 1.70+, but explicit is better
+[registries.crates-io]
+protocol = "sparse"
+
+# ── Git: Use system git for better caching and auth ─────────
+[net]
+git-fetch-with-cli = true

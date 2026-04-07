@@ -173,13 +173,33 @@ panic = "abort"
 
 [profile.dev]
 panic = "unwind"
+incremental = true
+codegen-units = 256
 
 # ── Coverage Profile ─────────────────────────────────────────
 # Third-party dependencies don't need full debug info for coverage
 # This significantly reduces build size and time
 [profile.dev.package."*"]
-debug = 0
+debug = 1                 # 2026 best practice: line tables only (better stack traces)
+incremental = true
+opt-level = 1
 
 [profile.dev.package]
 # Keep debug info for our own crates to get accurate coverage
 # (workspace crates inherit from default profile)
+
+# ── sccache optimization profile ───────────────────────────
+# When using sccache (RUSTC_WRAPPER=sccache), this ensures
+# maximum cache hit rate across rebuilds
+[profile.dev.build-override]
+incremental = false
+debug = 0
+
+# ── E2E testing profile ────────────────────────────────────
+# Optimized for fast compilation during E2E test runs
+# Inherits from dev profile but skips heavy optimizations
+[profile.e2e]
+inherits = "dev"
+opt-level = 0
+debug = false
+strip = true

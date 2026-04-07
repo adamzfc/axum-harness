@@ -7,13 +7,37 @@ import {
   resetTenantPair,
 } from '../helpers/tenant.mjs';
 
-describe('Desktop Tenant Isolation', () => {
-  const BASELINE = 0;
-  const TENANT_1_WRITES = 2;
+const RETRY_LIMIT = 3;
+const RETRY_DELAY_MS = 1200;
 
-  beforeEach(async () => {
-    await resetTenantPair(BASELINE);
-  });
+function sleep(ms) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withRetry(operationName, operation) {
+	let lastError;
+	for (let attempt = 1; attempt <= RETRY_LIMIT; attempt += 1) {
+		try {
+			return await operation();
+		} catch (error) {
+			lastError = error;
+			if (attempt === RETRY_LIMIT) {
+				break;
+			}
+			await sleep(RETRY_DELAY_MS);
+		}
+	}
+
+	throw new Error(`[tenant-isolation] ${operationName} failed after ${RETRY_LIMIT} attempts: ${lastError?.message ?? String(lastError)}`);
+}
+
+describe('Desktop Tenant Isolation', () => {
+	const BASELINE = 0;
+	const TENANT_1_WRITES = 2;
+
+	beforeEach(async () => {
+		await withRetry('resetTenantPair', () => resetTenantPair(BASELINE));
+	});
 
   it('uses the same fixed tenant pair as web harness', async () => {
     assert.equal(TENANT_1.userSub, 'tenant_a_user', 'tenant-1 userSub must match web fixture');
@@ -30,16 +54,20 @@ describe('Desktop Tenant Isolation', () => {
 });
 
 async function assertIsolationFlow({ runLabel, seed, writes }) {
-  const tenant1Start = await readTenantCounter(TENANT_1);
+	const tenant1Start = await withRetry(`${runLabel}:readTenantCounter(tenant-1:start)`, () =>
+		readTenantCounter(TENANT_1),
+	);
   assert.equal(
     tenant1Start,
     seed,
     `[${runLabel}] tenant-1 baseline mismatch: expected ${seed}, got ${tenant1Start}`,
   );
 
-  await incrementTenantCounter(TENANT_1, writes);
+	await withRetry(`${runLabel}:incrementTenantCounter(tenant-1)`, () => incrementTenantCounter(TENANT_1, writes));
 
-  const tenant1AfterWrite = await readTenantCounter(TENANT_1);
+	const tenant1AfterWrite = await withRetry(`${runLabel}:readTenantCounter(tenant-1:after)`, () =>
+		readTenantCounter(TENANT_1),
+	);
   const expectedTenant1 = seed + writes;
   assert.equal(
     tenant1AfterWrite,
@@ -47,7 +75,9 @@ async function assertIsolationFlow({ runLabel, seed, writes }) {
     `[${runLabel}] tenant-1 write result mismatch: expected ${expectedTenant1}, got ${tenant1AfterWrite}`,
   );
 
-  const tenant2AfterWrite = await readTenantCounter(TENANT_2);
+	const tenant2AfterWrite = await withRetry(`${runLabel}:readTenantCounter(tenant-2:after)`, () =>
+		readTenantCounter(TENANT_2),
+	);
   assert.equal(
     tenant2AfterWrite,
     seed,

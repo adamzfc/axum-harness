@@ -117,13 +117,23 @@ Plans:
 **Goal:** 在不改变业务行为的前提下，将桌面 E2E 迁移到 tauri-playwright Phase 1 深度（smoke/login/counter），并形成可回滚、可诊断、可执行的全仓 E2E 跑通通道。
 **Requirements**: QGATE-01, QGATE-02
 **Depends on:** Phase 13
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 14-01-PLAN.md — Feature-gated tauri-playwright 接入与独立桌面套件脚手架
-- [ ] 14-02-PLAN.md — smoke/login/counter 迁移与认证/租户语义对齐
-- [ ] 14-03-PLAN.md — CI macOS 观察通道 + 全量 E2E 验收与证据闭环
+- [x] 14-01-PLAN.md — Feature-gated tauri-playwright 接入与独立桌面套件脚手架
+- [x] 14-02-PLAN.md — smoke/login/counter 迁移与认证/租户语义对齐
+- [x] 14-03-PLAN.md — CI macOS 观察通道 + 全量 E2E 验收与证据闭环
 
 ---
 
 *Ready for next phase: `/gsd-discuss-phase 10` or `/gsd-plan-phase 10`*
+
+### Phase 14.1: 根据 deferred-items 文档修复 cargo 编译导致 E2E 运行慢与相关 E2E 未全绿问题 (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 14
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 14.1 to break down)

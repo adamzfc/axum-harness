@@ -30,6 +30,21 @@ doctor:
     @node --version   2>/dev/null || echo "node not in PATH"
     @bun --version    2>/dev/null || echo "bun not in PATH"
 
+# 安装 sccache 编译缓存（加速重复编译 80%+）
+# NOTE: 当前 sccache 在 Rust 1.94 + Windows 上编译失败 (windows-sys API 变更)
+# 等 sccache 修复后可正常使用
+setup-sccache:
+    @echo "sccache currently broken on Rust 1.94 + Windows"
+    @echo "Tracking: https://github.com/mozilla/sccache/issues"
+    @echo "Once fixed, run: cargo install sccache"
+
+# 安装 cargo-hakari 统一依赖解析（减少重复编译 30%+）
+setup-hakari:
+    @bun -e "const { spawnSync } = require('child_process'); const r = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['cargo-hakari'], { shell: process.platform === 'win32' }); if (r.status !== 0) { console.log('Installing cargo-hakari...'); spawnSync('cargo', ['install', 'cargo-hakari'], { stdio: 'inherit', shell: process.platform === 'win32' }); } else { console.log('cargo-hakari already installed'); }"
+    @echo "Generating unified dependency resolution..."
+    cargo hakari generate
+    @echo "hakari configured — run cargo build to see speedup"
+
 # 安装覆盖率工具（一次性）
 setup-coverage:
     @bun -e "const { spawnSync } = require('child_process'); ['cargo-llvm-cov', 'cargo-sweep'].forEach(t => { const r = spawnSync(process.platform === 'win32' ? 'where' : 'which', [t], { shell: process.platform === 'win32' }); if (r.status !== 0) spawnSync('cargo', ['install', t.replace('cargo-', '')], { stdio: 'inherit', shell: process.platform === 'win32' }); }); spawnSync('rustup', ['component', 'add', 'llvm-tools'], { stdio: 'inherit', shell: process.platform === 'win32' }); console.log('Coverage tools ready');"
@@ -111,6 +126,11 @@ test-e2e-full:
 test-desktop:
     moon run repo:test-desktop
 
+# 快速运行 E2E（使用 e2e profile,跳过优化编译）
+test-desktop-fast:
+    cargo build -p native-tauri --profile e2e --features e2e-testing
+    cd e2e-desktop-playwright && bun run test:desktop:core
+
 # 运行 feature powerset 检查
 test-hack:
     moon run repo:test-hack
@@ -142,6 +162,14 @@ clean-sweep:
 clean-sweep-deps:
     just _require cargo-sweep "cargo install cargo-sweep"
     cargo sweep --installed
+
+# 查看 sccache 缓存状态 (当前不可用)
+sccache-stats:
+    @echo "sccache currently disabled — see .env for details"
+
+# 清理 sccache 缓存 (当前不可用)
+sccache-clean:
+    @echo "sccache currently disabled — see .env for details"
 
 # 仅清理覆盖率产物
 clean-coverage:
