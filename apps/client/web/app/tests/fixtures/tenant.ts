@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { triggerMockOAuth } from './auth';
+import { makeTenantToken, triggerMockOAuth } from './auth';
 
 type TenantLabel = 'tenant-A' | 'tenant-B';
 
@@ -38,6 +38,7 @@ type InitTenantResponse = {
 async function callTenantInit(page: Page, tenant: TenantIdentity): Promise<void> {
 	const response = await page.request.post(TENANT_INIT_URL, {
 		headers: {
+			Authorization: `Bearer ${makeTenantToken(tenant.userSub)}`,
 			'content-type': 'application/json'
 		},
 		data: {

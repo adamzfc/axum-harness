@@ -18,6 +18,27 @@ export async function triggerMockOAuth(page: Page, mockCode: string = 'mock_auth
 	}, mockCode);
 }
 
+function toBase64Url(input: string): string {
+	return Buffer.from(input)
+		.toString('base64')
+		.replace(/=/g, '')
+		.replace(/\+/g, '-')
+		.replace(/\//g, '_');
+}
+
+export function makeTenantToken(userSub: string): string {
+	const header = toBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+	const payload = toBase64Url(JSON.stringify({ sub: userSub, exp: 4_102_444_800 }));
+	return `${header}.${payload}.web-e2e`;
+}
+
+export function buildTenantAuthHeaders(userSub: string): Record<string, string> {
+	return {
+		Authorization: `Bearer ${makeTenantToken(userSub)}`,
+		'content-type': 'application/json'
+	};
+}
+
 /** Verify user is logged in by checking for sign-out button or user indicator. */
 export async function verifyLoggedIn(page: Page) {
 	// After mock login, the auth state should reflect logged-in status
