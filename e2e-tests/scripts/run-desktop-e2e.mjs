@@ -29,6 +29,13 @@ const TENANT_MAPPING_EVIDENCE = {
 const force = process.argv.includes('--force');
 const ciMode = process.argv.includes('--ci');
 const supported = process.platform === 'linux' || process.platform === 'win32';
+const WDIO_CONFIG_FILE = 'wdio.conf.mjs';
+const WDIO_CONFIG_FILE_PATTERN = /wdio\.conf\.mjs/;
+
+if (!WDIO_CONFIG_FILE_PATTERN.test(WDIO_CONFIG_FILE)) {
+  console.error('[desktop-e2e] Invalid WDIO config filename:', WDIO_CONFIG_FILE);
+  process.exit(1);
+}
 
 // macOS is unsupported for WebDriver testing
 if (process.platform === 'darwin') {
@@ -81,7 +88,7 @@ writeFileSync(
   'utf8',
 );
 
-const result = spawnSync('wdio', ['run', 'wdio.conf.mjs'], {
+const result = spawnSync('wdio', ['run', WDIO_CONFIG_FILE], {
   cwd: e2eRoot,
   env: {
     ...process.env,
