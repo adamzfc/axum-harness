@@ -103,6 +103,10 @@ test-coverage-clean:
 test-e2e:
     moon run repo:test-e2e
 
+# 运行仓库全量 E2E 门禁（WDIO + Web Playwright + Tauri Playwright）
+test-e2e-full:
+    moon run repo:test-e2e-full
+
 # 运行 Tauri 桌面 E2E（tauri-driver + WebDriver）
 test-desktop:
     moon run repo:test-desktop

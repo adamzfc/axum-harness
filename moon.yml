@@ -188,6 +188,44 @@ tasks:
     deps:
       - '~:setup'
 
+  test-e2e-full:
+    script: |
+      bun -e "
+        const { spawnSync } = require('child_process');
+
+        const lanes = [
+          { name: 'WDIO desktop E2E (CI)', cwd: 'e2e-tests', cmd: process.platform === 'win32' ? 'bun.cmd' : 'bun', args: ['run', 'test:ci'] },
+          { name: 'Web Playwright E2E matrix', cwd: 'apps/client/web/app', cmd: process.platform === 'win32' ? 'bun.cmd' : 'bun', args: ['run', 'test:e2e'] },
+          { name: 'Tauri Playwright desktop E2E (CI)', cwd: 'e2e-desktop-playwright', cmd: process.platform === 'win32' ? 'bun.cmd' : 'bun', args: ['run', 'test:ci'] },
+        ];
+
+        const results = [];
+
+        for (const lane of lanes) {
+          console.log('=== ' + lane.name + ' ===');
+          const run = spawnSync(lane.cmd, lane.args, {
+            cwd: lane.cwd,
+            stdio: 'inherit',
+            shell: false,
+          });
+          results.push({ name: lane.name, code: run.status ?? 1 });
+        }
+
+        console.log('\n=== E2E Full Gate Summary ===');
+        let hasFailure = false;
+        for (const result of results) {
+          const ok = result.code === 0;
+          if (!ok) hasFailure = true;
+          console.log((ok ? '[PASS] ' : '[FAIL] ') + result.name + ' (exit ' + result.code + ')');
+        }
+
+        process.exit(hasFailure ? 1 : 0);
+      "
+    inputs:
+      - 'e2e-tests/**'
+      - 'apps/client/web/app/**'
+      - 'e2e-desktop-playwright/**'
+
   test-agent:
     command: 'echo "Agent tests — Phase 5 implementation"'
 
