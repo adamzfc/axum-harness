@@ -130,12 +130,12 @@ Plans:
 
 ### Phase 14.1: 根据 deferred-items 文档修复 cargo 编译导致 E2E 运行慢与相关 E2E 未全绿问题 (INSERTED)
 
-**Goal:** 修复 web E2E tenant 初始化 401/ECONNREFUSED 阻塞并建立 deterministic 预检与 runtime 复用路径，恢复 web+tauri 双通道全仓 E2E 可稳定全绿与可诊断证据输出。
-**Requirements**: TBD
+**Goal:** 对齐 CI 与本地 full-gate 契约，固化 preflight-first 的双 lane（web+tauri）门禁与可审计证据，完成 14.1 deferred gaps 收敛并可持续执行。
+**Requirements**: QGATE-01, QGATE-02
 **Depends on:** Phase 14
 **Plans:** 3 plans
 
 Plans:
-- [ ] 14.1-01-PLAN.md — 修复 web tenant fixture 鉴权契约与 runtime readiness，恢复关键回归可执行性
-- [ ] 14.1-02-PLAN.md — 新增仓库级 runtime preflight 并接线 full E2E gate，降低冷启动与假红成本
-- [ ] 14.1-03-PLAN.md — 对齐 CI/验证契约并更新路线图收口，固化 phase 14.1 可持续执行标准
+- [x] 14.1-01-PLAN.md — 修复 web tenant fixture 鉴权契约与 runtime readiness，恢复关键回归可执行性
+- [x] 14.1-02-PLAN.md — 新增仓库级 runtime preflight 并接线 full E2E gate，降低冷启动与假红成本
+- [x] 14.1-03-PLAN.md — 对齐 CI/验证契约并更新路线图收口，固化 phase 14.1 可持续执行标准
