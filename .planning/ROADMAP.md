@@ -112,6 +112,18 @@ Plans:
 | 12. 缺陷生命周期与回归强制闭环 | v0.2.1 | 0/0 | Not started | - |
 | 13. 跨平台放行证据与质量摘要 | v0.2.1 | 0/0 | Not started | - |
 
+### Phase 14: 请问根据D:\dev\rust\templates\tauri-sveltekit-axum-moon-template\docs\TAURI_PLAYWRIGHT_MIGRATION_CONTEXT.md 改造升级我的E2E系统,同时还需要完成跑通E2E的测试
+
+**Goal:** 在不改变业务行为的前提下，将桌面 E2E 迁移到 tauri-playwright Phase 1 深度（smoke/login/counter），并形成可回滚、可诊断、可执行的全仓 E2E 跑通通道。
+**Requirements**: QGATE-01, QGATE-02
+**Depends on:** Phase 13
+**Plans:** 3 plans
+
+Plans:
+- [ ] 14-01-PLAN.md — Feature-gated tauri-playwright 接入与独立桌面套件脚手架
+- [ ] 14-02-PLAN.md — smoke/login/counter 迁移与认证/租户语义对齐
+- [ ] 14-03-PLAN.md — CI macOS 观察通道 + 全量 E2E 验收与证据闭环
+
 ---
 
 *Ready for next phase: `/gsd-discuss-phase 10` or `/gsd-plan-phase 10`*
