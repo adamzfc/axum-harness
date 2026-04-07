@@ -1,5 +1,14 @@
 # Cross-Platform Tauri 2 QA UAT E2E Implementation Report
 
+> **⚠️ HISTORICAL DOCUMENT (2026-04-07)**
+> 
+> This document describes the original WDIO-based E2E implementation.
+> The `e2e-tests/` directory has been retired and migrated to `e2e-desktop-playwright/` (Tauri Playwright).
+> For current E2E setup, see:
+> - Desktop E2E: `e2e-desktop-playwright/`
+> - Migration guide: `.agents/playbooks/e2e/migration.md`
+> - Updated QA procedures: `qa-uat/README.md`
+
 ## Executive Summary
 
 Successfully implemented comprehensive **cross-platform QA/UAT E2E testing framework** for the Tauri 2 desktop application on Windows, Linux, and macOS. The implementation expands from **1 smoke test** to **20+ test cases** across 5 spec files, with full CI/CD integration and quality assurance infrastructure.

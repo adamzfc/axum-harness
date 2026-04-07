@@ -6,33 +6,33 @@ This directory contains the **Quality Assurance (QA)** and **User Acceptance Tes
 
 ## Testing Strategy
 
-### 1. E2E Desktop Testing (WDIO)
+### 1. E2E Desktop Testing (Tauri Playwright)
 
-**Location:** `e2e-tests/`
+**Location:** `e2e-desktop-playwright/`
 
 **Stack:**
-- WebdriverIO v9 with Mocha framework
-- `tauri-driver` for Tauri WebDriver protocol
-- WRY (Tauri's embedded WebView)
+- Playwright with Tauri integration
+- Direct Tauri binary execution (no WebDriver needed)
+- Migrated from legacy WDIO in Phase 14 (2026-04-07)
 
 **Test Coverage:**
 - ✅ Login page (auth guard, OAuth flow, responsive design)
-- ✅ Counter page (increment/decrement/reset, auth guard)
-- ✅ Admin Dashboard (stats display, charts, auth guard)
-- ✅ Agent Chat (layout, input area, send button, auth guard)
-- ✅ Smoke test (basic app shell loading)
+- ✅ Counter page (increment/decrement/reset, auth guard, tenant isolation)
+- ✅ Desktop-specific behaviors
 
 **Commands:**
 ```bash
-# Run desktop E2E tests
-bun run --cwd e2e-tests test
+# Run desktop E2E tests (auto-builds binary)
+just test-desktop
 
-# Force run on unsupported platforms
-bun run --cwd e2e-tests test:force
+# Fast run (cached build)
+just test-desktop-fast
 
-# CI mode with strict exit codes
-bun run --cwd e2e-tests test:ci
+# Full E2E gate (web + desktop)
+just test-e2e-full
 ```
+
+**Note:** Legacy `e2e-tests/` (WDIO) has been retired. See `.agents/playbooks/e2e/migration.md` for migration details.
 
 ### 2. Web E2E Testing (Playwright)
 
@@ -64,18 +64,18 @@ bun run --cwd e2e-tests test:ci
 
 ### Required Tools
 ```bash
-# Install tauri-driver (required for WDIO desktop tests)
-cargo install tauri-driver --locked
+# Install dependencies via mise
+mise install
 
 # Install Node.js dependencies
-bun install
+just setup
 
 # Verify toolchain
-moon run repo:doctor
+just doctor
 ```
 
 ### Windows-Specific Setup
-1. Ensure Visual Studio Build Tools 2019+ is installed
+1. Ensure Visual Studio Build Tools 2019+ is installed (provides cl.exe)
 2. Ensure WebView2 runtime is present (Windows 10+ includes it)
 3. Run terminal as Administrator if encountering permission issues
 
@@ -84,23 +84,23 @@ moon run repo:doctor
 ### Local Development
 ```bash
 # Run all desktop E2E tests
-moon run repo:test-desktop
+just test-desktop
 
 # Run web E2E tests
-moon run repo:test-e2e
+just test-e2e
 
 # Run both
-moon run repo:test-all-frontend
+just test-e2e-full
 ```
 
 ### CI/CD Integration
 ```bash
 # In CI pipeline (GitHub Actions)
-bun run --cwd e2e-tests test:ci
+moon run repo:test-e2e-full
 
 # Test results are output to:
-# - e2e-tests/test-results/junit/*.xml  (JUnit XML for CI)
-# - e2e-tests/test-results/html/*.html  (HTML report for humans)
+# - e2e-desktop-playwright/playwright-report/  (HTML report)
+# - e2e-desktop-playwright/test-results/       (Playwright results)
 ```
 
 ## QA Checklist
@@ -216,14 +216,14 @@ cargo tauri build --debug --no-bundle --manifest-path apps/client/native/src-tau
 
 ### Test Results
 After running tests, check:
-- **Console output:** Real-time spec reporter
-- **JUnit XML:** `e2e-tests/test-results/junit/wdio-results-*.xml`
-- **HTML Report:** `e2e-tests/test-results/html/wdio-report.html`
+- **Console output:** Playwright spec reporter
+- **HTML Report:** `e2e-desktop-playwright/playwright-report/index.html`
+- **Test Results:** `e2e-desktop-playwright/test-results/`
 
 ### CI Artifacts
 In GitHub Actions, test results are uploaded as artifacts:
-- `wdio-junit-results` (XML files)
-- `wdio-html-report` (HTML report)
+- `desktop-e2e-playwright-tauri-evidence` (Playwright reports)
+- `web-e2e-evidence` (Web Playwright reports)
 
 ## Future Improvements
 

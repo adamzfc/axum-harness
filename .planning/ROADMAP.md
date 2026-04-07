@@ -130,10 +130,12 @@ Plans:
 
 ### Phase 14.1: 根据 deferred-items 文档修复 cargo 编译导致 E2E 运行慢与相关 E2E 未全绿问题 (INSERTED)
 
-**Goal:** [Urgent work - to be planned]
+**Goal:** 修复 web E2E tenant 初始化 401/ECONNREFUSED 阻塞并建立 deterministic 预检与 runtime 复用路径，恢复 web+tauri 双通道全仓 E2E 可稳定全绿与可诊断证据输出。
 **Requirements**: TBD
 **Depends on:** Phase 14
-**Plans:** 0 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 14.1 to break down)
+- [ ] 14.1-01-PLAN.md — 修复 web tenant fixture 鉴权契约与 runtime readiness，恢复关键回归可执行性
+- [ ] 14.1-02-PLAN.md — 新增仓库级 runtime preflight 并接线 full E2E gate，降低冷启动与假红成本
+- [ ] 14.1-03-PLAN.md — 对齐 CI/验证契约并更新路线图收口，固化 phase 14.1 可持续执行标准

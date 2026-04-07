@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.2.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-07T10:23:28.372Z"
-last_activity: 2026-04-07 -- Phase 14 execution started
+last_updated: "2026-04-07T13:10:33.236Z"
+last_activity: 2026-04-07 -- Phase 14.1 planning complete
 progress:
-  total_phases: 6
-  completed_phases: 2
-  total_plans: 12
-  completed_plans: 11
-  percent: 92
+  total_phases: 7
+  completed_phases: 3
+  total_plans: 15
+  completed_plans: 12
+  percent: 80
 ---
 
 # STATE: Tauri-SvelteKit-Axum Boilerplate
@@ -30,8 +30,8 @@ progress:
 
 Phase: 14 (d-dev-rust-templates-tauri-sveltekit-axum-moon-template-docs) — EXECUTING
 Plan: 1 of 5
-Status: Executing Phase 14
-Last activity: 2026-04-07 -- Phase 14 execution started
+Status: Ready to execute
+Last activity: 2026-04-07 -- Phase 14.1 planning complete
 
 ## Milestone Focus
 
