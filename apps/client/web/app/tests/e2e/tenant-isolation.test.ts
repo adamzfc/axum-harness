@@ -1,11 +1,10 @@
-import { test, expect, type Page } from '@playwright/test';
-import { triggerMockOAuth } from '../fixtures/auth';
-import {
-	TENANT_A,
-	TENANT_B,
-	resetTenantPairCounter
-} from '../fixtures/tenant';
+import { test, expect, type APIRequestContext } from '@playwright/test';
+import { TENANT_A, TENANT_B, resetTenantPairCounter } from '../fixtures/tenant';
+import { buildTenantAuthHeaders } from '../fixtures/auth';
 import { ensureApiReady } from '../fixtures/runtime';
+
+const COUNTER_VALUE_URL = 'http://127.0.0.1:3001/api/counter/value';
+const COUNTER_INCREMENT_URL = 'http://127.0.0.1:3001/api/counter/increment';
 
 test.describe('Tenant Isolation (E2E)', () => {
 	test.describe.configure({ mode: 'serial' });
@@ -17,65 +16,64 @@ test.describe('Tenant Isolation (E2E)', () => {
 		await resetTenantPairCounter(page);
 	});
 
-	test('tenant-1 write does not alter tenant-2 value (run-1)', async ({ page }) => {
-		await assertTenantIsolationFlow({ page, runLabel: 'run-1', seed: COUNTER_START, mutations: TENANT_A_MUTATIONS });
+	test('tenant-1 write does not alter tenant-2 value (run-1)', async ({ request }) => {
+		await assertTenantIsolationFlow({ request, runLabel: 'run-1', seed: COUNTER_START, mutations: TENANT_A_MUTATIONS });
 	});
 
-	test('tenant-1 write does not alter tenant-2 value (run-2, same seed)', async ({ page }) => {
-		await assertTenantIsolationFlow({ page, runLabel: 'run-2', seed: COUNTER_START, mutations: TENANT_A_MUTATIONS });
+	test('tenant-1 write does not alter tenant-2 value (run-2, same seed)', async ({ request }) => {
+		await assertTenantIsolationFlow({ request, runLabel: 'run-2', seed: COUNTER_START, mutations: TENANT_A_MUTATIONS });
 	});
 });
 
 type IsolationFlowArgs = {
-	page: Page;
+	request: APIRequestContext;
 	runLabel: string;
 	seed: number;
 	mutations: number;
 };
 
-async function readCounterValue(page: Page): Promise<number> {
-	const counterDisplay = page.locator('.font-mono');
-	await counterDisplay.waitFor({ state: 'visible', timeout: 10000 });
-	const text = (await counterDisplay.textContent())?.trim() ?? '';
-	const parsed = Number(text);
-	if (Number.isNaN(parsed)) {
-		throw new Error(`counter value is not numeric: "${text}"`);
+
+async function readTenantCounter(request: APIRequestContext, userSub: string): Promise<number> {
+	const response = await request.get(COUNTER_VALUE_URL, {
+		headers: buildTenantAuthHeaders(userSub)
+	});
+	const body = (await response.json().catch(() => ({}))) as { value?: number };
+	if (response.status() !== 200 || typeof body.value !== 'number') {
+		throw new Error(`read counter failed for ${userSub}: status=${response.status()}, body=${JSON.stringify(body)}`);
 	}
-	return parsed;
+	return body.value;
 }
 
-async function openCounterAsTenant(page: Page, mockCode: string): Promise<void> {
-	await page.goto('/login');
-	await triggerMockOAuth(page, mockCode);
-	await page.waitForTimeout(1000);
-	await page.goto('/counter');
-	await page.waitForLoadState('networkidle');
-}
-
-async function incrementCounter(page: Page, times: number): Promise<void> {
+async function incrementTenantCounter(request: APIRequestContext, userSub: string, times: number): Promise<void> {
 	for (let i = 0; i < times; i += 1) {
-		await page.locator('button').nth(1).click();
+		const response = await request.post(COUNTER_INCREMENT_URL, {
+			headers: buildTenantAuthHeaders(userSub)
+		});
+		const body = (await response.json().catch(() => ({}))) as { value?: number };
+		if (response.status() !== 200 || typeof body.value !== 'number') {
+			throw new Error(
+				`increment failed for ${userSub} at step ${i + 1}: status=${response.status()}, body=${JSON.stringify(body)}`
+			);
+		}
 	}
 }
 
-async function assertTenantIsolationFlow({ page, runLabel, seed, mutations }: IsolationFlowArgs): Promise<void> {
-	await openCounterAsTenant(page, TENANT_A.mockCode);
-	const tenantAStart = await readCounterValue(page);
+async function assertTenantIsolationFlow({ request, runLabel, seed, mutations }: IsolationFlowArgs): Promise<void> {
+	const tenantAStart = await readTenantCounter(request, TENANT_A.userSub);
 	expect(
 		tenantAStart,
 		`[${runLabel}] expected tenant-1 baseline ${seed}, got ${tenantAStart}`
 	).toBe(seed);
 
-	await incrementCounter(page, mutations);
-	const tenantAAfter = await readCounterValue(page);
+	await incrementTenantCounter(request, TENANT_A.userSub, mutations);
+	const tenantAAfter = await readTenantCounter(request, TENANT_A.userSub);
 	const expectedTenantA = seed + mutations;
 	expect(
 		tenantAAfter,
 		`[${runLabel}] tenant-1 expected ${expectedTenantA} after ${mutations} writes, got ${tenantAAfter}`
 	).toBe(expectedTenantA);
 
-	await openCounterAsTenant(page, TENANT_B.mockCode);
-	const tenantBAfter = await readCounterValue(page);
+	const tenantBAfter = await readTenantCounter(request, TENANT_B.userSub);
 	expect(
 		tenantBAfter,
 		`[${runLabel}] tenant-2 leaked value after tenant-1 writes: expected ${seed}, got ${tenantBAfter}`
