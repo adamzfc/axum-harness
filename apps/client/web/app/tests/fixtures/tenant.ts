@@ -103,7 +103,7 @@ export async function initTenantPair(page: Page): Promise<void> {
 	}
 }
 
-export async function resetTenantPairCounter(page: Page): Promise<void> {
+export async function resetTenantPair(page: Page): Promise<void> {
 	await initTenantPair(page);
 
 	for (const tenant of TENANTS) {
@@ -115,4 +115,8 @@ export async function resetTenantPairCounter(page: Page): Promise<void> {
 			);
 		}
 	}
+}
+
+export async function resetTenantPairCounter(page: Page): Promise<void> {
+	await resetTenantPair(page);
 }
