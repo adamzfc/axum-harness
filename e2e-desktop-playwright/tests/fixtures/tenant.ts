@@ -34,6 +34,8 @@ export const TENANT_LABELS = [TENANT_A.label, TENANT_B.label] as const;
 
 const TENANTS = [TENANT_A, TENANT_B] as const;
 const TENANT_INIT_URL = 'http://127.0.0.1:3001/api/tenant/init';
+const RETRY_LIMIT = 3;
+const RETRY_DELAY_MS = 800;
 
 type InitTenantResponse = {
 	tenant_id?: string;
@@ -61,15 +63,38 @@ async function callTenantInit(page: Page, tenant: TenantIdentity): Promise<void>
 	}
 }
 
+function toBase64Url(input: string): string {
+	return Buffer.from(input).toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+function makeTenantToken(userSub: string): string {
+	const header = toBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+	const payload = toBase64Url(JSON.stringify({ sub: userSub, exp: 4_102_444_800 }));
+	return `${header}.${payload}.desktop-e2e-fixture`;
+}
+
+async function withRetry<T>(operationName: string, operation: () => Promise<T>): Promise<T> {
+	let lastError: unknown;
+	for (let attempt = 1; attempt <= RETRY_LIMIT; attempt += 1) {
+		try {
+			return await operation();
+		} catch (error) {
+			lastError = error;
+			if (attempt === RETRY_LIMIT) {
+				break;
+			}
+			await sleep(RETRY_DELAY_MS);
+		}
+	}
+
+	throw new Error(
+		`${operationName} failed after ${RETRY_LIMIT} attempts: ${lastError instanceof Error ? lastError.message : String(lastError)}`
+	);
+}
+
 export async function initTenantPair(page: Page): Promise<void> {
 	for (const tenant of TENANTS) {
-		try {
-			await callTenantInit(page, tenant);
-		} catch (error) {
-			if (!(error instanceof Error) || !error.message.includes('fetch failed')) {
-				throw error;
-			}
-		}
+		await withRetry(`[${tenant.label}] tenant init`, () => callTenantInit(page, tenant));
 	}
 }
 
@@ -106,12 +131,12 @@ async function ensureCounterIsReset(page: Page, tenant: TenantIdentity): Promise
 	}
 }
 
-export async function resetTenantPairCounter(page: Page): Promise<void> {
+export async function resetTenantPair(page: Page): Promise<void> {
 	await initTenantPair(page);
 
 	for (const tenant of TENANTS) {
 		try {
-			await openCounterPageAsTenant(page, tenant);
+			await withRetry(`[${tenant.label}] open counter page`, () => openCounterPageAsTenant(page, tenant));
 			await ensureCounterIsReset(page, tenant);
 		} catch (error) {
 			throw new Error(
@@ -119,6 +144,17 @@ export async function resetTenantPairCounter(page: Page): Promise<void> {
 			);
 		}
 	}
+}
+
+export async function resetTenantPairCounter(page: Page): Promise<void> {
+	await resetTenantPair(page);
+}
+
+export function buildTenantAuthHeaders(userSub: string): Record<string, string> {
+	return {
+		Authorization: `Bearer ${makeTenantToken(userSub)}`,
+		'content-type': 'application/json'
+	};
 }
 
 export async function waitForCounterControlsReady(page: Page): Promise<{

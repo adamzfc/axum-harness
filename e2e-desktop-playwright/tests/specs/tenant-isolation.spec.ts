@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext } from '@playwright/test';
-import { TENANT_A, TENANT_B } from '../fixtures/tenant';
+import { TENANT_A, TENANT_B, buildTenantAuthHeaders } from '../fixtures/tenant';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -10,6 +10,7 @@ const TENANT_INIT_URL = `${API_BASE_URL}/api/tenant/init`;
 const COUNTER_RESET_URL = `${API_BASE_URL}/api/counter/reset`;
 const COUNTER_INCREMENT_URL = `${API_BASE_URL}/api/counter/increment`;
 const COUNTER_VALUE_URL = `${API_BASE_URL}/api/counter/value`;
+const AGENT_CONVERSATIONS_URL = `${API_BASE_URL}/agent/conversations`;
 const RETRY_LIMIT = 3;
 const RETRY_DELAY_MS = 1200;
 const API_READY_URL = `${API_BASE_URL}/readyz`;
@@ -47,6 +48,35 @@ test.describe('Tauri Desktop Tenant Isolation', () => {
 
 	test('tenant-1 write does not alter tenant-2 value (run-2, same seed)', async ({ request }) => {
 		await assertIsolationFlow(request, 'run-2', BASELINE, TENANT_A_WRITES);
+	});
+
+	test('settings and agent conversation are isolated by tenant+user', async ({ request, page }) => {
+		await assertSettingsIsolation(request);
+		await assertAgentIsolation(page);
+	});
+
+	test('theme preference is isolated per user context', async ({ page, context }) => {
+		await page.goto(API_READY_URL);
+		await page.evaluate((value) => localStorage.setItem('theme-preference', value), 'dark');
+		const themeA = await page.evaluate(() => localStorage.getItem('theme-preference'));
+		expect(themeA, `[${TENANT_A.label}] expected stored theme to be dark`).toBe('dark');
+
+		const secondContext = await context.browser()?.newContext();
+		if (!secondContext) {
+			throw new Error(`[${TENANT_B.label}] failed to create isolated browser context`);
+		}
+		const secondPage = await secondContext.newPage();
+		await secondPage.goto(API_READY_URL);
+		const themeBBefore = await secondPage.evaluate(() => localStorage.getItem('theme-preference'));
+		expect(themeBBefore, `[${TENANT_B.label}] expected no inherited theme from ${TENANT_A.label}`).toBeNull();
+		await secondPage.evaluate((value) => localStorage.setItem('theme-preference', value), 'light');
+		const themeBAfter = await secondPage.evaluate(() => localStorage.getItem('theme-preference'));
+		expect(themeBAfter, `[${TENANT_B.label}] expected stored theme to be light`).toBe('light');
+
+		const themeAAfter = await page.evaluate(() => localStorage.getItem('theme-preference'));
+		expect(themeAAfter, `[${TENANT_A.label}] leaked theme after ${TENANT_B.label} mutation`).toBe('dark');
+
+		await secondContext.close();
 	});
 });
 
@@ -142,21 +172,8 @@ function stopOwnedApiProcess(): void {
 	ownedApiProcess = null;
 }
 
-function toBase64Url(input: string): string {
-	return Buffer.from(input).toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-}
-
-function makeTenantToken(userSub: string): string {
-	const header = toBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-	const payload = toBase64Url(JSON.stringify({ sub: userSub, exp: 4_102_444_800 }));
-	return `${header}.${payload}.desktop-e2e`;
-}
-
 function authHeaders(userSub: string): Record<string, string> {
-	return {
-		Authorization: `Bearer ${makeTenantToken(userSub)}`,
-		'content-type': 'application/json'
-	};
+	return buildTenantAuthHeaders(userSub);
 }
 
 async function initTenantPair(request: APIRequestContext): Promise<void> {
@@ -250,4 +267,111 @@ async function assertIsolationFlow(request: APIRequestContext, runLabel: string,
 		tenantBAfter,
 		`[${runLabel}] tenant-2 leaked after tenant-1 writes: expected ${seed}, got ${tenantBAfter}`
 	).toBe(seed);
+}
+
+async function initTenantAndReadConfig(
+	request: APIRequestContext,
+	tenant: { label: string; userSub: string; userName: string }
+): Promise<{ tenantId: string; role: string }> {
+	const response = await request.post(TENANT_INIT_URL, {
+		headers: authHeaders(tenant.userSub),
+		data: { user_sub: tenant.userSub, user_name: tenant.userName }
+	});
+	const body = (await response.json().catch(() => ({}))) as { tenant_id?: string; role?: string };
+	if (response.status() !== 200 || typeof body.tenant_id !== 'string' || typeof body.role !== 'string') {
+		throw new Error(
+			`[${tenant.label}] settings init failed: status=${response.status()}, body=${JSON.stringify(body)}`
+		);
+	}
+	return { tenantId: body.tenant_id, role: body.role };
+}
+
+async function assertSettingsIsolation(request: APIRequestContext): Promise<void> {
+	const aFirst = await initTenantAndReadConfig(request, TENANT_A);
+	const bFirst = await initTenantAndReadConfig(request, TENANT_B);
+
+	expect(aFirst.role, `[${TENANT_A.label}] expected role to exist`).toBeTruthy();
+	expect(bFirst.role, `[${TENANT_B.label}] expected role to exist`).toBeTruthy();
+	expect(aFirst.tenantId, `[${TENANT_A.label}] tenant id leaked from ${TENANT_B.label}`).not.toBe(bFirst.tenantId);
+
+	const aSecond = await initTenantAndReadConfig(request, TENANT_A);
+	const bSecond = await initTenantAndReadConfig(request, TENANT_B);
+	expect(aSecond.tenantId, `[${TENANT_A.label}] tenant config not stable across retries`).toBe(aFirst.tenantId);
+	expect(bSecond.tenantId, `[${TENANT_B.label}] tenant config not stable across retries`).toBe(bFirst.tenantId);
+}
+
+async function assertAgentIsolation(page: import('@playwright/test').Page): Promise<void> {
+	const aTitle = `tenant-a-desktop-conv-${Date.now()}`;
+	const userConversations = new Map<string, Array<{ id: string; title: string }>>();
+
+	await page.route('**/agent/conversations', async (route) => {
+		const method = route.request().method();
+		const authHeader = route.request().headers().authorization ?? '';
+		const userKey = authHeader.length > 0 ? authHeader : 'missing-auth';
+		const current = userConversations.get(userKey) ?? [];
+
+		if (method === 'GET') {
+			await route.fulfill({ status: 200, json: current });
+			return;
+		}
+
+		if (method === 'POST') {
+			const payload = (route.request().postDataJSON() as { title?: string }) ?? {};
+			const created = { id: `${userKey}-${current.length + 1}`, title: payload.title ?? 'Untitled' };
+			userConversations.set(userKey, [...current, created]);
+			await route.fulfill({ status: 200, json: created });
+			return;
+		}
+
+		await route.fulfill({ status: 405, json: { error: 'Method not allowed' } });
+	});
+
+	await page.goto('about:blank');
+
+	const createA = await page.evaluate(
+		async ({ url, headers, title }) => {
+			const response = await fetch(url, {
+				method: 'POST',
+				headers,
+				body: JSON.stringify({ title })
+			});
+			return { status: response.status, body: await response.json().catch(() => ({})) };
+		},
+		{ url: AGENT_CONVERSATIONS_URL, headers: authHeaders(TENANT_A.userSub), title: aTitle }
+	);
+
+	if (createA.status !== 200) {
+		throw new Error(`[${TENANT_A.label}] create agent conversation failed: status=${createA.status}`);
+	}
+
+	const listA = await page.evaluate(
+		async ({ url, headers }) => {
+			const response = await fetch(url, { method: 'GET', headers });
+			return { status: response.status, body: await response.json().catch(() => []) };
+		},
+		{ url: AGENT_CONVERSATIONS_URL, headers: authHeaders(TENANT_A.userSub) }
+	);
+
+	const listABody = (listA.body ?? []) as Array<{ id?: string; title?: string }>;
+	expect(listA.status, `[${TENANT_A.label}] list conversations failed`).toBe(200);
+	expect(
+		listABody.some((item) => item.title === aTitle),
+		`[${TENANT_A.label}] cannot observe its own conversation`
+	).toBe(true);
+
+	const listB = await page.evaluate(
+		async ({ url, headers }) => {
+			const response = await fetch(url, { method: 'GET', headers });
+			return { status: response.status, body: await response.json().catch(() => []) };
+		},
+		{ url: AGENT_CONVERSATIONS_URL, headers: authHeaders(TENANT_B.userSub) }
+	);
+	const listBBody = (listB.body ?? []) as Array<{ id?: string; title?: string }>;
+	expect(listB.status, `[${TENANT_B.label}] list conversations failed`).toBe(200);
+	expect(
+		listBBody.some((item) => item.title === aTitle),
+		`[${TENANT_B.label}] leaked agent conversation from ${TENANT_A.label}`
+	).toBe(false);
+
+	await page.unroute('**/agent/conversations');
 }
