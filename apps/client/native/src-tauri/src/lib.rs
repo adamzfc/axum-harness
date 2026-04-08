@@ -73,7 +73,7 @@ fn resolve_database_path(
 
     let (selected, source) = match env_override.map(str::trim).filter(|v| !v.is_empty()) {
         Some(value) => {
-            if value.eq_ignore_ascii_case(":memory:") || value.eq_ignore_ascii_case("memory") {
+            if is_disallowed_memory_path(value) {
                 return Err("memory path is not allowed for desktop runtime".to_string());
             }
             (PathBuf::from(value), DatabasePathSource::Env)
@@ -104,9 +104,7 @@ fn resolve_database_path(
 
     let canonical_path = canonical_parent.join(file_name);
     let canonical_path_str = canonical_path.to_string_lossy();
-    if canonical_path_str.eq_ignore_ascii_case(":memory:")
-        || canonical_path_str.eq_ignore_ascii_case("memory")
-    {
+    if is_disallowed_memory_path(&canonical_path_str) {
         return Err("memory path is not allowed for desktop runtime".to_string());
     }
 
@@ -114,6 +112,11 @@ fn resolve_database_path(
         path: canonical_path,
         source,
     })
+}
+
+fn is_disallowed_memory_path(value: &str) -> bool {
+    let normalized = value.trim().to_ascii_lowercase();
+    normalized == ":memory:" || normalized == "memory" || normalized.contains("mode=memory")
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -397,5 +400,14 @@ mod tests {
 
         assert!(missing_parent.is_dir());
         assert_eq!(resolved.source, DatabasePathSource::Env);
+    }
+
+    #[test]
+    fn rejects_memory_like_env_override() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let err = resolve_database_path(temp.path(), Some("file:test.db?mode=memory"))
+            .expect_err("memory-like path should be rejected");
+
+        assert!(err.contains("memory"));
     }
 }
