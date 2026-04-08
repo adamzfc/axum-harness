@@ -208,6 +208,8 @@ tasks:
 
   # Full E2E gate: preflight + Web + Desktop (parallel lanes)
   test-e2e-full:
+    deps:
+      - '~:check-storage-turso'
     script: 'bun run scripts/e2e/run-e2e-gate.ts'
     inputs:
       - 'scripts/e2e/run-e2e-gate.ts'
@@ -215,6 +217,14 @@ tasks:
       - 'scripts/lib/spawn.ts'
       - 'apps/client/web/app/**'
       - 'e2e-desktop-playwright/**'
+
+  check-storage-turso:
+    command: 'cargo check -p runtime_server'
+    inputs:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'servers/api/**/*'
+      - 'packages/adapters/storage/turso/**/*'
 
   test-all-rust:
     deps:
@@ -279,4 +289,3 @@ tasks:
 
   audit-bun:
     script: 'bun audit || true'
-

@@ -58,6 +58,9 @@ jobs:
         working-directory: apps/client/web/app
         run: bun run check
 
+      - name: Verify runtime_server Turso-only default build
+        run: cargo check -p runtime_server
+
       - name: Run Web E2E Tests
         working-directory: apps/client/web/app
         run: bun run test:e2e --project=desktop-chrome
@@ -115,6 +118,9 @@ jobs:
         working-directory: e2e-desktop-playwright
         run: bun run test:ci
         timeout-minutes: 30
+
+      - name: Verify runtime_server Turso-only default build
+        run: cargo check -p runtime_server
 
       - name: Upload Tauri Playwright Evidence
         uses: actions/upload-artifact@v4
