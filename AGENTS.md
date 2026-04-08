@@ -56,13 +56,20 @@
    - 确定性与幂等性
    - 未来 agent 可持续编辑
 4. 默认架构偏置：
+   - **依赖方向（不可违反）**：
+     - `contracts/` ← 所有共享类型的单一真理源
+     - `features/` ← 定义 trait + 类型，**不得**包含实现，**不得**依赖 `usecases`
+     - `usecases/` ← 实现 features 定义的 trait，依赖 `domain` + `features` + `contracts`
+     - `adapters/` ← 外部世界翻译层，**不得**承载业务逻辑
+     - `apps/` / `servers/` ← 组合层，**不得**包含业务逻辑
    - adapter 薄，core 稳
    - Tauri command / Axum handler 主要承担适配与协议职责
-   - 核心业务逻辑进入稳定、可测试的 core
+   - 核心业务逻辑进入稳定、可测试的 `usecases/`
    - SvelteKit 负责 UI 组合与瞬时状态，不承载领域真相
-   - 跨 Rust / TypeScript 边界优先 typed/shared contracts
+   - 跨 Rust / TypeScript 边界优先 typed/shared contracts（由 `contracts/` 生成）
    - 优先 vertical slice 和局部修改
    - 宁可小范围重复，也不要过早抽象
+   - 同一业务概念在不同层的类型必须对齐，**不得**出现字段级差异
 5. 禁止过度设计；先做最小可验证闭环。
 
 ---

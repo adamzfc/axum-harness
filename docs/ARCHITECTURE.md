@@ -125,15 +125,6 @@ packages/shared/
   types/
 ```
 
-### crates
-
-Rust-only reuse layer. Only enabled when sufficient Rust-only code exists.
-
-```
-crates/
-  rust-only/          # Placeholder for Rust-only crates
-```
-
 ### tools
 
 Generators, MCP servers, eval datasets, repo scripts.
@@ -163,14 +154,99 @@ Agent governance layer—not just documentation.
   rubrics/
 ```
 
-## Boundary Rules
+## Strict Dependency Rules
 
-- `core` must not depend on `apps`
-- `features` must not depend on specific host apps
-- `adapters` must not carry business logic
-- `contracts` must not be polluted by implementation details
-- `workers` must not bypass contracts to define custom event schemas
-- `apps/client/web/hosts/*` can only do host adaptation, not copy business logic
+These rules are **enforced by CI** (`boundary-check.ts`, `contracts-check`). Violations block merge.
+
+### Dependency Direction (MUST)
+
+```
+contracts/        ← Single Source of Truth for all types (DTOs, schemas, events)
+     ↑
+features/         ← Trait + type definitions at feature boundary (NO implementation)
+     ↑
+usecases/         ← Concrete service implementations (depends on features + domain)
+     ↑
+adapters/         ← External world translations (storage, auth, hosts, protocols)
+     ↑
+apps / servers    ← Composition layer (wires everything together)
+```
+
+**MUST rules:**
+
+1. **`feature-*` crates MUST NOT depend on `usecases`**
+   - Features define traits; usecases implement them
+   - Reverse dependency breaks the inversion-of-control pattern
+   - Exception: none
+
+2. **`contracts/` MUST be the Single Source of Truth for shared types**
+   - If the same concept exists in `features/` and `contracts/`, the feature-layer type MUST reference or derive from the contracts type
+   - No field-level drift between duplicate types (e.g. `i64` vs `u64`)
+   - DTOs in `contracts/` carry `ts_rs::TS` + `utoipa::ToSchema`; feature-internal types must not duplicate this
+
+3. **`domain/` MUST contain only port traits and value objects**
+   - No concrete implementations
+   - No transport or storage dependencies
+
+4. **`usecases/` MUST implement traits defined in `features/`**
+   - All concrete business logic lives here
+   - Depends on `domain` (ports), `feature-*` (trait definitions), `contracts/*` (DTOs)
+
+5. **`adapters/` MUST NOT carry business logic**
+   - Translation only: external protocol → internal contract
+   - No invariants, no policies, no orchestration
+
+6. **`apps/` / `servers/` MUST NOT contain business logic**
+   - Composition, wiring, host-specific startup only
+   - Delegate all work to `usecases/` via traits
+
+### Dependency Violations (known, to be fixed)
+
+| Violation | Location | Status |
+|-----------|----------|--------|
+| `feature-auth` depends on `usecases` | `packages/features/auth/Cargo.toml` | ⚠️ Pending fix |
+| Unused deps in `feature-counter`, `feature-admin` | `packages/features/*/Cargo.toml` | ⚠️ Pending fix |
+| `DashboardStats` type drift (`i64` vs `u64`) | `feature-admin` vs `contracts/api` | ⚠️ Pending fix |
+| `UserProfile` duplicated in feature + contracts | `feature-auth` vs `contracts/auth` | ⚠️ Pending fix |
+
+## Actual Dependency Graph (as of 2026-04-08)
+
+```
+contracts_api ──┐
+contracts_auth ─┤
+contracts_events┤                  (pure DTOs, ts_rs + utoipa)
+                │
+domain ─────────┤                  (port traits: LibSqlPort, SurrealDbPort)
+                │
+   ┌────────────┴────────────┐
+   │                         │
+feature-counter         feature-agent      feature-admin    feature-auth
+(trait + types)         (trait + types)    (trait + types)  (trait + types)
+   │                         │                   │              │
+   └────────────┬────────────┘                   │              │
+                │                                │              │
+            usecases ────────────────────────────┘              │
+   (LibSqlCounterService, LibSqlTenantService,                  │
+    LibSqlAdminService, LibSqlAgentService)                     │
+                │                                               │
+                └───────────────────────────────────────────────┘
+                                    ↑
+                            adapters (storage, hosts, auth)
+```
+
+## Current State
+
+The repository has moved beyond scaffold level:
+
+- **4 features** have trait definitions (`counter`, `agent`, `admin`, `auth`)
+- **4 usecase implementations** are complete with tests:
+  - `counter_service` — LibSQL backend + 3 tests
+  - `tenant_service` — LibSQL + SurrealDB backends + 4 tests
+  - `admin_service` — Aggregation layer + tests
+  - `agent_service` — OpenAI streaming SSE + tool execution + 3 tests
+- **Contracts** generate TypeScript types via `ts-rs` with drift-check CI gate
+- **Boundary enforcement** via `boundary-check.ts` in CI
+- Known dependency violations are tracked above
 
 ## Why This Structure
 
@@ -178,23 +254,25 @@ Agent governance layer—not just documentation.
 - Allows incremental backend/runtime adoption without rewiring everything.
 - Supports small-team velocity by making module responsibilities explicit.
 - Enables agent-friendly development with clear boundaries and patterns.
-
-## Current State
-
-The repository is at scaffold level:
-
-- Layer boundaries exist.
-- Packages and wiring points are prepared.
-- Most business/runtime implementation is left for adopters.
+- CI-enforced boundaries prevent architectural drift over time.
 
 ## Suggested Growth Path
 
-1. Define domain entities and invariants in `packages/core/domain`.
-2. Add use case services in `packages/core/usecases`.
-3. Define request/response contracts in `packages/contracts`.
-4. Implement features in `packages/features/<feature-name>`.
-5. Connect adapters in `packages/adapters/hosts/tauri` and `servers/api`.
-6. Expose via Tauri commands or HTTP endpoints.
+### For new features:
+
+1. Define trait + error + types in `packages/features/<feature-name>/src/lib.rs`.
+2. Add DTOs to `packages/contracts/<domain>/src/lib.rs` (with `ts_rs::TS` + `utoipa::ToSchema`).
+3. Run `repo:typegen` to sync TypeScript types.
+4. Implement the trait in `packages/core/usecases/src/<feature>_service.rs`.
+5. Wire the adapter in `packages/adapters/<type>/`.
+6. Expose via Tauri command or Axum handler.
+
+### For new adapters:
+
+1. Define port trait in `packages/core/domain/src/ports/` if not exists.
+2. Implement in `packages/adapters/<type>/<adapter-name>/`.
+3. Inject into usecase service via trait bound.
+4. Add tests with mock port implementation.
 
 ## Quality Gates
 

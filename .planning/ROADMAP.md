@@ -66,13 +66,16 @@ Plans:
 
 ### Phase 10.1: 根据 docs/STORAGE_COMPILE_REQUIREMENTS.md 落实 Turso-only 存储持久化、编译裁剪与多租户测试体系 (INSERTED)
 
-**Goal:** [Urgent work - to be planned]
-**Requirements**: TBD
+**Goal:** 默认运行链路收敛为 Turso 文件持久化，默认编译面与 E2E 门禁裁剪为 Turso-only，并将多租户回归扩展到 settings/theme/counter/agent 四维隔离。
+**Requirements**: MTEN-01, MTEN-03
 **Depends on:** Phase 10
-**Plans:** 0 plans
+**Plans:** 4 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 10.1 to break down)
+- [ ] 10.1-01-PLAN.md — runtime_server Turso-only 默认路径与 fail-fast 启动收敛
+- [ ] 10.1-02-PLAN.md — native-tauri Turso 文件库默认路径与可观测性收敛
+- [ ] 10.1-03-PLAN.md — Cargo/CI 默认编译链路裁剪为 Turso-only
+- [ ] 10.1-04-PLAN.md — Web/Desktop 多租户四维隔离回归与 fail-fast 证据化
 
 ### Phase 11: Windows 桌面 E2E 门禁固化
 **Goal**: 受保护分支的合并决策可由 Windows desktop E2E required check 直接约束。

@@ -1,21 +1,15 @@
 //! Admin feature — dashboard statistics from real data.
+//!
+//! Hexagonal boundary: re-exports DTOs from contracts_api,
+//! defines AdminService trait only.
 
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
-
-/// Dashboard statistics aggregated from real data.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DashboardStats {
-    pub tenant_count: i64,
-    pub counter_value: i64,
-    pub last_login: Option<String>,
-    pub app_version: String,
-}
+pub use contracts_api::AdminDashboardStats;
 
 /// Admin operations trait.
 #[async_trait]
 pub trait AdminService: Send + Sync {
-    async fn get_dashboard_stats(&self) -> Result<DashboardStats, AdminError>;
+    async fn get_dashboard_stats(&self) -> Result<AdminDashboardStats, AdminError>;
 }
 
 #[derive(Debug, thiserror::Error)]

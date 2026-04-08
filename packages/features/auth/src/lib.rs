@@ -1,11 +1,11 @@
 //! feature-auth — Authentication feature crate.
 //!
 //! Defines the AuthService trait and supporting types.
-//! Hexagonal boundary: depends on domain + usecases + contracts_auth,
-//! NOT on any adapter (adapter-google, etc.).
+//! Hexagonal boundary: depends on contracts_auth only,
+//! NOT on domain, usecases, or any adapter.
 
 use async_trait::async_trait;
-use contracts_auth::TokenPair;
+pub use contracts_auth::{TokenPair, UserProfile};
 
 // ── Error type ──────────────────────────────────────────────────
 
@@ -27,15 +27,6 @@ pub enum AuthError {
 }
 
 // ── Value types ─────────────────────────────────────────────────
-
-/// User profile from the OAuth provider.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct UserProfile {
-    pub email: String,
-    pub name: String,
-    pub picture: String,
-    pub sub: String,
-}
 
 /// Result of a successful authentication.
 #[derive(Debug, Clone)]
@@ -73,9 +64,3 @@ pub trait AuthService: Send + Sync {
     /// Log out and clear all session data.
     async fn logout(&self) -> Result<(), AuthError>;
 }
-
-// ── Stub: CounterServiceProxy ───────────────────────────────────
-
-/// Stub for admin/agent counter service proxy.
-/// Will be implemented when counter feature is built.
-pub struct CounterServiceProxy;

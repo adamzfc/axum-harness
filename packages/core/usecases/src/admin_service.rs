@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 use domain::ports::lib_sql::LibSqlPort;
-use feature_admin::{AdminError, AdminService, DashboardStats};
+use feature_admin::{AdminDashboardStats, AdminError, AdminService};
 use feature_counter::CounterService;
 
 use crate::tenant_service::TenantService;
@@ -28,7 +28,7 @@ impl<P: LibSqlPort, T: TenantService, C: CounterService> LibSqlAdminService<P, T
 impl<P: LibSqlPort, T: TenantService, C: CounterService> AdminService
     for LibSqlAdminService<P, T, C>
 {
-    async fn get_dashboard_stats(&self) -> Result<DashboardStats, AdminError> {
+    async fn get_dashboard_stats(&self) -> Result<AdminDashboardStats, AdminError> {
         let tenants =
             self.tenant_service.list_tenants().await.map_err(|e| {
                 AdminError::Database(Box::new(std::io::Error::other(e.to_string())))
@@ -39,8 +39,8 @@ impl<P: LibSqlPort, T: TenantService, C: CounterService> AdminService
             .await
             .map_err(|e| AdminError::Counter(e.to_string()))?;
 
-        Ok(DashboardStats {
-            tenant_count: tenants.len() as i64,
+        Ok(AdminDashboardStats {
+            tenant_count: tenants.len() as u64,
             counter_value,
             last_login: tenants.first().map(|t| t.created_at.clone()),
             app_version: env!("CARGO_PKG_VERSION").to_string(),
