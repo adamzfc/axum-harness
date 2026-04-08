@@ -9,8 +9,8 @@ rust-version.workspace = true
 domain = { workspace = true }
 usecases = { workspace = true }
 contracts_api = { workspace = true }
-storage_surrealdb = { workspace = true }
-storage_turso = { workspace = true }
+storage_surrealdb = { workspace = true, optional = true }
+storage_turso = { workspace = true, optional = true }
 feature-counter = { workspace = true }
 feature-admin = { workspace = true }
 feature-agent = { workspace = true }
@@ -91,7 +91,9 @@ tracing-test = { workspace = true }
 trybuild = { workspace = true }
 
 [features]
-default = []
+default = ["storage-turso"]
+storage-turso = ["dep:storage_turso"]
+storage-surreal = ["dep:storage_surrealdb", "storage-turso"]
 http3 = ["dep:quinn", "dep:h3", "dep:rcgen"]
 
 [lints]
