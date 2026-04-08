@@ -10,6 +10,7 @@ use figment::{
     providers::{Env, Format, Toml},
 };
 use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Config {
@@ -29,10 +30,22 @@ pub struct ServerConfig {
 #[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
 pub enum CloudDbProvider {
     #[serde(rename = "surrealdb")]
-    #[default]
     SurrealDB,
     #[serde(rename = "turso")]
+    #[default]
     Turso,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DatabasePathSource {
+    Default,
+    Env,
+}
+
+#[derive(Debug, Clone)]
+pub struct ResolvedDatabasePath {
+    pub absolute_path: PathBuf,
+    pub source: DatabasePathSource,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -69,8 +82,8 @@ impl Default for Config {
                 request_timeout_secs: 30,
             },
             database: DatabaseConfig {
-                provider: CloudDbProvider::SurrealDB,
-                url: "memory".to_string(),
+                provider: CloudDbProvider::Turso,
+                url: "servers/api/.data/runtime_server.db".to_string(),
                 ns: "app".to_string(),
                 db: "main".to_string(),
                 auth_token: String::new(),
@@ -103,11 +116,55 @@ impl Config {
             .merge(Env::prefixed("APP_").profile(profile_str).global())
             .extract()
     }
+
+    pub fn resolved_db_path(&self) -> Result<ResolvedDatabasePath, std::io::Error> {
+        let source = if std::env::var_os("APP_DATABASE__URL").is_some() {
+            DatabasePathSource::Env
+        } else {
+            DatabasePathSource::Default
+        };
+
+        if is_memory_database_url(&self.database.url) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!(
+                    "database url '{}' is not allowed: memory databases are forbidden",
+                    self.database.url
+                ),
+            ));
+        }
+
+        let input_path = Path::new(&self.database.url);
+        let absolute_path = if input_path.exists() {
+            input_path.canonicalize()?
+        } else if input_path.is_absolute() {
+            input_path.to_path_buf()
+        } else {
+            std::env::current_dir()?.join(input_path)
+        };
+
+        Ok(ResolvedDatabasePath {
+            absolute_path,
+            source,
+        })
+    }
+}
+
+fn is_memory_database_url(url: &str) -> bool {
+    let normalized = url.trim().to_lowercase();
+    normalized == "memory" || normalized == ":memory:" || normalized.contains(":memory:")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
+    use std::sync::{Mutex, OnceLock};
+
+    fn env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
 
     #[test]
     fn test_default_config() {
@@ -121,5 +178,85 @@ mod tests {
         let config = Config::default();
         let json = serde_json::to_string(&config).unwrap();
         assert!(json.contains("server"));
+    }
+
+    #[test]
+    fn default_database_uses_turso_file_path() {
+        let config = Config::default();
+
+        assert_eq!(config.database.provider, CloudDbProvider::Turso);
+        assert!(!config.database.url.contains("memory"));
+        assert!(!config.database.url.contains(":memory:"));
+        assert_eq!(
+            PathBuf::from(&config.database.url),
+            PathBuf::from("servers/api/.data/runtime_server.db")
+        );
+    }
+
+    #[test]
+    fn resolved_db_path_reports_default_source() {
+        let _guard = env_lock().lock().unwrap();
+        let original = std::env::var("APP_DATABASE__URL").ok();
+        unsafe {
+            std::env::remove_var("APP_DATABASE__URL");
+        }
+
+        let config = Config::default();
+        let resolved = config.resolved_db_path().unwrap();
+
+        assert_eq!(resolved.source, DatabasePathSource::Default);
+        assert!(resolved.absolute_path.is_absolute());
+        assert!(
+            resolved
+                .absolute_path
+                .ends_with("servers/api/.data/runtime_server.db")
+        );
+
+        if let Some(value) = original {
+            unsafe {
+                std::env::set_var("APP_DATABASE__URL", value);
+            }
+        }
+    }
+
+    #[test]
+    fn resolved_db_path_prefers_env_and_reports_env_source() {
+        let _guard = env_lock().lock().unwrap();
+        let original = std::env::var("APP_DATABASE__URL").ok();
+        let env_path = "servers/api/.data/from-env.db";
+        unsafe {
+            std::env::set_var("APP_DATABASE__URL", env_path);
+        }
+
+        let mut config = Config::default();
+        config.database.url = env_path.to_string();
+        let resolved = config.resolved_db_path().unwrap();
+
+        assert_eq!(config.database.url, env_path);
+        assert_eq!(resolved.source, DatabasePathSource::Env);
+        assert!(
+            resolved
+                .absolute_path
+                .ends_with("servers/api/.data/from-env.db")
+        );
+
+        if let Some(value) = original {
+            unsafe {
+                std::env::set_var("APP_DATABASE__URL", value);
+            }
+        } else {
+            unsafe {
+                std::env::remove_var("APP_DATABASE__URL");
+            }
+        }
+    }
+
+    #[test]
+    fn resolved_db_path_rejects_memory_urls() {
+        let mut config = Config::default();
+        config.database.url = ":memory:".to_string();
+
+        let err = config.resolved_db_path().unwrap_err().to_string();
+        assert!(err.contains("memory"));
     }
 }
