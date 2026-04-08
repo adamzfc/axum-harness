@@ -20,7 +20,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 function fail(message: string, suggestions: string[] = []): never {
-  console.error(`[runtime-preflight] ‚ùå FAIL: ${message}`);
+  console.error(`[runtime-preflight] ‚ù?FAIL: ${message}`);
   for (const suggestion of suggestions) {
     console.error(`[runtime-preflight]    hint: ${suggestion}`);
   }

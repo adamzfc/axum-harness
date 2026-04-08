@@ -8,7 +8,7 @@
  * Cross-platform process management with graceful shutdown
  */
 
-import { runInherit, killProcess, waitForPort } from '../lib/spawn.js';
+import { runInherit, killProcess, waitForPort } from '../lib/spawn.ts';
 import process from 'node:process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,15 +26,15 @@ function printOptimizationTips(): void {
   const hakari = process.env.CARGO_HAKARI !== '0';
 
   if (sccache) {
-    console.log('[dev-desktop] âœ“ sccache enabled (compilation caching active)');
+    console.log('[dev-desktop] âœ?sccache enabled (compilation caching active)');
   } else {
-    console.log('[dev-desktop] âš  sccache NOT enabled â€” run: just setup-sccache');
+    console.log('[dev-desktop] âš?sccache NOT enabled â€?run: just setup-sccache');
   }
 
   if (hakari) {
-    console.log('[dev-desktop] âœ“ cargo-hakari enabled (unified dependency resolution)');
+    console.log('[dev-desktop] âœ?cargo-hakari enabled (unified dependency resolution)');
   } else {
-    console.log('[dev-desktop] âš  cargo-hakari NOT enabled â€” run: just setup-hakari');
+    console.log('[dev-desktop] âš?cargo-hakari NOT enabled â€?run: just setup-hakari');
   }
   console.log('');
 }

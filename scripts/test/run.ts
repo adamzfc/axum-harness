@@ -5,7 +5,7 @@
  * Stage: Testing
  */
 
-import { runInherit, requireTool } from '../lib/spawn.js';
+import { runInherit, requireTool } from '../lib/spawn.ts';
 import process from 'node:process';
 
 const GREEN = '\x1b[0;32m';
@@ -42,7 +42,7 @@ async function runCoverage(extraArgs: string[] = []): Promise<number> {
   const outputFormat = process.env.COV_FORMAT || 'lcov';
   const outputPath = 'target/lcov.info';
 
-  log(`Format: ${outputFormat} → ${outputPath}`);
+  log(`Format: ${outputFormat} �?${outputPath}`);
 
   const exitCode = await runInherit('cargo', [
     'llvm-cov', '--workspace',
@@ -82,7 +82,7 @@ async function runMutants(extraArgs: string[] = []): Promise<number> {
   if (exitCode === 0) {
     ok('All mutants caught by tests');
   } else {
-    warn('Some mutants survive — tests may need strengthening');
+    warn('Some mutants survive �?tests may need strengthening');
   }
   return 0;
 }
@@ -120,13 +120,13 @@ async function runAll(): Promise<number> {
   await runMutants();
 
   console.log('');
-  log('═══════════════════════════════════════');
+  log('══════════════════════════════════════�?);
   if (failures === 0) {
     ok('All test suites passed');
   } else {
     fail(`${failures} suite(s) had issues`);
   }
-  log('═══════════════════════════════════════');
+  log('══════════════════════════════════════�?);
 
   return failures;
 }

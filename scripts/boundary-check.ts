@@ -1,11 +1,4 @@
-/**
- * Boundary Check - Architecture Dependency Validation
- * 
- * Enforces architectural dependency boundaries using cargo tree
- * Stage: Quality gate / CI
- */
-
-import { run } from '../lib/spawn.js';
+import { run } from './lib/spawn.ts';
 import process from 'node:process';
 
 interface BoundaryRule {
@@ -20,9 +13,9 @@ async function checkBoundary(rule: BoundaryRule): Promise<boolean> {
   const result = await run('cargo', ['tree', '-p', rule.pkgName, '--depth', '1']);
 
   if (!result.success) {
-    console.warn(`⚠️  Could not get dependency tree for ${rule.pkgName}`);
+    console.warn(`Warning: Could not get dependency tree for ${rule.pkgName}`);
     if (result.error) console.warn(result.error);
-    return true; // Don't fail on missing package
+    return true;
   }
 
   const lines = result.output.split(/\r?\n/);
@@ -41,13 +34,13 @@ async function checkBoundary(rule: BoundaryRule): Promise<boolean> {
   }
 
   if (violations.length > 0) {
-    console.error(`❌ FAIL: ${rule.pkgName} depends on illegal crates:`);
+    console.error(`FAIL: ${rule.pkgName} depends on illegal crates:`);
     for (const v of violations) {
       console.error(`  - ${v}`);
     }
     return false;
   } else {
-    console.log(`✅ OK: ${rule.pkgName} boundary clean`);
+    console.log(`OK: ${rule.pkgName} boundary clean`);
     return true;
   }
 }
@@ -80,11 +73,11 @@ async function main(): Promise<number> {
   const allClean = results.every(Boolean);
 
   if (allClean) {
-    console.log('✅ All boundary checks passed');
+    console.log('All boundary checks passed');
     return 0;
   }
 
-  console.error('❌ Boundary check failed — review architectural dependencies');
+  console.error('Boundary check failed - review architectural dependencies');
   return 1;
 }
 

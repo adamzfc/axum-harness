@@ -9,7 +9,7 @@
  * Runs web and desktop tests in parallel after preflight passes
  */
 
-import { runSync, runInherit } from '../lib/spawn.js';
+import { runSync, runInherit } from '../lib/spawn.ts';
 import process from 'node:process';
 
 interface TestLane {

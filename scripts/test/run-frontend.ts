@@ -5,7 +5,7 @@
  * Stage: Testing
  */
 
-import { runInherit } from '../lib/spawn.js';
+import { runInherit } from '../lib/spawn.ts';
 import process from 'node:process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -70,13 +70,13 @@ async function runAll(): Promise<number> {
   if (await runE2E() !== 0) failures++;
 
   console.log('');
-  log('═══════════════════════════════════════');
+  log('══════════════════════════════════════�?);
   if (failures === 0) {
     ok('All frontend checks passed');
   } else {
     fail(`${failures} check(s) had issues`);
   }
-  log('═══════════════════════════════════════');
+  log('══════════════════════════════════════�?);
 
   return failures;
 }
