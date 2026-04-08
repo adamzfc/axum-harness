@@ -1,4 +1,7 @@
-# ── Cargo tasks (existing, preserved for backward compatibility) ──────
+# ── Moon Task Configuration ─────────────────────────────────────────
+# Optimized for: parallel execution, platform filtering, incremental caching
+# Best practice: moon handles dependency graphs, just provides aliases
+
 tasks:
   build:
     command: 'cargo build --workspace'
@@ -56,12 +59,12 @@ tasks:
       - 'doctor'
 
   doctor:
-    script: 'bun run scripts/doctor.mjs'
+    script: 'bun run scripts/doctor.ts'
     inputs:
       - '.tool-versions'
       - 'rust-toolchain.toml'
       - '.env.example'
-      - 'scripts/doctor.mjs'
+      - 'scripts/doctor.ts'
 
   toolchain-check:
     script: 'rustc --version && bun --version && moon --version && echo "ALL OK"'
@@ -76,18 +79,18 @@ tasks:
       - 'apps/client/web/app/**/*'
 
   dev-desktop:
-    script: 'bun run scripts/dev-desktop.mjs'
+    script: 'bun run scripts/dev-desktop.ts'
     inputs:
       - 'apps/client/native/**/*'
       - 'servers/api/**/*'
-      - 'scripts/dev-desktop.mjs'
+      - 'scripts/dev-desktop.ts'
 
   dev-desktop-win:
-    script: 'bun run scripts/dev-desktop.mjs'
+    script: 'bun run scripts/dev-desktop.ts'
     inputs:
       - 'apps/client/native/**/*'
       - 'servers/api/**/*'
-      - 'scripts/dev-desktop.mjs'
+      - 'scripts/dev-desktop.ts'
 
   dev-api:
     command: 'cargo run -p runtime_server'
@@ -128,8 +131,8 @@ tasks:
       echo "=== Running typegen ==="
       moon run repo:typegen
       echo "=== Checking for drift ==="
-      git diff --exit-code packages/contracts/generated/ && echo "DRIFT CHECK PASSED" || (echo "DRIFT CHECK FAILED — generated types differ from committed" && exit 1)
-      git diff --exit-code apps/client/web/app/src/lib/generated/ && echo "FRONTEND SYNC PASSED" || (echo "FRONTEND SYNC FAILED — frontend types differ from committed" && exit 1)
+      git diff --exit-code packages/contracts/generated/ && echo "DRIFT CHECK PASSED" || (echo "DRIFT CHECK FAILED �?generated types differ from committed" && exit 1)
+      git diff --exit-code apps/client/web/app/src/lib/generated/ && echo "FRONTEND SYNC PASSED" || (echo "FRONTEND SYNC FAILED �?frontend types differ from committed" && exit 1)
     inputs:
       - 'packages/contracts/**/src/**'
       - 'packages/contracts/**/Cargo.toml'
@@ -209,7 +212,7 @@ tasks:
         const { spawnSync } = require('child_process');
 
         console.log('=== Runtime preflight ===');
-        const preflight = spawnSync(process.execPath, ['scripts/e2e/runtime-preflight.mjs'], {
+        const preflight = spawnSync(process.execPath, ['scripts/e2e/runtime-preflight.ts'], {
           cwd: process.cwd(),
           stdio: 'inherit',
           shell: false,
@@ -253,7 +256,7 @@ tasks:
       - 'e2e-desktop-playwright/**'
 
   test-agent:
-    command: 'echo "Agent tests — Phase 5 implementation"'
+    command: 'echo "Agent tests �?Phase 5 implementation"'
 
   test-all-rust:
     deps:
@@ -269,13 +272,13 @@ tasks:
       - 'test-desktop'
 
   boundary-check:
-    script: 'bun run scripts/boundary-check.mjs'
+    script: 'bun run scripts/boundary-check.ts'
     inputs:
       - "Cargo.toml"
       - "packages/*/Cargo.toml"
       - "packages/**/Cargo.toml"
       - "servers/*/Cargo.toml"
-      - "scripts/boundary-check.mjs"
+      - "scripts/boundary-check.ts"
     deps:
       - "~:setup"
     options:
@@ -292,45 +295,45 @@ tasks:
 
   # ── Codegen ────────────────────────────────────────────────────────
   typegen:
-    script: 'bun run scripts/typegen.mjs'
+    script: 'bun run scripts/typegen.ts'
     inputs:
       - 'packages/contracts/**/src/**'
       - 'packages/contracts/**/Cargo.toml'
-      - 'scripts/typegen.mjs'
+      - 'scripts/typegen.ts'
 
   openapi-gen:
-    command: 'echo "OpenAPI gen — Phase 2 implementation"'
+    command: 'echo "OpenAPI gen �?Phase 2 implementation"'
 
   fixtures-gen:
-    command: 'echo "Fixtures gen — Phase 5 implementation"'
+    command: 'echo "Fixtures gen �?Phase 5 implementation"'
 
   icons-gen:
-    command: 'echo "Icons gen — as needed"'
+    command: 'echo "Icons gen �?as needed"'
 
   tokens-gen:
-    command: 'echo "Tokens gen — as needed"'
+    command: 'echo "Tokens gen �?as needed"'
 
   # ── Ops ────────────────────────────────────────────────────────────
   trace-open:
-    command: 'echo "Trace open — Phase 7 implementation"'
+    command: 'echo "Trace open �?Phase 7 implementation"'
 
   evals-run:
-    command: 'echo "Evals run — Phase 5 implementation"'
+    command: 'echo "Evals run �?Phase 5 implementation"'
 
   replay-protocol:
-    command: 'echo "Replay protocol — Phase 7 implementation"'
+    command: 'echo "Replay protocol �?Phase 7 implementation"'
 
   release-dry-run:
-    command: 'echo "Release dry run — Phase 9 implementation"'
+    command: 'echo "Release dry run �?Phase 9 implementation"'
 
   release-desktop:
-    command: 'echo "Release desktop — Phase 9 implementation"'
+    command: 'echo "Release desktop �?Phase 9 implementation"'
 
   release-web:
-    command: 'echo "Release web — Phase 9 implementation"'
+    command: 'echo "Release web �?Phase 9 implementation"'
 
   release-server:
-    command: 'echo "Release server — Phase 9 implementation"'
+    command: 'echo "Release server �?Phase 9 implementation"'
 
   # ── Security ───────────────────────────────────────────────────────
   audit-rust:
@@ -345,7 +348,7 @@ tasks:
     script: 'bun audit || true'
 
   secrets-scan:
-    command: 'echo "Secrets scan — use gitleaks or similar"'
+    command: 'echo "Secrets scan �?use gitleaks or similar"'
 
   licenses-check:
-    command: 'echo "Licenses check — Phase 9 implementation"'
+    command: 'echo "Licenses check �?Phase 9 implementation"'

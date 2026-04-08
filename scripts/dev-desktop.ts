@@ -3,25 +3,28 @@ import process from 'node:process';
 import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { ChildProcess } from 'node:child_process';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const workspaceRoot = path.resolve(__dirname, '..');
 const tauriDir = path.join(workspaceRoot, 'apps', 'client', 'native', 'src-tauri');
 
 const API_PORT = 3001;
-const API_WAIT_SECONDS = 180; // 首次编译 surrealdb-core 可能需要很久 (sccache 启用后后续会快很多)
+const API_WAIT_SECONDS = 180; // First compile may take long (improves with sccache)
 
-function printOptimizationTips() {
-  const sccache = process.env.RUSTC_WRAPPER === 'sccache';
-  const hakari = process.env.CARGO_HAKARI !== '0';
+interface OptimizationStatus {
+  sccache: boolean;
+  hakari: boolean;
+}
 
-  if (sccache) {
+function printOptimizationTips(status: OptimizationStatus): void {
+  if (status.sccache) {
     console.log('[dev-desktop] ✓ sccache enabled (compilation caching active)');
   } else {
     console.log('[dev-desktop] ⚠ sccache NOT enabled — run: just setup-sccache');
   }
 
-  if (hakari) {
+  if (status.hakari) {
     console.log('[dev-desktop] ✓ cargo-hakari enabled (unified dependency resolution)');
   } else {
     console.log('[dev-desktop] ⚠ cargo-hakari NOT enabled — run: just setup-hakari');
@@ -29,7 +32,10 @@ function printOptimizationTips() {
   console.log('');
 }
 
-function waitForPort(port, maxSeconds, name) {
+/**
+ * Wait for a port to become available
+ */
+function waitForPort(port: number, maxSeconds: number, name: string): Promise<boolean> {
   return new Promise((resolve) => {
     const startTime = Date.now();
     const interval = setInterval(() => {
@@ -40,12 +46,14 @@ function waitForPort(port, maxSeconds, name) {
         resolve(false);
         return;
       }
+
       const socket = net.createConnection({ port, host: 'localhost' }, () => {
         clearInterval(interval);
         socket.end();
         console.log(`[dev-desktop] ${name} ready on port ${port}`);
         resolve(true);
       });
+
       socket.on('error', () => {
         socket.destroy();
       });
@@ -53,33 +61,47 @@ function waitForPort(port, maxSeconds, name) {
   });
 }
 
-function killProcessTree(pid) {
+/**
+ * Kill a process and its children (cross-platform)
+ */
+function killProcessTree(pid: number | undefined): void {
   if (!pid) return;
+
   if (process.platform === 'win32') {
     spawnSync('taskkill', ['/PID', String(pid), '/F', '/T'], {
       stdio: 'inherit',
     });
   } else {
-    process.kill(pid, 'SIGTERM');
+    try {
+      process.kill(-pid, 'SIGTERM');
+    } catch {
+      process.kill(pid, 'SIGTERM');
+    }
   }
 }
 
-function cleanup(apiProcess, tauriProcess) {
+/**
+ * Cleanup all child processes
+ */
+function cleanup(apiProcess: ChildProcess | null, tauriProcess: ChildProcess | null): void {
   console.log('\n[dev-desktop] Cleaning up...');
+
   if (tauriProcess) {
     console.log('[dev-desktop] Stopping Tauri (this will also stop its child processes)...');
     killProcessTree(tauriProcess.pid);
   }
+
   if (apiProcess) {
     console.log('[dev-desktop] Stopping API server...');
     killProcessTree(apiProcess.pid);
   }
 }
 
-async function main() {
-  let apiProcess = null;
-  let tauriProcess = null;
+async function main(): Promise<void> {
+  let apiProcess: ChildProcess | null = null;
+  let tauriProcess: ChildProcess | null = null;
 
+  // Setup cleanup handlers
   const cleanupHandler = () => cleanup(apiProcess, tauriProcess);
   process.on('SIGINT', cleanupHandler);
   process.on('SIGTERM', cleanupHandler);
@@ -93,11 +115,16 @@ async function main() {
   console.log('');
 
   // Print optimization tips
-  printOptimizationTips();
+  const optStatus: OptimizationStatus = {
+    sccache: process.env.RUSTC_WRAPPER === 'sccache',
+    hakari: process.env.CARGO_HAKARI !== '0',
+  };
+  printOptimizationTips(optStatus);
 
-  // Step 1: Start Axum API server (for HTTP fallback and API calls)
+  // Step 1: Start Axum API server
   console.log('[dev-desktop] Step 1/2: Starting Axum API server...');
   console.log('[dev-desktop] (First run may take a while to compile surrealdb-core)');
+
   apiProcess = spawn('cargo', ['run', '-p', 'runtime_server'], {
     cwd: workspaceRoot,
     stdio: ['ignore', 'inherit', 'inherit'],
@@ -117,11 +144,11 @@ async function main() {
   }
   console.log('');
 
-  // Step 2: Start Tauri
-  // Tauri's beforeDevCommand will automatically start the SvelteKit frontend on port 5173
+  // Step 2: Start Tauri (automatically starts SvelteKit frontend via beforeDevCommand)
   console.log('[dev-desktop] Step 2/2: Starting Tauri desktop app...');
   console.log('[dev-desktop] Tauri will start the SvelteKit frontend automatically...');
   console.log('');
+
   tauriProcess = spawn('cargo', ['tauri', 'dev'], {
     cwd: tauriDir,
     stdio: ['ignore', 'inherit', 'inherit'],
@@ -146,9 +173,9 @@ async function main() {
   console.log('[dev-desktop] Press Ctrl+C to stop all services');
   console.log('');
 
-  // Wait for Tauri to exit (blocking)
-  await new Promise((resolve) => {
-    tauriProcess.on('exit', resolve);
+  // Wait for Tauri to exit
+  await new Promise<void>((resolve) => {
+    tauriProcess?.on('exit', () => resolve());
   });
 
   console.log('[dev-desktop] Tauri exited, shutting down API server...');
