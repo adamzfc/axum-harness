@@ -6,9 +6,9 @@
 [build]
 # Let Cargo auto-detect parallelism (uses all available cores by default)
 
-# sccache wrapper — skipped due to windows-sys compatibility issue on Rust 1.94
-# Once sccache compiles successfully, uncomment the line below:
-# rustc-wrapper = "sccache"
+# sccache wrapper — enables compilation caching (install via: scoop install sccache)
+# Use full path on Windows to avoid PATH resolution issues
+rustc-wrapper = "D:/dev-storage/scoop/persist/rustup/.cargo/bin/sccache.exe"
 
 # Redirect all build output to D drive to save C disk space
 target-dir = "D:/dev-storage/cache/cargo-target/tauri-sveltekit-axum-moon-template"

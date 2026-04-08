@@ -9,7 +9,25 @@ const workspaceRoot = path.resolve(__dirname, '..');
 const tauriDir = path.join(workspaceRoot, 'apps', 'client', 'native', 'src-tauri');
 
 const API_PORT = 3001;
-const API_WAIT_SECONDS = 120; // 首次编译 surrealdb-core 可能需要很久
+const API_WAIT_SECONDS = 180; // 首次编译 surrealdb-core 可能需要很久 (sccache 启用后后续会快很多)
+
+function printOptimizationTips() {
+  const sccache = process.env.RUSTC_WRAPPER === 'sccache';
+  const hakari = process.env.CARGO_HAKARI !== '0';
+
+  if (sccache) {
+    console.log('[dev-desktop] ✓ sccache enabled (compilation caching active)');
+  } else {
+    console.log('[dev-desktop] ⚠ sccache NOT enabled — run: just setup-sccache');
+  }
+
+  if (hakari) {
+    console.log('[dev-desktop] ✓ cargo-hakari enabled (unified dependency resolution)');
+  } else {
+    console.log('[dev-desktop] ⚠ cargo-hakari NOT enabled — run: just setup-hakari');
+  }
+  console.log('');
+}
 
 function waitForPort(port, maxSeconds, name) {
   return new Promise((resolve) => {
@@ -73,6 +91,9 @@ async function main() {
   console.log(`[dev-desktop] Workspace: ${workspaceRoot}`);
   console.log(`[dev-desktop] Tauri dir: ${tauriDir}`);
   console.log('');
+
+  // Print optimization tips
+  printOptimizationTips();
 
   // Step 1: Start Axum API server (for HTTP fallback and API calls)
   console.log('[dev-desktop] Step 1/2: Starting Axum API server...');

@@ -31,19 +31,36 @@ doctor:
     @bun --version    2>/dev/null || echo "bun not in PATH"
 
 # 安装 sccache 编译缓存（加速重复编译 80%+）
-# NOTE: 当前 sccache 在 Rust 1.94 + Windows 上编译失败 (windows-sys API 变更)
-# 等 sccache 修复后可正常使用
+# Windows 推荐用 scoop: scoop install sccache
+# 也可用 cargo: cargo install sccache --locked
 setup-sccache:
-    @echo "sccache currently broken on Rust 1.94 + Windows"
-    @echo "Tracking: https://github.com/mozilla/sccache/issues"
-    @echo "Once fixed, run: cargo install sccache"
+    @bun -e "const { spawnSync } = require('child_process'); const r = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['sccache'], { shell: process.platform === 'win32' }); if (r.status !== 0) { console.log('Installing sccache via cargo...'); spawnSync('cargo', ['install', 'sccache', '--locked'], { stdio: 'inherit', shell: process.platform === 'win32' }); } else { console.log('sccache already installed: ' + spawnSync('sccache', ['--version'], { shell: process.platform === 'win32' }).stdout?.toString().trim()); }"
+    @echo "Setting up sccache environment..."
+    @echo "SCCACHE_DIR=D:\dev-storage\cache\sccache" | setx >nul 2>&1 || true
+    @echo "RUSTC_WRAPPER=sccache" | setx >nul 2>&1 || true
+    @echo "sccache configured — restart terminal or run: just setup-sccache-verify"
+
+# 验证 sccache 是否生效
+setup-sccache-verify:
+    @echo "=== sccache status ==="
+    @sccache --show-stats
+    @echo ""
+    @echo "=== .cargo/config.toml check ==="
+    @bun -e "const fs = require('fs'); const c = fs.readFileSync('.cargo/config.toml', 'utf8'); console.log(c.includes('rustc-wrapper = \"sccache\"') ? '✓ rustc-wrapper enabled' : '✗ rustc-wrapper NOT set');"
 
 # 安装 cargo-hakari 统一依赖解析（减少重复编译 30%+）
 setup-hakari:
-    @bun -e "const { spawnSync } = require('child_process'); const r = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['cargo-hakari'], { shell: process.platform === 'win32' }); if (r.status !== 0) { console.log('Installing cargo-hakari...'); spawnSync('cargo', ['install', 'cargo-hakari'], { stdio: 'inherit', shell: process.platform === 'win32' }); } else { console.log('cargo-hakari already installed'); }"
+    @bun -e "const { spawnSync } = require('child_process'); const r = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['cargo-hakari'], { shell: process.platform === 'win32' }); if (r.status !== 0) { console.log('Installing cargo-hakari...'); spawnSync('cargo', ['install', 'cargo-hakari'], { stdio: 'inherit', shell: process.platform === 'win32' }); } else { console.log('cargo-hakari already installed: ' + spawnSync('cargo', ['hakari', '--version'], { shell: process.platform === 'win32' }).stdout?.toString().trim()); }"
     @echo "Generating unified dependency resolution..."
     cargo hakari generate
+    cargo hakari manage-deps --yes
     @echo "hakari configured — run cargo build to see speedup"
+
+# 验证 hakari 是否生效
+setup-hakari-verify:
+    @echo "=== hakari status ==="
+    @bun -e "const fs = require('fs'); const exists = fs.existsSync('.config/hakari.toml'); console.log(exists ? '✓ .config/hakari.toml exists' : '✗ .config/hakari.toml missing');"
+    @bun -e "const fs = require('fs'); const c = fs.readFileSync('Cargo.toml', 'utf8'); console.log(c.includes('workspace-hack') ? '✓ workspace-hack in members' : '✗ workspace-hack NOT in members');"
 
 # 安装覆盖率工具（一次性）
 setup-coverage:

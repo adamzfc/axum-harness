@@ -79,6 +79,7 @@ tracing-log = { workspace = true }
 # API documentation
 utoipa = { version = "5", features = ["axum_extras"] }
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
+workspace-hack = { version = "0.1", path = "../../packages/core/workspace-hack" }
 
 [dev-dependencies]
 http-body-util = "0.1"

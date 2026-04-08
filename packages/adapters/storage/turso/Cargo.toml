@@ -12,6 +12,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
 base64 = { workspace = true }
+workspace-hack = { version = "0.1", path = "../../../core/workspace-hack" }
 
 # Force pure-Rust aegis on Windows (avoids clang-cl requirement)
 [target.'cfg(windows)'.dependencies]

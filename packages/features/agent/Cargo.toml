@@ -10,6 +10,7 @@ serde = { workspace = true }
 async-trait = { workspace = true }
 thiserror = { workspace = true }
 futures-util = "0.3"
+workspace-hack = { version = "0.1", path = "../../core/workspace-hack" }
 
 [lints]
 workspace = true
