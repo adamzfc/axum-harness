@@ -5,7 +5,7 @@ use axum::{Json, Router, extract::State, routing::get};
 use feature_admin::AdminService;
 
 pub fn router() -> Router<AppState> {
-    Router::new().route("/admin/stats", get(get_dashboard_stats))
+    Router::new().route("/api/admin/stats", get(get_dashboard_stats))
 }
 
 async fn get_dashboard_stats(State(state): State<AppState>) -> Json<serde_json::Value> {
