@@ -1,11 +1,10 @@
 <script lang="ts">
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import { onMount } from 'svelte';
 import '../app.css';
 import Toast from '$lib/components/ui/Toast.svelte';
 import { handleOAuthCallback } from '$lib/ipc/auth';
 import { auth, initAuthListeners, setSession } from '$lib/stores/auth.svelte';
+import { isTauri, safeInvoke, safeListen } from '$lib/ipc/bridge';
 
 const { children } = $props();
 
@@ -27,44 +26,52 @@ function dismissError() {
 }
 
 onMount(() => {
-  // Listen for auth:expired events from refresh timer
-  const cleanupAuth = initAuthListeners();
+  // Listen for auth:expired events from refresh timer (Tauri only)
+  const cleanupAuth = isTauri() ? initAuthListeners() : undefined;
 
-  // Listen for OAuth callback from Rust TCP listener (custom event name to avoid deep-link plugin conflicts)
-  const unlistenOAuth = listen<string>('oauth-callback', async (event) => {
-    console.log('[auth] Received oauth-callback event:', event.payload);
-    const url = event.payload;
-    if (url.includes('oauth/callback')) {
-      try {
-        const session = await handleOAuthCallback(url);
-        console.log('[auth] OAuth callback succeeded:', session.user.email);
-        setSession(session);
-      } catch (e) {
-        console.error('[auth] OAuth callback failed:', e);
-        auth.authLoading = false;
-        auth.authError = String(e);
+  // Listen for OAuth callback from Rust TCP listener (Tauri only)
+  let unlistenOAuthCleanup: (() => void) | undefined;
+  if (isTauri()) {
+    safeListen<string>('oauth-callback', async (payload) => {
+      console.log('[auth] Received oauth-callback event:', payload);
+      const url = payload;
+      if (url.includes('oauth/callback')) {
+        try {
+          const session = await handleOAuthCallback(url);
+          console.log('[auth] OAuth callback succeeded:', session.user.email);
+          setSession(session);
+        } catch (e) {
+          console.error('[auth] OAuth callback failed:', e);
+          auth.authLoading = false;
+          auth.authError = String(e);
+        }
       }
-    }
-  });
+    }).then((cleanup) => { unlistenOAuthCleanup = cleanup; });
+  }
 
-  // Listen for Rust panic events
-  const unlistenPanic = listen<string>('app:panic', (event) => {
-    showError(event.payload);
-  });
+  // Listen for Rust panic events (Tauri only)
+  let unlistenPanicCleanup: (() => void) | undefined;
+  if (isTauri()) {
+    safeListen<string>('app:panic', (payload) => {
+      showError(payload);
+    }).then((cleanup) => { unlistenPanicCleanup = cleanup; });
+  }
 
-  // Ctrl+Q → quit
+  // Ctrl+Q → quit (Tauri only)
   const handleKeydown = (e: KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'q') {
       e.preventDefault();
-      invoke('quit_app');
+      if (isTauri()) {
+        safeInvoke('quit_app');
+      }
     }
   };
   window.addEventListener('keydown', handleKeydown);
 
   return () => {
     cleanupAuth?.();
-    unlistenOAuth.then((fn) => fn());
-    unlistenPanic.then((fn) => fn());
+    unlistenOAuthCleanup?.();
+    unlistenPanicCleanup?.();
     window.removeEventListener('keydown', handleKeydown);
   };
 });
