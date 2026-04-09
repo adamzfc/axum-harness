@@ -1,5 +1,5 @@
 import type { ChatMessage } from '$lib/generated/api/ChatMessage';
-import { Channel, invoke } from '@tauri-apps/api/core';
+import { safeInvoke, isTauri, safeChannel } from '$lib/ipc/bridge';
 
 const API_BASE = 'http://localhost:3001';
 
@@ -40,7 +40,7 @@ async function parseJson<T>(response: Response): Promise<T> {
 export async function listConversations(): Promise<Conversation[]> {
   if (shouldPreferIpc()) {
     try {
-      return await invoke('agent_list_conversations');
+      return (await safeInvoke('agent_list_conversations')) as Conversation[];
     } catch (error) {
       if (isTauriRuntime()) {
         throw error;
@@ -55,7 +55,7 @@ export async function listConversations(): Promise<Conversation[]> {
 export async function createConversation(title: string): Promise<Conversation> {
   if (shouldPreferIpc()) {
     try {
-      return await invoke('agent_create_conversation', { title });
+      return (await safeInvoke('agent_create_conversation', { title })) as Conversation;
     } catch (error) {
       if (isTauriRuntime()) {
         throw error;
@@ -75,7 +75,7 @@ export async function createConversation(title: string): Promise<Conversation> {
 export async function getConversationMessages(id: string): Promise<ChatMessage[]> {
   if (shouldPreferIpc()) {
     try {
-      return await invoke('agent_get_messages', { id });
+      return (await safeInvoke('agent_get_messages', { id })) as ChatMessage[];
     } catch (error) {
       if (isTauriRuntime()) {
         throw error;
@@ -111,7 +111,10 @@ async function* tauriPath(params: {
   baseUrl: string;
   model: string;
 }): AsyncGenerator<string, void, unknown> {
-  const channel = new Channel<string>();
+  const channel = await safeChannel<string>();
+  if (!channel) {
+    throw new Error('Channel unavailable in web mode');
+  }
   let resolveNext: ((value: IteratorResult<string>) => void) | null = null;
   let done = false;
 
@@ -123,7 +126,7 @@ async function* tauriPath(params: {
     }
   };
 
-  const invokePromise = invoke('agent_chat', {
+  const invokePromise = safeInvoke('agent_chat', {
     conversationId: params.conversationId,
     content: params.content,
     apiKey: params.apiKey,
