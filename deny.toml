@@ -23,7 +23,15 @@ ignore = [
     # 影响: 可能导致被撤销的证书被错误接受（需要攻击者控制 CA）
     # 风险评估: 有限影响，因为攻击者需要控制受信任的 CA
     # 解决方案: 等待 libsql 升级到支持 rustls 0.23 的版本
-    "RUSTSEC-2026-0049"
+    "RUSTSEC-2026-0049",
+    
+    # rsa 0.9.10 - Marvin Attack 时间侧信道漏洞
+    # 原因: jsonwebtoken 10.3.0 依赖 rsa 0.9.10
+    # 影响: 可能通过时间侧信道泄露 RSA 私钥信息
+    # 风险评估: 零风险 - 项目仅使用 HS256（HMAC-SHA256）算法，不使用 RSA
+    # 证据: servers/api/src/middleware/tenant.rs 仅使用 Algorithm::HS256
+    # 解决方案: 等待 jsonwebtoken 发布不依赖 rsa 的版本，或项目迁移到其他 JWT 库
+    "RUSTSEC-2023-0071",
 ]
 
 # ══════════════════════════════════════════════════════════════

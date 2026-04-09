@@ -105,7 +105,7 @@ anyhow = "1"
 figment = { version = "0.10", features = ["toml", "env"] }
 
 # Validation (2026 best practices)
-validator = { version = "0.16", features = ["derive"] }
+validator = { version = "0.20", features = ["derive"] }
 
 # Tracing enhancements
 tracing-error = "0.2"
