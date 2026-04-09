@@ -15,7 +15,7 @@ pub mod state;
 use axum::{Router, middleware as axum_mw};
 use std::time::Duration;
 use tower_http::{
-    cors::CorsLayer,
+    cors::{AllowOrigin, CorsLayer},
     request_id::{MakeRequestId, PropagateRequestIdLayer, RequestId, SetRequestIdLayer},
     timeout::TimeoutLayer,
     trace::TraceLayer,
@@ -74,6 +74,9 @@ struct ApiDoc;
 /// 6. Tenant middleware — JWT extraction (API routes only via route_layer)
 /// 7. Routes — health check (public) + API routes (tenant-scoped)
 pub fn create_router(state: AppState) -> Router {
+    // CORS: if cors_allowed_origins is empty → permissive (dev mode).
+    // If set → enforce explicit allowlist with credentials.
+    let cors = build_cors_layer(&state.config.server.cors_allowed_origins);
     // Tenant-scoped routes — middleware extracts TenantId from JWT
     let api_routes =
         routes::api_router().route_layer(axum_mw::from_fn(middleware::tenant::tenant_middleware));
@@ -86,7 +89,7 @@ pub fn create_router(state: AppState) -> Router {
         .merge(public_routes)
         .merge(api_routes)
         .with_state(state)
-        .layer(CorsLayer::permissive())
+        .layer(cors)
         .layer(
             TraceLayer::new_for_http().make_span_with(|req: &axum::http::Request<_>| {
                 let request_id = req
@@ -113,4 +116,37 @@ pub fn create_router(state: AppState) -> Router {
             axum::http::StatusCode::REQUEST_TIMEOUT,
             Duration::from_secs(30),
         ))
+}
+
+/// Build CORS layer from allowed origins list.
+///
+/// - Empty list → `CorsLayer::permissive()` (dev mode fallback)
+/// - Non-empty → explicit allowlist with credentials, methods, and headers
+fn build_cors_layer(allowed_origins: &[String]) -> CorsLayer {
+    if allowed_origins.is_empty() {
+        tracing::info!("CORS: no allowed origins configured — using permissive mode (dev)");
+        return CorsLayer::permissive();
+    }
+
+    let origins: Vec<axum::http::HeaderValue> = allowed_origins
+        .iter()
+        .filter_map(|o| o.parse().ok())
+        .collect();
+
+    tracing::info!(count = origins.len(), "CORS: enforcing origin allowlist");
+
+    CorsLayer::new()
+        .allow_origin(AllowOrigin::list(origins))
+        .allow_methods([
+            axum::http::Method::GET,
+            axum::http::Method::POST,
+            axum::http::Method::PUT,
+            axum::http::Method::DELETE,
+        ])
+        .allow_headers([
+            axum::http::header::AUTHORIZATION,
+            axum::http::header::CONTENT_TYPE,
+            axum::http::header::ACCEPT,
+        ])
+        .allow_credentials(true)
 }
