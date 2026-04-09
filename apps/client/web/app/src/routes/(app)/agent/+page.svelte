@@ -181,10 +181,6 @@ async function sendMessage() {
     );
   } finally {
     streaming = false;
-    await loadConversations();
-    if (activeConversation) {
-      await selectConversation(activeConversation);
-    }
   }
 }
 
