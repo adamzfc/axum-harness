@@ -1,5 +1,11 @@
 import { defineConfig } from '@playwright/test';
 
+const isWindows = process.platform === 'win32';
+const tauriCommand = 'cargo tauri dev --features e2e-testing --config tauri.e2e.conf.json';
+const webServerCommand = isWindows
+  ? `cmd /C "set WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222 && set AWS_LC_SYS_PREBUILT_NASM=1 && ${tauriCommand}"`
+  : `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222 AWS_LC_SYS_PREBUILT_NASM=1 ${tauriCommand}`;
+
 export default defineConfig({
   testDir: './tests/specs',
   outputDir: 'test-results',
@@ -28,8 +34,7 @@ export default defineConfig({
     }
   ],
   webServer: {
-    command:
-      'cmd /C "set WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222 && set AWS_LC_SYS_PREBUILT_NASM=1 && cargo tauri dev --features e2e-testing --config tauri.e2e.conf.json"',
+    command: webServerCommand,
     url: 'http://127.0.0.1:9222/json/version',
     cwd: '../apps/client/native/src-tauri',
     reuseExistingServer: !process.env.CI,
