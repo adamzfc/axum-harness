@@ -64,6 +64,19 @@ Plans:
 - [x] 10-02-PLAN.md — tenant-1/tenant-2 隔离断言与重复运行回归
 - [x] 10-03-PLAN.md — CI 最小诊断包与 job 级 artifact 输出
 
+### Phase 10.2: 改进建议和计划 Phase 1 安全加固 (INSERTED)
+
+**Goal:** 消除 JWT 签名伪造、CORS 完全开放、api_key 泄露、CI 未启用四个安全风险。
+**Requirements**: SEC-01, SEC-02, SEC-03, SEC-04
+**Depends on:** Phase 10
+**Plans:** 4/4 plans complete
+
+Plans:
+- [x] 10.2-01-PLAN.md — JWT 环境门控 HS256 签名验证与 exp 过期检查
+- [x] 10.2-02-PLAN.md — CORS 配置驱动白名单与 dev permissive 回落
+- [x] 10.2-03-PLAN.md — AgentConfig api_key 序列化脱敏与 Debug 脱敏
+- [x] 10.2-04-PLAN.md — CI workflow 启用并接入 PR/main push 触发
+
 ### Phase 10.1: 根据 docs/STORAGE_COMPILE_REQUIREMENTS.md 落实 Turso-only 存储持久化、编译裁剪与多租户测试体系 (INSERTED)
 
 **Goal:** 默认运行链路收敛为 Turso 文件持久化，默认编译面与 E2E 门禁裁剪为 Turso-only，并将多租户回归扩展到 settings/theme/counter/agent 四维隔离。
