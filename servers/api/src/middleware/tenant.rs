@@ -37,11 +37,11 @@ pub async fn tenant_middleware(mut req: Request, next: Next) -> Result<Response,
         .and_then(|h| h.strip_prefix("Bearer "))
         .ok_or(StatusCode::UNAUTHORIZED)?;
 
-    // 2. Read jwt_secret from AppState (set by route_layer on api_router)
-    let jwt_secret = req
+    // 2. Read jwt_secret from request extensions (set by Extension layer)
+    let jwt_secret: String = req
         .extensions()
-        .get::<crate::state::AppState>()
-        .map(|s| s.config.auth.jwt_secret.clone())
+        .get::<String>()
+        .cloned()
         .unwrap_or_default();
 
     // 3. Decode JWT — env-gated: dev mode vs prod mode

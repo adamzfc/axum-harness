@@ -38,6 +38,10 @@ node_modules/
 **/coverage/
 **/*.tsbuildinfo
 
+# --- Newman E2E local env (may contain tokens) ---
+servers/api/tests/e2e/env.json
+servers/api/tests/e2e/report.xml
+
 # --- Playwright ---
 **/playwright-report/
 **/test-results/

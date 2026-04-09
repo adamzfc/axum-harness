@@ -7,11 +7,14 @@ use axum::{
     response::sse::{Event, Sse},
     routing::{get, post},
 };
+use contracts_api::{
+    ChatMessage, ChatRequest, ConversationDetail, ConversationSummary, CreateConversationRequest,
+};
 use feature_agent::AgentService;
 use futures_util::{StreamExt, stream};
-use serde::Deserialize;
 use std::convert::Infallible;
 use std::pin::Pin;
+use utoipa::OpenApi;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -30,14 +33,42 @@ fn get_db(state: &AppState) -> Result<storage_turso::EmbeddedTurso, Json<serde_j
         .ok_or_else(|| Json(serde_json::json!({ "error": "Embedded database not initialized" })))
 }
 
-#[derive(Deserialize)]
-struct CreateConversationReq {
-    title: String,
+/// List all agent conversations.
+#[utoipa::path(
+    get,
+    path = "/api/agent/conversations",
+    tag = "agent",
+    responses(
+        (status = 200, description = "List of conversation summaries", body = Vec<ConversationSummary>, content_type = "application/json"),
+        (status = 500, description = "Internal server error", body = serde_json::Value, content_type = "application/json"),
+    ),
+)]
+pub async fn list_conversations(State(state): State<AppState>) -> Json<serde_json::Value> {
+    let db = match get_db(&state) {
+        Ok(db) => db,
+        Err(e) => return e,
+    };
+    let service = usecases::agent_service::LibSqlAgentService::new(db, state.http_client.clone());
+    match service.get_conversations().await {
+        Ok(convs) => Json(serde_json::json!(convs)),
+        Err(e) => Json(serde_json::json!({ "error": e.to_string() })),
+    }
 }
 
-async fn create_conversation(
+/// Create a new agent conversation.
+#[utoipa::path(
+    post,
+    path = "/api/agent/conversations",
+    tag = "agent",
+    request_body = CreateConversationRequest,
+    responses(
+        (status = 200, description = "Conversation created successfully", body = ConversationSummary, content_type = "application/json"),
+        (status = 500, description = "Internal server error", body = serde_json::Value, content_type = "application/json"),
+    ),
+)]
+pub async fn create_conversation(
     State(state): State<AppState>,
-    Json(req): Json<CreateConversationReq>,
+    Json(req): Json<CreateConversationRequest>,
 ) -> Json<serde_json::Value> {
     let db = match get_db(&state) {
         Ok(db) => db,
@@ -50,19 +81,20 @@ async fn create_conversation(
     }
 }
 
-async fn list_conversations(State(state): State<AppState>) -> Json<serde_json::Value> {
-    let db = match get_db(&state) {
-        Ok(db) => db,
-        Err(e) => return e,
-    };
-    let service = usecases::agent_service::LibSqlAgentService::new(db, state.http_client.clone());
-    match service.get_conversations().await {
-        Ok(convs) => Json(serde_json::json!(convs)),
-        Err(e) => Json(serde_json::json!({ "error": e.to_string() })),
-    }
-}
-
-async fn get_messages(
+/// Get messages for a specific conversation.
+#[utoipa::path(
+    get,
+    path = "/api/agent/conversations/{id}/messages",
+    tag = "agent",
+    params(
+        ("id" = String, Path, description = "Conversation ID"),
+    ),
+    responses(
+        (status = 200, description = "List of chat messages", body = Vec<ChatMessage>, content_type = "application/json"),
+        (status = 500, description = "Internal server error", body = serde_json::Value, content_type = "application/json"),
+    ),
+)]
+pub async fn get_messages(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Json<serde_json::Value> {
@@ -77,18 +109,20 @@ async fn get_messages(
     }
 }
 
-#[derive(Deserialize)]
-struct ChatReq {
-    conversation_id: String,
-    content: String,
-    api_key: String,
-    base_url: String,
-    model: String,
-}
-
-async fn chat_handler(
+/// Chat with the agent via SSE streaming.
+#[utoipa::path(
+    post,
+    path = "/api/agent/chat",
+    tag = "agent",
+    request_body = ChatRequest,
+    responses(
+        (status = 200, description = "SSE stream of agent responses", content_type = "text/event-stream"),
+        (status = 500, description = "Internal server error", body = serde_json::Value, content_type = "application/json"),
+    ),
+)]
+pub async fn chat_handler(
     State(state): State<AppState>,
-    Json(req): Json<ChatReq>,
+    Json(req): Json<ChatRequest>,
 ) -> Sse<Pin<Box<dyn futures_util::Stream<Item = Result<Event, Infallible>> + Send>>> {
     let db = match get_db(&state) {
         Ok(db) => db,

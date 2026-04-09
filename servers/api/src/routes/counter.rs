@@ -7,8 +7,10 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
+use contracts_api::{CounterResponse, ErrorResponse};
 use domain::ports::TenantId;
 use feature_counter::CounterService;
+use utoipa::OpenApi;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -16,6 +18,40 @@ pub fn router() -> Router<AppState> {
         .route("/api/counter/decrement", post(decrement))
         .route("/api/counter/reset", post(reset))
         .route("/api/counter/value", get(get_value))
+}
+
+/// Increment the tenant's counter value.
+#[utoipa::path(
+    post,
+    path = "/api/counter/increment",
+    tag = "counter",
+    security(("tenant_auth" = [])),
+    responses(
+        (status = 200, description = "Counter incremented successfully", body = CounterResponse, content_type = "application/json"),
+        (status = 401, description = "Unauthorized — missing tenant context", body = ErrorResponse, content_type = "application/json"),
+        (status = 500, description = "Internal server error", body = ErrorResponse, content_type = "application/json"),
+    ),
+)]
+async fn increment(
+    State(state): State<AppState>,
+    tenant: Option<Extension<TenantId>>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let db = match get_db(&state) {
+        Ok(db) => db,
+        Err(e) => return e,
+    };
+    let tenant_id = match get_tenant(tenant) {
+        Ok(id) => id,
+        Err(e) => return e,
+    };
+    let service = usecases::counter_service::LibSqlCounterService::new(db);
+    match service.increment_for_tenant(&tenant_id).await {
+        Ok(value) => (StatusCode::OK, Json(serde_json::json!({ "value": value }))),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        ),
+    }
 }
 
 fn get_db(
@@ -40,28 +76,18 @@ fn get_tenant(
     })
 }
 
-async fn increment(
-    State(state): State<AppState>,
-    tenant: Option<Extension<TenantId>>,
-) -> (StatusCode, Json<serde_json::Value>) {
-    let db = match get_db(&state) {
-        Ok(db) => db,
-        Err(e) => return e,
-    };
-    let tenant_id = match get_tenant(tenant) {
-        Ok(id) => id,
-        Err(e) => return e,
-    };
-    let service = usecases::counter_service::LibSqlCounterService::new(db);
-    match service.increment_for_tenant(&tenant_id).await {
-        Ok(value) => (StatusCode::OK, Json(serde_json::json!({ "value": value }))),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        ),
-    }
-}
-
+/// Decrement the tenant's counter value.
+#[utoipa::path(
+    post,
+    path = "/api/counter/decrement",
+    tag = "counter",
+    security(("tenant_auth" = [])),
+    responses(
+        (status = 200, description = "Counter decremented successfully", body = CounterResponse, content_type = "application/json"),
+        (status = 401, description = "Unauthorized — missing tenant context", body = ErrorResponse, content_type = "application/json"),
+        (status = 500, description = "Internal server error", body = ErrorResponse, content_type = "application/json"),
+    ),
+)]
 async fn decrement(
     State(state): State<AppState>,
     tenant: Option<Extension<TenantId>>,
@@ -84,6 +110,18 @@ async fn decrement(
     }
 }
 
+/// Reset the tenant's counter value to zero.
+#[utoipa::path(
+    post,
+    path = "/api/counter/reset",
+    tag = "counter",
+    security(("tenant_auth" = [])),
+    responses(
+        (status = 200, description = "Counter reset successfully", body = CounterResponse, content_type = "application/json"),
+        (status = 401, description = "Unauthorized — missing tenant context", body = ErrorResponse, content_type = "application/json"),
+        (status = 500, description = "Internal server error", body = ErrorResponse, content_type = "application/json"),
+    ),
+)]
 async fn reset(
     State(state): State<AppState>,
     tenant: Option<Extension<TenantId>>,
@@ -106,6 +144,18 @@ async fn reset(
     }
 }
 
+/// Get the current counter value for the authenticated tenant.
+#[utoipa::path(
+    get,
+    path = "/api/counter/value",
+    tag = "counter",
+    security(("tenant_auth" = [])),
+    responses(
+        (status = 200, description = "Current counter value", body = CounterResponse, content_type = "application/json"),
+        (status = 401, description = "Unauthorized — missing tenant context", body = ErrorResponse, content_type = "application/json"),
+        (status = 500, description = "Internal server error", body = ErrorResponse, content_type = "application/json"),
+    ),
+)]
 async fn get_value(
     State(state): State<AppState>,
     tenant: Option<Extension<TenantId>>,

@@ -67,3 +67,18 @@ test-desktop-fast:
 # 所有前端测试（check + lint + unit + e2e + desktop）
 test-all-frontend:
     moon run repo:test-all-frontend
+
+# ── Newman API E2E 测试 ────────────────────────────────────
+
+# Newman API E2E 测试（自动启动服务器 → 运行测试 → 清理）
+test-api-e2e:
+    bun {{justfile_directory()}}/servers/api/tests/e2e/run-api-e2e.ts
+
+# Newman API E2E 测试（仅运行，假设服务器已在运行）
+test-api-e2e-only:
+    bunx newman run {{justfile_directory()}}/servers/api/tests/e2e/collection.json \
+      -e {{justfile_directory()}}/servers/api/tests/e2e/env.json \
+      --bail \
+      --reporter-cli \
+      --reporter-junit-extra \
+      --reporter-junit-extra-output {{justfile_directory()}}/servers/api/tests/e2e/report.xml

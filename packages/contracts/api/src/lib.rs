@@ -96,6 +96,65 @@ pub struct AdminDashboardStats {
     pub app_version: String,
 }
 
+/// Generic counter operation response.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export, export_to = "api/")]
+pub struct CounterResponse {
+    /// The current counter value after the operation.
+    pub value: i64,
+}
+
+/// Generic error response returned on failure.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export, export_to = "api/")]
+pub struct ErrorResponse {
+    /// Error message describing what went wrong.
+    pub error: String,
+}
+
+/// Agent conversation summary.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export, export_to = "api/")]
+pub struct ConversationSummary {
+    pub id: String,
+    pub title: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// Agent conversation with messages.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export, export_to = "api/")]
+pub struct ConversationDetail {
+    pub id: String,
+    pub title: String,
+    pub messages: Vec<ChatMessage>,
+}
+
+/// Request body for creating an agent conversation.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export, export_to = "api/")]
+pub struct CreateConversationRequest {
+    /// Conversation title.
+    pub title: String,
+}
+
+/// Request body for agent chat.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export, export_to = "api/")]
+pub struct ChatRequest {
+    /// The conversation ID to continue or create.
+    pub conversation_id: String,
+    /// User message content.
+    pub content: String,
+    /// LLM API key (provided by client, not stored).
+    pub api_key: String,
+    /// LLM API base URL.
+    pub base_url: String,
+    /// Model name to use.
+    pub model: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

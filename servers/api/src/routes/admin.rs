@@ -2,12 +2,25 @@
 
 use crate::state::AppState;
 use axum::{Json, Router, extract::State, routing::get};
+use contracts_api::AdminDashboardStats;
 use feature_admin::AdminService;
+use utoipa::OpenApi;
 
 pub fn router() -> Router<AppState> {
     Router::new().route("/api/admin/stats", get(get_dashboard_stats))
 }
 
+/// Get dashboard statistics (tenant count, counter value, etc.).
+#[utoipa::path(
+    get,
+    path = "/api/admin/stats",
+    tag = "admin",
+    security(("tenant_auth" = [])),
+    responses(
+        (status = 200, description = "Dashboard statistics retrieved successfully", body = AdminDashboardStats, content_type = "application/json"),
+        (status = 500, description = "Internal server error", body = serde_json::Value, content_type = "application/json"),
+    ),
+)]
 async fn get_dashboard_stats(State(state): State<AppState>) -> Json<serde_json::Value> {
     let db = match state.embedded_db.clone() {
         Some(db) => db,

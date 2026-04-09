@@ -23,7 +23,11 @@ use tower_http::{
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-use contracts_api::{HealthResponse, InitTenantRequest, InitTenantResponse};
+use contracts_api::{
+    HealthResponse, InitTenantRequest, InitTenantResponse, CounterResponse, ErrorResponse,
+    ChatMessage, ToolCall, AgentConfig, ConversationSummary, ConversationDetail,
+    CreateConversationRequest, ChatRequest, AdminDashboardStats,
+};
 use state::AppState;
 
 /// Generate time-ordered UUID v7 request IDs.
@@ -47,18 +51,43 @@ impl MakeRequestId for MakeRequestUuidV7 {
         routes::health::healthz,
         routes::health::readyz,
         routes::tenant::init_tenant,
+        routes::counter::increment,
+        routes::counter::decrement,
+        routes::counter::reset,
+        routes::counter::get_value,
+        routes::admin::get_dashboard_stats,
+        routes::agent::list_conversations,
+        routes::agent::create_conversation,
+        routes::agent::get_messages,
+        routes::agent::chat_handler,
     ),
     components(schemas(
         HealthResponse,
         InitTenantRequest,
         InitTenantResponse,
+        CounterResponse,
+        ErrorResponse,
+        ChatMessage,
+        ToolCall,
+        AgentConfig,
+        ConversationSummary,
+        ConversationDetail,
+        CreateConversationRequest,
+        ChatRequest,
+        AdminDashboardStats,
     )),
     tags(
         (name = "health", description = "Health check and readiness probes"),
         (name = "tenant", description = "Tenant lifecycle operations"),
+        (name = "counter", description = "Counter operations"),
+        (name = "admin", description = "Admin dashboard operations"),
+        (name = "agent", description = "Agent chat and conversation management"),
     ),
     servers(
         (url = "http://localhost:3001", description = "Local development server"),
+    ),
+    security(
+        ("tenant_auth" = []),
     ),
 )]
 struct ApiDoc;
@@ -78,8 +107,14 @@ pub fn create_router(state: AppState) -> Router {
     // If set → enforce explicit allowlist with credentials.
     let cors = build_cors_layer(&state.config.server.cors_allowed_origins);
     // Tenant-scoped routes — middleware extracts TenantId from JWT
-    let api_routes =
-        routes::api_router().route_layer(axum_mw::from_fn(middleware::tenant::tenant_middleware));
+    // jwt_secret is injected as Extension<String> so tenant_middleware can read it
+    //
+    // Layer order (outermost → innermost):
+    // 1. Extension(jwt_secret) — adds String to request extensions
+    // 2. tenant_middleware — reads jwt_secret from extensions
+    let api_routes = routes::api_router()
+        .route_layer(axum_mw::from_fn(middleware::tenant::tenant_middleware))
+        .route_layer(axum::Extension(state.config.auth.jwt_secret.clone()));
 
     // Public routes — health checks, no auth required
     let public_routes = routes::health::router();
