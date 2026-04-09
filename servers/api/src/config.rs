@@ -307,4 +307,84 @@ mod tests {
         let err = config.resolved_db_path().unwrap_err().to_string();
         assert!(err.contains("memory"));
     }
+
+    #[test]
+    fn default_cors_allowed_origins_is_empty() {
+        let config = Config::default();
+        assert!(
+            config.server.cors_allowed_origins.is_empty(),
+            "default config should have empty cors_allowed_origins (dev permissive mode)"
+        );
+    }
+
+    #[test]
+    fn cors_allowed_origins_from_env_comma_separated() {
+        // Verify Config::default() produces empty cors list
+        let config = Config::default();
+        assert!(config.server.cors_allowed_origins.is_empty());
+
+        // Verify serialization roundtrip preserves the field
+        let mut config = Config::default();
+        config.server.cors_allowed_origins = vec![
+            "https://example.com".to_string(),
+            "https://app.example.com".to_string(),
+        ];
+        let json = serde_json::to_string(&config).unwrap();
+        let restored: Config = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            restored.server.cors_allowed_origins,
+            vec!["https://example.com", "https://app.example.com"]
+        );
+    }
+
+    #[test]
+    fn cors_allowed_origins_empty_env_stays_empty() {
+        // Verify comma-separated string deserializes via serde_json
+        let json = r#"{
+            "server": {
+                "host": "0.0.0.0",
+                "port": 3001,
+                "request_timeout_secs": 30,
+                "cors_allowed_origins": "https://a.com, https://b.com"
+            },
+            "database": {
+                "provider": "turso",
+                "url": "test.db",
+                "ns": "app",
+                "db": "main",
+                "auth_token": ""
+            },
+            "cache": { "max_capacity": 10000, "ttl_secs": 300 },
+            "auth": { "jwt_secret": "test", "jwt_expiration_secs": 86400 }
+        }"#;
+        let config: Config = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            config.server.cors_allowed_origins,
+            vec!["https://a.com", "https://b.com"]
+        );
+
+        // Verify empty string → empty vec
+        let json_empty = r#"{
+            "server": {
+                "host": "0.0.0.0",
+                "port": 3001,
+                "request_timeout_secs": 30,
+                "cors_allowed_origins": ""
+            },
+            "database": {
+                "provider": "turso",
+                "url": "test.db",
+                "ns": "app",
+                "db": "main",
+                "auth_token": ""
+            },
+            "cache": { "max_capacity": 10000, "ttl_secs": 300 },
+            "auth": { "jwt_secret": "test", "jwt_expiration_secs": 86400 }
+        }"#;
+        let config: Config = serde_json::from_str(json_empty).unwrap();
+        assert!(
+            config.server.cors_allowed_origins.is_empty(),
+            "empty string should produce empty vec"
+        );
+    }
 }

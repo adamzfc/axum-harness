@@ -150,3 +150,138 @@ fn build_cors_layer(allowed_origins: &[String]) -> CorsLayer {
         ])
         .allow_credentials(true)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{
+        body::Body,
+        http::{Request, header},
+    };
+    use futures_util::FutureExt;
+    use tower::ServiceExt;
+
+    #[test]
+    fn build_cors_layer_empty_origins_returns_permissive() {
+        let layer = build_cors_layer(&[]);
+        let app = axum::Router::new()
+            .route("/", axum::routing::get(|| async { "ok" }))
+            .layer(layer);
+
+        let request = Request::builder()
+            .header(header::ORIGIN, "https://any-origin.com")
+            .method("GET")
+            .uri("/")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).now_or_never().unwrap().unwrap();
+        // Permissive mode sends ACAO: *
+        assert_eq!(
+            response
+                .headers()
+                .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                .unwrap(),
+            "*"
+        );
+    }
+
+    #[test]
+    fn build_cors_layer_with_origins_allows_matching_origin() {
+        let origins = vec![
+            "https://example.com".to_string(),
+            "https://app.example.com".to_string(),
+        ];
+        let layer = build_cors_layer(&origins);
+
+        let app = axum::Router::new()
+            .route("/", axum::routing::get(|| async { "ok" }))
+            .layer(layer);
+
+        let request = Request::builder()
+            .header(header::ORIGIN, "https://example.com")
+            .method("GET")
+            .uri("/")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).now_or_never().unwrap().unwrap();
+        assert_eq!(
+            response
+                .headers()
+                .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                .unwrap(),
+            "https://example.com"
+        );
+        assert_eq!(
+            response
+                .headers()
+                .get(header::ACCESS_CONTROL_ALLOW_CREDENTIALS)
+                .unwrap(),
+            "true"
+        );
+    }
+
+    #[test]
+    fn build_cors_layer_with_origins_rejects_non_matching_origin() {
+        let origins = vec!["https://example.com".to_string()];
+        let layer = build_cors_layer(&origins);
+
+        let app = axum::Router::new()
+            .route("/", axum::routing::get(|| async { "ok" }))
+            .layer(layer);
+
+        let request = Request::builder()
+            .header(header::ORIGIN, "https://evil.com")
+            .method("GET")
+            .uri("/")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).now_or_never().unwrap().unwrap();
+        // Non-matching origin should NOT have ACAO header
+        assert!(
+            response
+                .headers()
+                .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn build_cors_layer_preflight_allows_configured_methods_and_headers() {
+        let origins = vec!["https://example.com".to_string()];
+        let layer = build_cors_layer(&origins);
+
+        let app = axum::Router::new()
+            .route("/", axum::routing::get(|| async { "ok" }))
+            .layer(layer);
+
+        let request = Request::builder()
+            .header(header::ORIGIN, "https://example.com")
+            .header(header::ACCESS_CONTROL_REQUEST_METHOD, "POST")
+            .header(header::ACCESS_CONTROL_REQUEST_HEADERS, "content-type")
+            .method("OPTIONS")
+            .uri("/")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).now_or_never().unwrap().unwrap();
+        // Preflight response should include CORS headers
+        assert_eq!(
+            response
+                .headers()
+                .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                .unwrap(),
+            "https://example.com"
+        );
+        // Allow-Methods should include POST
+        let allow_methods = response
+            .headers()
+            .get(header::ACCESS_CONTROL_ALLOW_METHODS)
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert!(allow_methods.contains("POST"));
+    }
+}
