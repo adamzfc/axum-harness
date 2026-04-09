@@ -2,6 +2,7 @@
 //! All types derive TS for automatic TypeScript generation.
 
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use ts_rs::TS;
 use utoipa::ToSchema;
 use validator::Validate;
@@ -63,12 +64,24 @@ pub struct ToolCall {
 }
 
 /// Agent configuration (user-provided API key + endpoint).
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, TS)]
+#[derive(Clone, Serialize, Deserialize, ToSchema, TS)]
 #[ts(export, export_to = "api/")]
 pub struct AgentConfig {
+    /// API key — skipped during serialization to prevent accidental exposure.
+    #[serde(skip_serializing)]
     pub api_key: String,
     pub base_url: String,
     pub model: String,
+}
+
+impl fmt::Debug for AgentConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AgentConfig")
+            .field("api_key", &"[REDACTED]")
+            .field("base_url", &self.base_url)
+            .field("model", &self.model)
+            .finish()
+    }
 }
 
 /// Admin dashboard statistics.
@@ -120,5 +133,55 @@ mod tests {
     #[test]
     fn export_admin_dashboard_stats() {
         AdminDashboardStats::export().unwrap();
+    }
+
+    #[test]
+    fn agent_config_serialize_redacts_api_key() {
+        let config = AgentConfig {
+            api_key: "sk-secret-key-12345".to_string(),
+            base_url: "https://api.example.com".to_string(),
+            model: "gpt-4".to_string(),
+        };
+        let json = serde_json::to_string(&config).unwrap();
+        assert!(
+            !json.contains("sk-secret-key-12345"),
+            "api_key must not appear in serialized JSON"
+        );
+        assert!(
+            !json.contains("api_key"),
+            "api_key field must be omitted from serialized JSON"
+        );
+        assert!(json.contains("base_url"));
+        assert!(json.contains("model"));
+    }
+
+    #[test]
+    fn agent_config_deserialize_populates_api_key() {
+        let json =
+            r#"{"api_key":"sk-from-json","base_url":"https://api.example.com","model":"gpt-4"}"#;
+        let config: AgentConfig = serde_json::from_str(json).unwrap();
+        assert_eq!(config.api_key, "sk-from-json");
+        assert_eq!(config.base_url, "https://api.example.com");
+        assert_eq!(config.model, "gpt-4");
+    }
+
+    #[test]
+    fn agent_config_debug_redacts_api_key() {
+        let config = AgentConfig {
+            api_key: "sk-secret-key-12345".to_string(),
+            base_url: "https://api.example.com".to_string(),
+            model: "gpt-4".to_string(),
+        };
+        let debug_str = format!("{:?}", config);
+        assert!(
+            !debug_str.contains("sk-secret-key-12345"),
+            "api_key must not appear in Debug output"
+        );
+        assert!(
+            debug_str.contains("[REDACTED]"),
+            "Debug output must contain [REDACTED]"
+        );
+        assert!(debug_str.contains("base_url"));
+        assert!(debug_str.contains("model"));
     }
 }
