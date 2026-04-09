@@ -1,48 +1,62 @@
-# cargo-deny configuration
+# cargo-deny configuration (v0.19.0+)
 # Docs: https://embarkstudios.github.io/cargo-deny/
 
+# ══════════════════════════════════════════════════════════════
+# [graph] — 依赖图配置
+# ══════════════════════════════════════════════════════════════
 [graph]
-# Check all workspace members
 all-features = true
+targets = []
 
+# ══════════════════════════════════════════════════════════════
+# [advisories] — 安全漏洞检查
+# ══════════════════════════════════════════════════════════════
 [advisories]
-# Disable advisory check for now (can enable later)
 version = 2
+unmaintained = "workspace"
+yanked = "warn"
 
+# ══════════════════════════════════════════════════════════════
+# [licenses] — 许可证合规检查
+# ══════════════════════════════════════════════════════════════
 [licenses]
-# Disable license check for now (can enable later)
-unlicensed = "deny"
+unused-allowed-license = "warn"
+confidence-threshold = 0.8
 
+# 允许的开源许可证
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+    "0BSD",
+    "CC0-1.0",
+    "Unlicense",
+    # Tauri 生态依赖
+    "MPL-2.0",
+    # SurrealDB 许可证
+    "BUSL-1.1",
+    # 数据许可证
+    "CDLA-Permissive-2.0",
+]
+
+# 私有 workspace crates 不检查许可证
+private = { ignore = true }
+
+# ══════════════════════════════════════════════════════════════
+# [bans] — 依赖禁止规则
+# ══════════════════════════════════════════════════════════════
+# 注意：架构边界检查通过 scripts/boundary-check.ts 实现
+# 这里只配置重复依赖的警告级别
 [bans]
-# Deny specific dependency directions to enforce hexagonal architecture
-# These rules prevent core crates from depending on host/adapter crates
+multiple-versions = "warn"
+wildcards = "warn"
 
-# Rule: domain must not depend on adapters, hosts, contracts, or servers
-[[bans.deny]]
-name = "storage_surrealdb"
-wrappers = ["domain", "usecases"]
-
-[[bans.deny]]
-name = "storage_libsql"
-wrappers = ["domain", "usecases"]
-
-[[bans.deny]]
-name = "runtime_tauri"
-wrappers = ["domain", "usecases", "contracts_api"]
-
-[[bans.deny]]
-name = "contracts_api"
-wrappers = ["domain", "usecases"]
-
-[[bans.deny]]
-name = "runtime_server"
-wrappers = ["domain", "usecases", "contracts_api", "storage_surrealdb", "storage_libsql", "runtime_tauri"]
-
-# Rule: contracts must not depend on domain, usecases, adapters, or hosts
-[[bans.deny]]
-name = "domain"
-wrappers = ["contracts_api", "contracts_auth", "contracts_events"]
-
-[[bans.deny]]
-name = "usecases"
-wrappers = ["contracts_api", "contracts_auth", "contracts_events"]
+# 允许 workspace 依赖重复（hakari 会处理）
+[bans.workspace-dependencies]
+duplicates = "allow"
+unused = "warn"

@@ -52,6 +52,7 @@ libc = { version = "0.2" }
 lock_api = { version = "0.4", features = ["arc_lock"] }
 log = { version = "0.4", default-features = false, features = ["kv_unstable", "std"] }
 memchr = { version = "2" }
+num-bigint = { version = "0.4" }
 num-complex = { version = "0.4", default-features = false, features = ["std"] }
 num-integer = { version = "0.1", features = ["i128"] }
 num-traits = { version = "0.2", features = ["i128", "libm"] }
