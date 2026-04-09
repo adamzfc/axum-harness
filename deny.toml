@@ -16,17 +16,6 @@ version = 2
 unmaintained = "workspace"
 yanked = "warn"
 
-# 临时忽略的安全漏洞（等待上游依赖修复）
-ignore = [
-    # rsa 0.9.10 - Marvin Attack 时间侧信道漏洞
-    # 原因: jsonwebtoken 10.3.0 依赖 rsa 0.9.10
-    # 影响: 可能通过时间侧信道泄露 RSA 私钥信息
-    # 风险评估: 零风险 - 项目仅使用 HS256（HMAC-SHA256）算法，不使用 RSA
-    # 证据: servers/api/src/middleware/tenant.rs 仅使用 Algorithm::HS256
-    # 解决方案: 等待 jsonwebtoken 发布不依赖 rsa 的版本，或项目迁移到其他 JWT 库
-    "RUSTSEC-2023-0071",
-]
-
 # ══════════════════════════════════════════════════════════════
 # [licenses] — 许可证合规检查
 # ══════════════════════════════════════════════════════════════
