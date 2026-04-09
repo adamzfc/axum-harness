@@ -1,73 +1,73 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { listen } from '@tauri-apps/api/event';
-	import { invoke } from '@tauri-apps/api/core';
-	import '../app.css';
-	import { setSession, initAuthListeners, auth } from '$lib/stores/auth.svelte';
-	import { handleOAuthCallback } from '$lib/ipc/auth';
-	import Toast from '$lib/components/ui/Toast.svelte';
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
+import { onMount } from 'svelte';
+import '../app.css';
+import Toast from '$lib/components/ui/Toast.svelte';
+import { handleOAuthCallback } from '$lib/ipc/auth';
+import { auth, initAuthListeners, setSession } from '$lib/stores/auth.svelte';
 
-	const { children } = $props();
+const { children } = $props();
 
-	// Error toast state
-	let errorMessage = $state('');
-	let toastTimeout: ReturnType<typeof setTimeout> | undefined;
+// Error toast state
+let errorMessage = $state('');
+let toastTimeout: ReturnType<typeof setTimeout> | undefined;
 
-	function showError(msg: string) {
-		clearTimeout(toastTimeout);
-		errorMessage = msg;
-		toastTimeout = setTimeout(() => {
-			errorMessage = '';
-		}, 5000);
-	}
+function showError(msg: string) {
+  clearTimeout(toastTimeout);
+  errorMessage = msg;
+  toastTimeout = setTimeout(() => {
+    errorMessage = '';
+  }, 5000);
+}
 
-	function dismissError() {
-		clearTimeout(toastTimeout);
-		errorMessage = '';
-	}
+function dismissError() {
+  clearTimeout(toastTimeout);
+  errorMessage = '';
+}
 
-	onMount(() => {
-		// Listen for auth:expired events from refresh timer
-		const cleanupAuth = initAuthListeners();
+onMount(() => {
+  // Listen for auth:expired events from refresh timer
+  const cleanupAuth = initAuthListeners();
 
-		// Listen for OAuth callback from Rust TCP listener (custom event name to avoid deep-link plugin conflicts)
-		const unlistenOAuth = listen<string>('oauth-callback', async (event) => {
-			console.log('[auth] Received oauth-callback event:', event.payload);
-			const url = event.payload;
-			if (url.includes('oauth/callback')) {
-				try {
-					const session = await handleOAuthCallback(url);
-					console.log('[auth] OAuth callback succeeded:', session.user.email);
-					setSession(session);
-				} catch (e) {
-					console.error('[auth] OAuth callback failed:', e);
-					auth.authLoading = false;
-					auth.authError = String(e);
-				}
-			}
-		});
+  // Listen for OAuth callback from Rust TCP listener (custom event name to avoid deep-link plugin conflicts)
+  const unlistenOAuth = listen<string>('oauth-callback', async (event) => {
+    console.log('[auth] Received oauth-callback event:', event.payload);
+    const url = event.payload;
+    if (url.includes('oauth/callback')) {
+      try {
+        const session = await handleOAuthCallback(url);
+        console.log('[auth] OAuth callback succeeded:', session.user.email);
+        setSession(session);
+      } catch (e) {
+        console.error('[auth] OAuth callback failed:', e);
+        auth.authLoading = false;
+        auth.authError = String(e);
+      }
+    }
+  });
 
-		// Listen for Rust panic events
-		const unlistenPanic = listen<string>('app:panic', (event) => {
-			showError(event.payload);
-		});
+  // Listen for Rust panic events
+  const unlistenPanic = listen<string>('app:panic', (event) => {
+    showError(event.payload);
+  });
 
-		// Ctrl+Q → quit
-		const handleKeydown = (e: KeyboardEvent) => {
-			if ((e.ctrlKey || e.metaKey) && e.key === 'q') {
-				e.preventDefault();
-				invoke('quit_app');
-			}
-		};
-		window.addEventListener('keydown', handleKeydown);
+  // Ctrl+Q → quit
+  const handleKeydown = (e: KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'q') {
+      e.preventDefault();
+      invoke('quit_app');
+    }
+  };
+  window.addEventListener('keydown', handleKeydown);
 
-		return () => {
-			cleanupAuth?.();
-			unlistenOAuth.then((fn) => fn());
-			unlistenPanic.then((fn) => fn());
-			window.removeEventListener('keydown', handleKeydown);
-		};
-	});
+  return () => {
+    cleanupAuth?.();
+    unlistenOAuth.then((fn) => fn());
+    unlistenPanic.then((fn) => fn());
+    window.removeEventListener('keydown', handleKeydown);
+  };
+});
 </script>
 
 {@render children()}

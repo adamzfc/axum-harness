@@ -3,4 +3,4 @@
 /**
  * OAuth callback payload from provider.
  */
-export type OAuthCallback = { code: string, state: string, };
+export type OAuthCallback = { code: string; state: string };

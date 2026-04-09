@@ -3,4 +3,4 @@
 /**
  * Agent configuration (user-provided API key + endpoint).
  */
-export type AgentConfig = { api_key: string, base_url: string, model: string, };
+export type AgentConfig = { api_key: string; base_url: string; model: string };

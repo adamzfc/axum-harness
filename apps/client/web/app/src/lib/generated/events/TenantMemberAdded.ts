@@ -3,4 +3,4 @@
 /**
  * Tenant member added event.
  */
-export type TenantMemberAdded = { tenant_id: string, user_sub: string, role: string, };
+export type TenantMemberAdded = { tenant_id: string; user_sub: string; role: string };

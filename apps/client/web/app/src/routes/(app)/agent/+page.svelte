@@ -1,188 +1,189 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { Button, Card, Input } from '$lib/components';
-	import { Plus, Send } from '@jis3r/icons';
-	import type { ChatMessage } from '$lib/generated/api/ChatMessage';
-	import type { AgentConfig } from '$lib/generated/api/AgentConfig';
-	import {
-		agentChatStream,
-		createConversation as createConversationRecord,
-		getConversationMessages,
-		listConversations,
-		type Conversation
-	} from '$lib/ipc/agent';
+import { Button, Card, Input } from '$lib/components';
+import type { AgentConfig } from '$lib/generated/api/AgentConfig';
+import type { ChatMessage } from '$lib/generated/api/ChatMessage';
+import {
+  type Conversation,
+  agentChatStream,
+  createConversation as createConversationRecord,
+  getConversationMessages,
+  listConversations,
+} from '$lib/ipc/agent';
+import { Plus, Send } from '@jis3r/icons';
+import { onMount } from 'svelte';
 
-	let conversations = $state<Conversation[]>([]);
-	let activeConversation = $state<string | null>(null);
-	let messages = $state<ChatMessage[]>([]);
-	let inputText = $state('');
-	let streaming = $state(false);
-	let loadError = $state<string | null>(null);
-	const settingsReadGuidance =
-		'Could not read settings.json. Open Settings and re-save API key, Base URL, and Model.';
+let conversations = $state<Conversation[]>([]);
+let activeConversation = $state<string | null>(null);
+let messages = $state<ChatMessage[]>([]);
+let inputText = $state('');
+let streaming = $state(false);
+let loadError = $state<string | null>(null);
+const settingsReadGuidance =
+  'Could not read settings.json. Open Settings and re-save API key, Base URL, and Model.';
 
-	async function loadSettings(): Promise<AgentConfig> {
-		const defaults: AgentConfig = {
-			api_key: '',
-			base_url: 'https://api.openai.com/v1',
-			model: 'gpt-4o-mini'
-		};
+async function loadSettings(): Promise<AgentConfig> {
+  const defaults: AgentConfig = {
+    api_key: '',
+    base_url: 'https://api.openai.com/v1',
+    model: 'gpt-4o-mini',
+  };
 
-		try {
-			if (typeof window !== 'undefined' && (window as { __TAURI__?: unknown }).__TAURI__) {
-				const { Store } = await import('@tauri-apps/plugin-store');
-				const store = await Store.load('settings.json');
-				const apiKey = (await store.get('api_key')) as string | null;
-				const baseUrl = (await store.get('base_url')) as string | null;
-				const model = (await store.get('model')) as string | null;
+  try {
+    if (typeof window !== 'undefined' && (window as { __TAURI__?: unknown }).__TAURI__) {
+      const { Store } = await import('@tauri-apps/plugin-store');
+      const store = await Store.load('settings.json');
+      const apiKey = (await store.get('api_key')) as string | null;
+      const baseUrl = (await store.get('base_url')) as string | null;
+      const model = (await store.get('model')) as string | null;
 
-				return {
-					api_key: apiKey ?? defaults.api_key,
-					base_url: baseUrl ?? defaults.base_url,
-					model: model ?? defaults.model
-				};
-			}
-		} catch {
-			loadError = settingsReadGuidance;
-		}
+      return {
+        api_key: apiKey ?? defaults.api_key,
+        base_url: baseUrl ?? defaults.base_url,
+        model: model ?? defaults.model,
+      };
+    }
+  } catch {
+    loadError = settingsReadGuidance;
+  }
 
-		return defaults;
-	}
+  return defaults;
+}
 
-	async function loadConversations() {
-		const previousError = loadError;
-		const shouldKeepSettingsGuidance = previousError === settingsReadGuidance;
+async function loadConversations() {
+  const previousError = loadError;
+  const shouldKeepSettingsGuidance = previousError === settingsReadGuidance;
 
-		try {
-			conversations = await listConversations();
-			loadError = shouldKeepSettingsGuidance ? previousError : null;
-		} catch (error) {
-			loadError = error instanceof Error ? error.message : String(error);
-			conversations = [];
-			return;
-		}
+  try {
+    conversations = await listConversations();
+    loadError = shouldKeepSettingsGuidance ? previousError : null;
+  } catch (error) {
+    loadError = error instanceof Error ? error.message : String(error);
+    conversations = [];
+    return;
+  }
 
-		if (!activeConversation && conversations.length > 0) {
-			await selectConversation(conversations[0].id);
-		}
-	}
+  if (!activeConversation && conversations.length > 0) {
+    await selectConversation(conversations[0].id);
+  }
+}
 
-	async function createConversation() {
-		try {
-			const conv = await createConversationRecord(`Chat ${conversations.length + 1}`);
-			if (!conv?.id) return;
+async function createConversation() {
+  try {
+    const conv = await createConversationRecord(`Chat ${conversations.length + 1}`);
+    if (!conv?.id) return;
 
-			loadError = null;
-			activeConversation = conv.id;
-			messages = [];
-			inputText = '';
-			await loadConversations();
-		} catch (error) {
-			loadError = error instanceof Error ? error.message : String(error);
-		}
-	}
+    loadError = null;
+    activeConversation = conv.id;
+    messages = [];
+    inputText = '';
+    await loadConversations();
+  } catch (error) {
+    loadError = error instanceof Error ? error.message : String(error);
+  }
+}
 
-	async function selectConversation(id: string) {
-		activeConversation = id;
+async function selectConversation(id: string) {
+  activeConversation = id;
 
-		try {
-			messages = await getConversationMessages(id);
-			loadError = null;
-		} catch (error) {
-			loadError = error instanceof Error ? error.message : String(error);
-			messages = [];
-		}
-	}
+  try {
+    messages = await getConversationMessages(id);
+    loadError = null;
+  } catch (error) {
+    loadError = error instanceof Error ? error.message : String(error);
+    messages = [];
+  }
+}
 
-	function appendAssistantChunk(chunk: string) {
-		const assistantIndex = messages.findIndex((m) => m.id === 'temp-assistant');
-		if (assistantIndex === -1) return;
+function appendAssistantChunk(chunk: string) {
+  const assistantIndex = messages.findIndex((m) => m.id === 'temp-assistant');
+  if (assistantIndex === -1) return;
 
-		const existing = messages[assistantIndex];
-		const next = {
-			...existing,
-			content: `${existing.content}${chunk}`
-		};
+  const existing = messages[assistantIndex];
+  const next = {
+    ...existing,
+    content: `${existing.content}${chunk}`,
+  };
 
-		messages = messages.map((m, i) => (i === assistantIndex ? next : m));
-	}
+  messages = messages.map((m, i) => (i === assistantIndex ? next : m));
+}
 
-	function isToolChunk(content: string) {
-		return content.includes('[tool:');
-	}
+function isToolChunk(content: string) {
+  return content.includes('[tool:');
+}
 
-	async function sendMessage() {
-		if (!inputText.trim() || !activeConversation || streaming) return;
+async function sendMessage() {
+  if (!inputText.trim() || !activeConversation || streaming) return;
 
-		const content = inputText.trim();
-		inputText = '';
-		streaming = true;
+  const content = inputText.trim();
+  inputText = '';
+  streaming = true;
 
-		const tempUser: ChatMessage = {
-			id: 'temp-user',
-			conversation_id: activeConversation,
-			role: 'user',
-			content,
-			tool_calls: null,
-			created_at: new Date().toISOString()
-		};
-		const tempAssistant: ChatMessage = {
-			id: 'temp-assistant',
-			conversation_id: activeConversation,
-			role: 'assistant',
-			content: '',
-			tool_calls: null,
-			created_at: new Date().toISOString()
-		};
-		messages = [...messages, tempUser, tempAssistant];
+  const tempUser: ChatMessage = {
+    id: 'temp-user',
+    conversation_id: activeConversation,
+    role: 'user',
+    content,
+    tool_calls: null,
+    created_at: new Date().toISOString(),
+  };
+  const tempAssistant: ChatMessage = {
+    id: 'temp-assistant',
+    conversation_id: activeConversation,
+    role: 'assistant',
+    content: '',
+    tool_calls: null,
+    created_at: new Date().toISOString(),
+  };
+  messages = [...messages, tempUser, tempAssistant];
 
-		try {
-			const { api_key, base_url, model } = await loadSettings();
+  try {
+    const { api_key, base_url, model } = await loadSettings();
 
-			// Runtime environment detection for dual-path routing
-			const isTauri = typeof window !== 'undefined' && !!(window as { __TAURI__?: unknown }).__TAURI__;
+    // Runtime environment detection for dual-path routing
+    const isTauri =
+      typeof window !== 'undefined' && !!(window as { __TAURI__?: unknown }).__TAURI__;
 
-			if (isTauri) {
-				// Tauri path: use agentChatStream (IPC invoke + Channel streaming)
-				for await (const chunk of agentChatStream({
-					conversationId: activeConversation,
-					content,
-					apiKey: api_key,
-					baseUrl: base_url,
-					model
-				})) {
-					appendAssistantChunk(chunk);
-				}
-			} else {
-				// Browser path: use agentChatStream (HTTP SSE fallback)
-				for await (const chunk of agentChatStream({
-					conversationId: activeConversation,
-					content,
-					apiKey: api_key,
-					baseUrl: base_url,
-					model
-				})) {
-					appendAssistantChunk(chunk);
-				}
-			}
-		} catch (error) {
-			messages = messages.map((msg) =>
-				msg.id === 'temp-assistant'
-					? { ...msg, content: `Error: ${error instanceof Error ? error.message : String(error)}` }
-					: msg
-			);
-		} finally {
-			streaming = false;
-			await loadConversations();
-			if (activeConversation) {
-				await selectConversation(activeConversation);
-			}
-		}
-	}
+    if (isTauri) {
+      // Tauri path: use agentChatStream (IPC invoke + Channel streaming)
+      for await (const chunk of agentChatStream({
+        conversationId: activeConversation,
+        content,
+        apiKey: api_key,
+        baseUrl: base_url,
+        model,
+      })) {
+        appendAssistantChunk(chunk);
+      }
+    } else {
+      // Browser path: use agentChatStream (HTTP SSE fallback)
+      for await (const chunk of agentChatStream({
+        conversationId: activeConversation,
+        content,
+        apiKey: api_key,
+        baseUrl: base_url,
+        model,
+      })) {
+        appendAssistantChunk(chunk);
+      }
+    }
+  } catch (error) {
+    messages = messages.map((msg) =>
+      msg.id === 'temp-assistant'
+        ? { ...msg, content: `Error: ${error instanceof Error ? error.message : String(error)}` }
+        : msg,
+    );
+  } finally {
+    streaming = false;
+    await loadConversations();
+    if (activeConversation) {
+      await selectConversation(activeConversation);
+    }
+  }
+}
 
-	onMount(() => {
-		loadConversations();
-	});
+onMount(() => {
+  loadConversations();
+});
 </script>
 
 <div class="flex h-screen">

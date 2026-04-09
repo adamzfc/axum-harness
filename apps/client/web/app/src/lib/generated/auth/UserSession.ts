@@ -3,4 +3,4 @@
 /**
  * Authenticated user session info.
  */
-export type UserSession = { user_sub: string, tenant_id: string, role: string, };
+export type UserSession = { user_sub: string; tenant_id: string; role: string };

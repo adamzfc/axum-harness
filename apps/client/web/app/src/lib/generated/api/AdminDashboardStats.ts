@@ -3,4 +3,9 @@
 /**
  * Admin dashboard statistics.
  */
-export type AdminDashboardStats = { tenant_count: number, counter_value: number, last_login: string | null, app_version: string, };
+export type AdminDashboardStats = {
+  tenant_count: number;
+  counter_value: number;
+  last_login: string | null;
+  app_version: string;
+};

@@ -3,16 +3,17 @@
 /**
  * Response from tenant initialization.
  */
-export type InitTenantResponse = { 
-/**
- * The tenant ID in "table:key" format.
- */
-tenant_id: string, 
-/**
- * User's role within the tenant.
- */
-role: string, 
-/**
- * Whether a new tenant was created.
- */
-created: boolean, };
+export type InitTenantResponse = {
+  /**
+   * The tenant ID in "table:key" format.
+   */
+  tenant_id: string;
+  /**
+   * User's role within the tenant.
+   */
+  role: string;
+  /**
+   * Whether a new tenant was created.
+   */
+  created: boolean;
+};

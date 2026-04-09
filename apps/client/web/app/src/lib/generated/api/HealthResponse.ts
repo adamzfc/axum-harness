@@ -3,8 +3,9 @@
 /**
  * Health check response.
  */
-export type HealthResponse = { 
-/**
- * Server status: "ok" or "degraded"
- */
-status: string, };
+export type HealthResponse = {
+  /**
+   * Server status: "ok" or "degraded"
+   */
+  status: string;
+};

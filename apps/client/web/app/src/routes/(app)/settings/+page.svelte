@@ -1,167 +1,167 @@
 <script lang="ts">
-	import { Button, Card, Input } from '$lib/components';
-	import { signOut } from '$lib/stores/auth.svelte';
+import { Button, Card, Input } from '$lib/components';
+import { signOut } from '$lib/stores/auth.svelte';
 
-	let apiKey = $state('');
-	let baseUrl = $state('https://api.openai.com/v1');
-	let model = $state('gpt-4o-mini');
-	let saving = $state(false);
-	let saved = $state(false);
-	let testingConnection = $state(false);
+let apiKey = $state('');
+let baseUrl = $state('https://api.openai.com/v1');
+let model = $state('gpt-4o-mini');
+let saving = $state(false);
+let saved = $state(false);
+let testingConnection = $state(false);
 
-	type CheckStatus = 'pass' | 'fail';
-	type ConnectionResult = {
-		label: 'API key' | 'Base URL' | 'Model';
-		status: CheckStatus;
-		nextStep: string;
-	};
+type CheckStatus = 'pass' | 'fail';
+type ConnectionResult = {
+  label: 'API key' | 'Base URL' | 'Model';
+  status: CheckStatus;
+  nextStep: string;
+};
 
-	let connectionResults = $state<ConnectionResult[] | null>(null);
+let connectionResults = $state<ConnectionResult[] | null>(null);
 
-	function pass(label: ConnectionResult['label'], nextStep: string): ConnectionResult {
-		return { label, status: 'pass', nextStep };
-	}
+function pass(label: ConnectionResult['label'], nextStep: string): ConnectionResult {
+  return { label, status: 'pass', nextStep };
+}
 
-	function fail(label: ConnectionResult['label'], nextStep: string): ConnectionResult {
-		return { label, status: 'fail', nextStep };
-	}
+function fail(label: ConnectionResult['label'], nextStep: string): ConnectionResult {
+  return { label, status: 'fail', nextStep };
+}
 
-	function formatBaseUrlModelsEndpoint(url: string): string {
-		return `${url.replace(/\/$/, '')}/models`;
-	}
+function formatBaseUrlModelsEndpoint(url: string): string {
+  return `${url.replace(/\/$/, '')}/models`;
+}
 
-	function sanitizeError(error: unknown, currentApiKey: string): string {
-		const raw = error instanceof Error ? error.message : String(error);
-		if (!currentApiKey.trim()) return raw;
-		return raw.split(currentApiKey.trim()).join('[redacted-api-key]');
-	}
+function sanitizeError(error: unknown, currentApiKey: string): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  if (!currentApiKey.trim()) return raw;
+  return raw.split(currentApiKey.trim()).join('[redacted-api-key]');
+}
 
-	async function loadSettings() {
-		try {
-			if (typeof window !== 'undefined' && (window as { __TAURI__?: unknown }).__TAURI__) {
-				const { Store } = await import('@tauri-apps/plugin-store');
-				const store = await Store.load('settings.json');
+async function loadSettings() {
+  try {
+    if (typeof window !== 'undefined' && (window as { __TAURI__?: unknown }).__TAURI__) {
+      const { Store } = await import('@tauri-apps/plugin-store');
+      const store = await Store.load('settings.json');
 
-				apiKey = ((await store.get('api_key')) as string | null) ?? '';
-				baseUrl = ((await store.get('base_url')) as string | null) ?? 'https://api.openai.com/v1';
-				model = ((await store.get('model')) as string | null) ?? 'gpt-4o-mini';
-			}
-		} catch {
-			// ignore load failures
-		}
-	}
+      apiKey = ((await store.get('api_key')) as string | null) ?? '';
+      baseUrl = ((await store.get('base_url')) as string | null) ?? 'https://api.openai.com/v1';
+      model = ((await store.get('model')) as string | null) ?? 'gpt-4o-mini';
+    }
+  } catch {
+    // ignore load failures
+  }
+}
 
-	async function saveSettings() {
-		saving = true;
-		saved = false;
+async function saveSettings() {
+  saving = true;
+  saved = false;
 
-		try {
-			if (typeof window !== 'undefined' && (window as { __TAURI__?: unknown }).__TAURI__) {
-				const { Store } = await import('@tauri-apps/plugin-store');
-				const store = await Store.load('settings.json');
+  try {
+    if (typeof window !== 'undefined' && (window as { __TAURI__?: unknown }).__TAURI__) {
+      const { Store } = await import('@tauri-apps/plugin-store');
+      const store = await Store.load('settings.json');
 
-				await store.set('api_key', apiKey);
-				await store.set('base_url', baseUrl);
-				await store.set('model', model);
-				await store.save();
-			}
+      await store.set('api_key', apiKey);
+      await store.set('base_url', baseUrl);
+      await store.set('model', model);
+      await store.save();
+    }
 
-			saved = true;
-			setTimeout(() => {
-				saved = false;
-			}, 2000);
-		} catch {
-			// ignore save failures
-		} finally {
-			saving = false;
-		}
-	}
+    saved = true;
+    setTimeout(() => {
+      saved = false;
+    }, 2000);
+  } catch {
+    // ignore save failures
+  } finally {
+    saving = false;
+  }
+}
 
-	async function testConnection() {
-		testingConnection = true;
-		connectionResults = null;
+async function testConnection() {
+  testingConnection = true;
+  connectionResults = null;
 
-		const results: ConnectionResult[] = [];
-		const trimmedApiKey = apiKey.trim();
-		const trimmedBaseUrl = baseUrl.trim();
-		const trimmedModel = model.trim();
+  const results: ConnectionResult[] = [];
+  const trimmedApiKey = apiKey.trim();
+  const trimmedBaseUrl = baseUrl.trim();
+  const trimmedModel = model.trim();
 
-		if (!trimmedApiKey) {
-			results.push(fail('API key', 'Enter your API key before retrying.'));
-		} else if (!trimmedApiKey.startsWith('sk-')) {
-			results.push(fail('API key', 'API key usually starts with "sk-". Confirm provider format.'));
-		} else {
-			results.push(pass('API key', 'API key format looks valid.'));
-		}
+  if (!trimmedApiKey) {
+    results.push(fail('API key', 'Enter your API key before retrying.'));
+  } else if (!trimmedApiKey.startsWith('sk-')) {
+    results.push(fail('API key', 'API key usually starts with "sk-". Confirm provider format.'));
+  } else {
+    results.push(pass('API key', 'API key format looks valid.'));
+  }
 
-		let modelsPayload: unknown = null;
-		let baseUrlIsReachable = false;
+  let modelsPayload: unknown = null;
+  let baseUrlIsReachable = false;
 
-		try {
-			new URL(trimmedBaseUrl);
+  try {
+    new URL(trimmedBaseUrl);
 
-			const controller = new AbortController();
-			const timeout = setTimeout(() => controller.abort(), 5000);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
 
-			try {
-				const response = await fetch(formatBaseUrlModelsEndpoint(trimmedBaseUrl), {
-					method: 'GET',
-					headers: {
-						Authorization: `Bearer ${trimmedApiKey}`,
-						'Content-Type': 'application/json'
-					},
-					signal: controller.signal
-				});
+    try {
+      const response = await fetch(formatBaseUrlModelsEndpoint(trimmedBaseUrl), {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${trimmedApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      });
 
-				if (!response.ok) {
-					results.push(
-						fail('Base URL', `Request failed with status ${response.status}. Verify Base URL and API key.`)
-					);
-				} else {
-					baseUrlIsReachable = true;
-					modelsPayload = await response.json();
-					results.push(pass('Base URL', 'Base URL is reachable and responded successfully.'));
-				}
-			} finally {
-				clearTimeout(timeout);
-			}
-		} catch (error) {
-			results.push(
-				fail(
-					'Base URL',
-					`Cannot reach Base URL. ${sanitizeError(error, trimmedApiKey)}. Check URL format and network.`
-				)
-			);
-		}
+      if (!response.ok) {
+        results.push(
+          fail(
+            'Base URL',
+            `Request failed with status ${response.status}. Verify Base URL and API key.`,
+          ),
+        );
+      } else {
+        baseUrlIsReachable = true;
+        modelsPayload = await response.json();
+        results.push(pass('Base URL', 'Base URL is reachable and responded successfully.'));
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+  } catch (error) {
+    results.push(
+      fail(
+        'Base URL',
+        `Cannot reach Base URL. ${sanitizeError(error, trimmedApiKey)}. Check URL format and network.`,
+      ),
+    );
+  }
 
-		if (!trimmedModel) {
-			results.push(fail('Model', 'Enter a model name before retrying.'));
-		} else if (!baseUrlIsReachable) {
-			results.push(fail('Model', 'Fix API key/Base URL first, then retry model check.'));
-		} else {
-			const modelIds = Array.isArray((modelsPayload as { data?: unknown[] } | null)?.data)
-				? (((modelsPayload as { data: Array<{ id?: string }> }).data ?? [])
-					.map((item) => item?.id)
-					.filter((id): id is string => typeof id === 'string'))
-				: [];
+  if (!trimmedModel) {
+    results.push(fail('Model', 'Enter a model name before retrying.'));
+  } else if (!baseUrlIsReachable) {
+    results.push(fail('Model', 'Fix API key/Base URL first, then retry model check.'));
+  } else {
+    const modelIds = Array.isArray((modelsPayload as { data?: unknown[] } | null)?.data)
+      ? ((modelsPayload as { data: Array<{ id?: string }> }).data ?? [])
+          .map((item) => item?.id)
+          .filter((id): id is string => typeof id === 'string')
+      : [];
 
-			if (modelIds.includes(trimmedModel)) {
-				results.push(pass('Model', 'Model is available on the target endpoint.'));
-			} else {
-				results.push(
-					fail(
-						'Model',
-						`Model "${trimmedModel}" was not found. Pick one from /models and retry.`
-					)
-				);
-			}
-		}
+    if (modelIds.includes(trimmedModel)) {
+      results.push(pass('Model', 'Model is available on the target endpoint.'));
+    } else {
+      results.push(
+        fail('Model', `Model "${trimmedModel}" was not found. Pick one from /models and retry.`),
+      );
+    }
+  }
 
-		connectionResults = results;
-		testingConnection = false;
-	}
+  connectionResults = results;
+  testingConnection = false;
+}
 
-	void loadSettings();
+void loadSettings();
 </script>
 
 <div class="p-4 md:p-6 max-w-lg mx-auto space-y-6">

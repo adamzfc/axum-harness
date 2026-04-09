@@ -3,4 +3,4 @@
 /**
  * User profile information from OAuth provider.
  */
-export type UserProfile = { email: string, name: string, picture: string, sub: string, };
+export type UserProfile = { email: string; name: string; picture: string; sub: string };

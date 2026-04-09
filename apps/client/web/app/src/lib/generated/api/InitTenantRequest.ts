@@ -3,12 +3,13 @@
 /**
  * Request body for tenant initialization.
  */
-export type InitTenantRequest = { 
-/**
- * OAuth provider's subject identifier.
- */
-user_sub: string, 
-/**
- * Display name for the user.
- */
-user_name: string, };
+export type InitTenantRequest = {
+  /**
+   * OAuth provider's subject identifier.
+   */
+  user_sub: string;
+  /**
+   * Display name for the user.
+   */
+  user_name: string;
+};

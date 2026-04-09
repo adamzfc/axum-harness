@@ -82,6 +82,7 @@ utoipa-swagger-ui = { version = "9", features = ["axum"] }
 workspace-hack = { version = "0.1", path = "../../packages/core/workspace-hack" }
 
 [dev-dependencies]
+storage_surrealdb = { workspace = true }
 http-body-util = "0.1"
 tower = { workspace = true, features = ["util"] }
 proptest = { workspace = true }

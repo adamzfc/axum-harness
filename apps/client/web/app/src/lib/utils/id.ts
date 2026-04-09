@@ -9,5 +9,5 @@ import { v7 as uuidv7 } from 'uuid';
  * - RFC 9562 compliant
  */
 export function newId(): string {
-	return uuidv7();
+  return uuidv7();
 }

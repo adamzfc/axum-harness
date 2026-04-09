@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { page } from '$app/state';
-	import { Button } from '$lib/components';
+import { page } from '$app/state';
+import { Button } from '$lib/components';
 
-	// SvelteKit passes handleError return value as page.error
-	// Our handleError returns { message: string, errorId: string }
-	const error = $derived(page.error as { message?: string; errorId?: string } | null);
-	const status = $derived(page.status);
+// SvelteKit passes handleError return value as page.error
+// Our handleError returns { message: string, errorId: string }
+const error = $derived(page.error as { message?: string; errorId?: string } | null);
+const status = $derived(page.status);
 </script>
 
 <svelte:head>

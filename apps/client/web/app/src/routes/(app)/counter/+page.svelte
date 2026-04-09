@@ -1,72 +1,75 @@
 <script lang="ts">
 import { Button } from '$lib/components';
-import { Plus, Minus, RotateCcw } from '@jis3r/icons';
+import { Minus, Plus, RotateCcw } from '@jis3r/icons';
 import { onMount } from 'svelte';
 
 let count = $state(0);
 let loading = $state(false);
 let errorMessage = $state('');
 
-const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__;
+interface TauriWindow {
+  __TAURI__?: { core: { invoke(cmd: string): Promise<unknown> } };
+}
+const tauriApi = typeof window !== 'undefined' ? (window as TauriWindow).__TAURI__ : undefined;
+const isTauri = !!tauriApi;
 
 async function invokeCommand(cmd: string) {
-	if (isTauri) {
-		return (window as any).__TAURI__.core.invoke(cmd);
-	} else {
-		const method = cmd.startsWith('counter_get') ? 'GET' : 'POST';
-		const endpoint = cmd.replace('counter_', '').replace('get_value', 'value');
-		const url = `http://localhost:3001/api/counter/${endpoint}`;
-		const resp = await fetch(url, { method });
-		const data = await resp.json();
-		return data.value;
-	}
+  if (tauriApi) {
+    return tauriApi.core.invoke(cmd);
+  }
+  const method = cmd.startsWith('counter_get') ? 'GET' : 'POST';
+  const endpoint = cmd.replace('counter_', '').replace('get_value', 'value');
+  const url = `http://localhost:3001/api/counter/${endpoint}`;
+  const resp = await fetch(url, { method });
+  const data = await resp.json();
+  return data.value;
 }
 
 async function loadValue() {
-	loading = true;
-	errorMessage = '';
-	try {
-		count = await invokeCommand('counter_get_value');
-	} catch (error) {
-		console.error('Failed to load persisted counter value', error);
-		count = 0;
-		errorMessage = 'Failed to load persisted counter value';
-	}
-	loading = false;
+  loading = true;
+  errorMessage = '';
+  try {
+    count = await invokeCommand('counter_get_value');
+  } catch (error) {
+    console.error('Failed to load persisted counter value', error);
+    count = 0;
+    errorMessage = 'Failed to load persisted counter value';
+  }
+  loading = false;
 }
 
 async function increment() {
-	try {
-		count = await invokeCommand('counter_increment');
-		errorMessage = '';
-	} catch (error) {
-		console.error('Failed to increment counter', error);
-		errorMessage = 'Failed to increment counter';
-	}
+  try {
+    count = await invokeCommand('counter_increment');
+    errorMessage = '';
+  } catch (error) {
+    console.error('Failed to increment counter', error);
+    errorMessage = 'Failed to increment counter';
+  }
 }
 
 async function decrement() {
-	try {
-		count = await invokeCommand('counter_decrement');
-		errorMessage = '';
-	} catch (error) {
-		console.error('Failed to decrement counter', error);
-		errorMessage = 'Failed to decrement counter';
-	}
+  try {
+    count = await invokeCommand('counter_decrement');
+    errorMessage = '';
+  } catch (error) {
+    console.error('Failed to decrement counter', error);
+    errorMessage = 'Failed to decrement counter';
+  }
 }
 
 async function reset() {
-	try {
-		count = await invokeCommand('counter_reset');
-		errorMessage = '';
-	} catch (error) {
-		console.error('Failed to reset counter', error);
-		errorMessage = 'Failed to reset counter';
-	}
+  try {
+    count = await invokeCommand('counter_reset');
+    errorMessage = '';
+  } catch (error) {
+    console.error('Failed to reset counter', error);
+    errorMessage = 'Failed to reset counter';
+  }
 }
 
 onMount(() => {
-	loadValue();
+  loadValue();
 });
 </script>
 

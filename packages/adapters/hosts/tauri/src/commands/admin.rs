@@ -5,7 +5,9 @@ use storage_turso::EmbeddedTurso;
 use tauri::Manager;
 
 #[tauri::command]
-pub async fn admin_get_dashboard_stats(app: tauri::AppHandle) -> Result<AdminDashboardStats, String> {
+pub async fn admin_get_dashboard_stats(
+    app: tauri::AppHandle,
+) -> Result<AdminDashboardStats, String> {
     let db = app.state::<EmbeddedTurso>().inner().clone();
     let tenant_service = usecases::tenant_service::LibSqlTenantService::new(db.clone());
     let counter_service = usecases::counter_service::LibSqlCounterService::new(db.clone());

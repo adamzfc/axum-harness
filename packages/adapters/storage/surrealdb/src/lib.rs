@@ -120,10 +120,10 @@ impl TenantAwareSurrealDb {
         let clauses = [" GROUP BY", " ORDER BY", " LIMIT", " START", " FETCH"];
         let mut earliest = sql.len();
         for clause in &clauses {
-            if let Some(pos) = sql_upper.find(clause) {
-                if pos < earliest {
-                    earliest = pos;
-                }
+            if let Some(pos) = sql_upper.find(clause)
+                && pos < earliest
+            {
+                earliest = pos;
             }
         }
         earliest

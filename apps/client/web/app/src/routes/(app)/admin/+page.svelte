@@ -1,37 +1,50 @@
 <script lang="ts">
 import { Card } from '$lib/components';
-import { onMount } from 'svelte';
 import type { AdminDashboardStats } from '$lib/generated/api/AdminDashboardStats';
+import { onMount } from 'svelte';
 
-let stats = $state<AdminDashboardStats>({ tenant_count: 0, counter_value: 0, last_login: null, app_version: '0.0.0' });
+let stats = $state<AdminDashboardStats>({
+  tenant_count: 0,
+  counter_value: 0,
+  last_login: null,
+  app_version: '0.0.0',
+});
 let loading = $state(true);
 
-const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__;
+interface TauriWindow {
+  __TAURI__?: { core: { invoke(cmd: string): Promise<unknown> } };
+}
+const tauriApi = typeof window !== 'undefined' ? (window as TauriWindow).__TAURI__ : undefined;
+const isTauri = !!tauriApi;
 
 async function fetchStats() {
-	loading = true;
-	try {
-		if (isTauri) {
-			stats = await (window as any).__TAURI__.core.invoke('admin_get_dashboard_stats');
-		} else {
-			const resp = await fetch('http://localhost:3001/api/admin/stats');
-			stats = await resp.json();
-		}
-	} catch (e) {
-		console.error('Failed to load stats:', e);
-	}
-	loading = false;
+  loading = true;
+  try {
+    if (tauriApi) {
+      stats = (await tauriApi.core.invoke('admin_get_dashboard_stats')) as AdminDashboardStats;
+    } else {
+      const resp = await fetch('http://localhost:3001/api/admin/stats');
+      stats = await resp.json();
+    }
+  } catch (e) {
+    console.error('Failed to load stats:', e);
+  }
+  loading = false;
 }
 
 onMount(() => {
-	fetchStats();
+  fetchStats();
 });
 
 const statCards = $derived([
-	{ label: 'Tenants', value: String(stats.tenant_count), icon: '🏢' },
-	{ label: 'Counter', value: String(stats.counter_value), icon: '🔢' },
-	{ label: 'Last Login', value: stats.last_login ? new Date(stats.last_login).toLocaleDateString() : 'N/A', icon: '👤' },
-	{ label: 'Version', value: stats.app_version, icon: '📦' },
+  { label: 'Tenants', value: String(stats.tenant_count), icon: '🏢' },
+  { label: 'Counter', value: String(stats.counter_value), icon: '🔢' },
+  {
+    label: 'Last Login',
+    value: stats.last_login ? new Date(stats.last_login).toLocaleDateString() : 'N/A',
+    icon: '👤',
+  },
+  { label: 'Version', value: stats.app_version, icon: '📦' },
 ]);
 </script>
 

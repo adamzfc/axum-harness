@@ -1,5 +1,5 @@
-import type { HandleClientError } from '@sveltejs/kit';
 import { newId } from '$lib/utils/id';
+import type { HandleClientError } from '@sveltejs/kit';
 
 /**
  * Client-side error handler for unexpected errors during navigation and rendering.
@@ -11,19 +11,19 @@ import { newId } from '$lib/utils/id';
  * This handler should NEVER throw. Return a safe user-facing message + tracking ID.
  */
 export const handleError: HandleClientError = async ({ error, event, status, message }) => {
-	const errorId = newId();
+  const errorId = newId();
 
-	console.error('[client-error]', {
-		errorId,
-		status,
-		message,
-		url: event.url.pathname,
-		error: error instanceof Error ? error.message : String(error),
-		stack: error instanceof Error ? error.stack : undefined
-	});
+  console.error('[client-error]', {
+    errorId,
+    status,
+    message,
+    url: event.url.pathname,
+    error: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+  });
 
-	return {
-		message: 'Something went wrong',
-		errorId
-	};
+  return {
+    message: 'Something went wrong',
+    errorId,
+  };
 };

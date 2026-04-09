@@ -5,7 +5,7 @@
  * Stage: Code generation
  */
 
-import { run } from '../lib/spawn.ts';
+import { run } from './lib/spawn.ts';
 import process from 'node:process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,7 +37,7 @@ function safeCopy(src: string, dest: string): void {
 
   try {
     cpSync(src, dest, { recursive: true });
-    console.log(`  ‚ú?Copied ${path.basename(src)} ‚Ü?${path.basename(dest)}`);
+    console.log(`  ÔøΩ?Copied ${path.basename(src)} ÔøΩ?${path.basename(dest)}`);
   } catch (err) {
     console.warn(`  ‚ö†Ô∏è  Could not copy ${src} to ${dest}: ${err}`);
   }
@@ -68,11 +68,11 @@ async function main(): Promise<number> {
   ]);
 
   if (!testResult.success) {
-    console.error('‚ù?Contract generation failed:');
+    console.error('ÔøΩ?Contract generation failed:');
     console.error(testResult.error);
     return 1;
   }
-  console.log('  ‚ú?Contract bindings generated\n');
+  console.log('  ÔøΩ?Contract bindings generated\n');
 
   // Step 2: Clean old generated files
   console.log('[2/4] Cleaning old generated files...');
@@ -82,7 +82,7 @@ async function main(): Promise<number> {
       rmSync(fullPath, { recursive: true, force: true });
     }
   }
-  console.log('  ‚ú?Old files cleaned\n');
+  console.log('  ÔøΩ?Old files cleaned\n');
 
   // Step 3: Copy generated types
   console.log('[3/4] Copying generated types...');

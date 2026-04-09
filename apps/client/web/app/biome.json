@@ -16,7 +16,7 @@
     "enabled": true
   },
   "files": {
-    "ignore": [".svelte-kit/**", "build/**", "node_modules/**"]
+    "ignore": [".svelte-kit/**", "build/**", "node_modules/**", "src/lib/generated/**"]
   },
   "javascript": {
     "formatter": {

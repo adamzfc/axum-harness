@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { type ChildProcess, spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
@@ -14,109 +14,111 @@ let ownedApiProcess: ChildProcess | null = null;
 let cleanupRegistered = false;
 
 function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function runtimeServerBinaryPath(): string {
-	const binary = process.platform === 'win32' ? 'runtime_server.exe' : 'runtime_server';
-	return path.join(workspaceRoot, 'target', 'debug', binary);
+  const binary = process.platform === 'win32' ? 'runtime_server.exe' : 'runtime_server';
+  return path.join(workspaceRoot, 'target', 'debug', binary);
 }
 
 async function waitForApiReady(timeoutMs: number): Promise<boolean> {
-	const start = Date.now();
-	while (Date.now() - start < timeoutMs) {
-		try {
-			const response = await fetch(API_READY_URL);
-			if (response.ok) {
-				return true;
-			}
-		} catch {
-			// keep polling until timeout
-		}
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const response = await fetch(API_READY_URL);
+      if (response.ok) {
+        return true;
+      }
+    } catch {
+      // keep polling until timeout
+    }
 
-		await sleep(500);
-	}
+    await sleep(500);
+  }
 
-	return false;
+  return false;
 }
 
 function registerCleanupOnce(): void {
-	if (cleanupRegistered) {
-		return;
-	}
+  if (cleanupRegistered) {
+    return;
+  }
 
-	cleanupRegistered = true;
-	process.on('exit', () => {
-		stopOwnedApiProcess();
-	});
+  cleanupRegistered = true;
+  process.on('exit', () => {
+    stopOwnedApiProcess();
+  });
 }
 
 function startOwnedApiProcess(): void {
-	if (ownedApiProcess) {
-		return;
-	}
+  if (ownedApiProcess) {
+    return;
+  }
 
-	const runtimeBinary = runtimeServerBinaryPath();
-	if (existsSync(runtimeBinary)) {
-		ownedApiProcess = spawn(runtimeBinary, [], {
-			cwd: workspaceRoot,
-			stdio: 'ignore',
-			shell: false
-		});
-		return;
-	}
+  const runtimeBinary = runtimeServerBinaryPath();
+  if (existsSync(runtimeBinary)) {
+    ownedApiProcess = spawn(runtimeBinary, [], {
+      cwd: workspaceRoot,
+      stdio: 'ignore',
+      shell: false,
+    });
+    return;
+  }
 
-	ownedApiProcess = spawn('cargo', ['run', '-p', 'runtime_server'], {
-		cwd: workspaceRoot,
-		stdio: 'ignore',
-		shell: process.platform === 'win32'
-	});
+  ownedApiProcess = spawn('cargo', ['run', '-p', 'runtime_server'], {
+    cwd: workspaceRoot,
+    stdio: 'ignore',
+    shell: process.platform === 'win32',
+  });
 }
 
 export async function ensureApiReady(timeoutMs = DEFAULT_BOOTSTRAP_TIMEOUT_MS): Promise<void> {
-	if (await waitForApiReady(1_000)) {
-		return;
-	}
+  if (await waitForApiReady(1_000)) {
+    return;
+  }
 
-	registerCleanupOnce();
-	startOwnedApiProcess();
+  registerCleanupOnce();
+  startOwnedApiProcess();
 
-	const ready = await waitForApiReady(timeoutMs);
-	if (!ready) {
-		const pid = ownedApiProcess?.pid ?? 'none';
-		stopOwnedApiProcess();
-		throw new Error(
-			`[runtime] API not ready at ${API_READY_URL} within ${timeoutMs}ms (owned_pid=${pid}, port=${API_PORT})`
-		);
-	}
+  const ready = await waitForApiReady(timeoutMs);
+  if (!ready) {
+    const pid = ownedApiProcess?.pid ?? 'none';
+    stopOwnedApiProcess();
+    throw new Error(
+      `[runtime] API not ready at ${API_READY_URL} within ${timeoutMs}ms (owned_pid=${pid}, port=${API_PORT})`,
+    );
+  }
 }
 
-export async function ensureWebE2EPreflight(timeoutMs = DEFAULT_BOOTSTRAP_TIMEOUT_MS): Promise<void> {
-	await ensureApiReady(timeoutMs);
+export async function ensureWebE2EPreflight(
+  timeoutMs = DEFAULT_BOOTSTRAP_TIMEOUT_MS,
+): Promise<void> {
+  await ensureApiReady(timeoutMs);
 
-	const typesDir = path.join(workspaceRoot, WEB_TYPES_DIR);
-	if (!existsSync(typesDir)) {
-		throw new Error(
-			`[runtime] missing SvelteKit type artifacts at ${typesDir}; run: rtk bun run --cwd apps/client/web/app check`
-		);
-	}
+  const typesDir = path.join(workspaceRoot, WEB_TYPES_DIR);
+  if (!existsSync(typesDir)) {
+    throw new Error(
+      `[runtime] missing SvelteKit type artifacts at ${typesDir}; run: rtk bun run --cwd apps/client/web/app check`,
+    );
+  }
 }
 
 export function stopOwnedApiProcess(): void {
-	if (!ownedApiProcess) {
-		return;
-	}
+  if (!ownedApiProcess) {
+    return;
+  }
 
-	if (!ownedApiProcess.killed) {
-		if (process.platform === 'win32') {
-			spawn('taskkill', ['/PID', String(ownedApiProcess.pid), '/F', '/T'], {
-				stdio: 'ignore',
-				shell: false
-			});
-		} else {
-			ownedApiProcess.kill('SIGTERM');
-		}
-	}
+  if (!ownedApiProcess.killed) {
+    if (process.platform === 'win32') {
+      spawn('taskkill', ['/PID', String(ownedApiProcess.pid), '/F', '/T'], {
+        stdio: 'ignore',
+        shell: false,
+      });
+    } else {
+      ownedApiProcess.kill('SIGTERM');
+    }
+  }
 
-	ownedApiProcess = null;
+  ownedApiProcess = null;
 }

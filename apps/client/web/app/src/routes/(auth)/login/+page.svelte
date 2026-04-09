@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
-	import { Button, Input, LottiePlayer } from '$lib/components';
-	import { auth, signInWithGoogle, checkSession } from '$lib/stores/auth.svelte';
+import { goto } from '$app/navigation';
+import { Button, Input, LottiePlayer } from '$lib/components';
+import { auth, checkSession, signInWithGoogle } from '$lib/stores/auth.svelte';
+import { onMount } from 'svelte';
 
-	// D-11: Redirect to /counter if already authenticated
-	onMount(async () => {
-		const hasSession = await checkSession();
-		if (hasSession) {
-			goto('/counter');
-		}
-	});
+// D-11: Redirect to /counter if already authenticated
+onMount(async () => {
+  const hasSession = await checkSession();
+  if (hasSession) {
+    goto('/counter');
+  }
+});
 
-	// Reactive redirect when auth state changes (e.g., after callback)
-	$effect(() => {
-		if (auth.isAuthenticated) {
-			goto('/counter');
-		}
-	});
+// Reactive redirect when auth state changes (e.g., after callback)
+$effect(() => {
+  if (auth.isAuthenticated) {
+    goto('/counter');
+  }
+});
 </script>
 
 <!-- D-12: Background decoration animation -->

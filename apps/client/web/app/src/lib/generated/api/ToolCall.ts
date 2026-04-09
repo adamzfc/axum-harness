@@ -3,4 +3,4 @@
 /**
  * Tool call in a chat message.
  */
-export type ToolCall = { id: string, name: string, arguments: any, result: string | null, };
+export type ToolCall = { id: string; name: string; arguments: any; result: string | null };

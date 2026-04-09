@@ -1,50 +1,58 @@
 <script lang="ts">
-import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import { Switch } from '$lib/components';
-import { LayoutDashboard, Plus, Settings, MessageSquare, PanelLeftClose, PanelLeftOpen } from '@jis3r/icons';
-import { toggleTheme, getTheme } from '$lib/stores/theme';
 import { auth, checkSession } from '$lib/stores/auth.svelte';
+import { getTheme, toggleTheme } from '$lib/stores/theme';
+import {
+  LayoutDashboard,
+  MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  Settings,
+} from '@jis3r/icons';
+import { onMount } from 'svelte';
 import type { Snippet } from 'svelte';
 
 interface Props {
-	children: Snippet;
+  children: Snippet;
 }
 
 const { children }: Props = $props();
 
+// biome-ignore lint/style/useConst: Svelte 5 $state requires let for template reassignment
 let sidebarExpanded = $state(true);
 let isDark = $state(getTheme() === 'dark');
 let authReady = $state(false);
 
 // Auth guard: check session on mount, redirect if not authenticated
 onMount(async () => {
-	const hasSession = await checkSession();
-	authReady = true;
-	if (!hasSession) {
-		goto('/login');
-	}
+  const hasSession = await checkSession();
+  authReady = true;
+  if (!hasSession) {
+    goto('/login');
+  }
 });
 
 // Reactive guard: only active after initial session check completes
 $effect(() => {
-	if (!authReady) return;
-	if (!auth.isAuthenticated) {
-		goto('/login');
-	}
+  if (!authReady) return;
+  if (!auth.isAuthenticated) {
+    goto('/login');
+  }
 });
 
 const navItems = [
-	{ href: '/counter', label: 'Counter', icon: Plus },
-	{ href: '/admin', label: 'Admin', icon: LayoutDashboard },
-	{ href: '/agent', label: 'Agent Chat', icon: MessageSquare },
-	{ href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/counter', label: 'Counter', icon: Plus },
+  { href: '/admin', label: 'Admin', icon: LayoutDashboard },
+  { href: '/agent', label: 'Agent Chat', icon: MessageSquare },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 function handleThemeToggle(checked: boolean) {
-	isDark = checked;
-	toggleTheme();
+  isDark = checked;
+  toggleTheme();
 }
 </script>
 
