@@ -8,7 +8,7 @@
 
 /** Detect whether we are running inside a Tauri WebView. */
 export function isTauri(): boolean {
-  return typeof window !== 'undefined' && !!(window as { __TAURI__?: unknown }).__TAURI__;
+  return typeof window !== 'undefined' && !!((globalThis || window) as { isTauri?: boolean }).isTauri;
 }
 
 /**

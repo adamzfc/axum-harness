@@ -181,7 +181,7 @@ pub fn run() {
         builder = builder.plugin(tauri_plugin_mcp::init_with_config(
             tauri_plugin_mcp::PluginConfig::new("My App".to_string())
                 .start_socket_server(true)
-                .socket_path("/tmp/tauri-mcp.sock"),
+                .socket_path("/tmp/tauri-mcp.sock".into()),
         ));
     }
 

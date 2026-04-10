@@ -68,11 +68,25 @@ onMount(() => {
   };
   window.addEventListener('keydown', handleKeydown);
 
+  // MCP plugin listeners (Tauri only)
+  let mcpCleanup: (() => void) | undefined;
+  if (isTauri()) {
+    import('tauri-plugin-mcp').then(({ setupPluginListeners, cleanupPluginListeners }) => {
+      setupPluginListeners().catch((e) => {
+        console.error('[mcp] setupPluginListeners() failed:', e);
+      });
+      mcpCleanup = cleanupPluginListeners;
+    }).catch((e) => {
+      console.warn('[mcp] failed to initialize plugin listeners:', e);
+    });
+  }
+
   return () => {
     cleanupAuth?.();
     unlistenOAuthCleanup?.();
     unlistenPanicCleanup?.();
     window.removeEventListener('keydown', handleKeydown);
+    mcpCleanup?.();
   };
 });
 </script>
