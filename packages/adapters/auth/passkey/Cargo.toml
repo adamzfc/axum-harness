@@ -1,0 +1,10 @@
+[package]
+name = "adapter-auth-passkey"
+version = "0.1.0"
+edition = "2024"
+description = "WebAuthn / Passkey adapter"
+
+[dependencies]
+
+[lints]
+workspace = true

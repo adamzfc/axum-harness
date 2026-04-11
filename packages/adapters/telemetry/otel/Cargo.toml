@@ -1,0 +1,11 @@
+[package]
+name = "adapter-telemetry-otel"
+version = "0.1.0"
+edition = "2024"
+description = "OpenTelemetry adapter for distributed tracing and metrics"
+
+[dependencies]
+tracing = { workspace = true }
+opentelemetry = "0.27"
+opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.27", features = ["trace", "metrics"] }

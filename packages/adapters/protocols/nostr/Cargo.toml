@@ -1,0 +1,10 @@
+[package]
+name = "adapter-protocols-nostr"
+version = "0.1.0"
+edition = "2024"
+description = "Nostr integration — relay connection pool, event signing, NIP implementations"
+
+[dependencies]
+
+[lints]
+workspace = true
