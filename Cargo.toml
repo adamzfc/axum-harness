@@ -1,21 +1,75 @@
 [workspace]
 members = [
-    "apps/client/native/src-tauri",
+    # Apps
+    "apps/desktop/src-tauri",
+    # Core
     "packages/core/workspace-hack",
-    "servers/api",
     "packages/core/domain",
     "packages/core/usecases",
+    "packages/core/kernel",
+    "packages/core/platform",
+    # Contracts
     "packages/contracts/api",
     "packages/contracts/auth",
     "packages/contracts/events",
+    "packages/contracts/errors",
+    # Shared
+    "packages/shared/errors",
+    "packages/shared/utils",
+    "packages/shared/config",
+    "packages/shared/env",
+    "packages/shared/testing",
+    "packages/shared/types",
+    # Adapters
+    "packages/adapters/telemetry/otel",
+    "packages/adapters/telemetry/tracing",
     "packages/adapters/hosts/tauri",
+    "packages/adapters/hosts/base-app",
+    "packages/adapters/hosts/browser-extension",
+    "packages/adapters/hosts/farcaster-miniapp",
+    "packages/adapters/hosts/telegram-miniapp",
     "packages/adapters/storage/surrealdb",
     "packages/adapters/storage/turso",
+    "packages/adapters/storage/sqlite",
+    "packages/adapters/storage/extension-storage",
+    "packages/adapters/storage/indexeddb",
+    "packages/adapters/storage/tauri-store",
     "packages/adapters/auth/google",
+    "packages/adapters/auth/dpop",
+    "packages/adapters/auth/oauth",
+    "packages/adapters/auth/passkey",
+    "packages/adapters/cache",
+    "packages/adapters/chains/base",
+    "packages/adapters/chains/evm",
+    "packages/adapters/chains/solana",
+    "packages/adapters/chains/ton",
+    "packages/adapters/protocols/atproto",
+    "packages/adapters/protocols/farcaster",
+    "packages/adapters/protocols/nostr",
+    # Features
     "packages/features/auth",
     "packages/features/counter",
     "packages/features/admin",
     "packages/features/agent",
+    "packages/features/chat",
+    "packages/features/settings",
+    "packages/features/feed",
+    "packages/features/notifications",
+    "packages/features/payments",
+    "packages/features/profile",
+    "packages/features/social-graph",
+    "packages/features/wallet",
+    # Services (all stubs, ready for incremental implementation)
+    "services/user-service",
+    "services/tenant-service",
+    "services/counter-service",
+    "services/chat-service",
+    "services/agent-service",
+    "services/event-bus",
+    "services/indexer",
+    # Servers
+    "servers/api",
+    "servers/gateway",
 ]
 resolver = "3"
 
@@ -45,9 +99,16 @@ rust-version = "1.94"
 # Internal crates
 domain = { path = "packages/core/domain" }
 usecases = { path = "packages/core/usecases" }
+kernel = { path = "packages/core/kernel" }
+platform = { path = "packages/core/platform" }
 contracts_api = { path = "packages/contracts/api" }
 contracts_auth = { path = "packages/contracts/auth" }
 contracts_events = { path = "packages/contracts/events" }
+contracts_errors = { path = "packages/contracts/errors" }
+shared_errors = { path = "packages/shared/errors" }
+shared_utils = { path = "packages/shared/utils" }
+adapter_telemetry_otel = { path = "packages/adapters/telemetry/otel" }
+adapter_telemetry_tracing = { path = "packages/adapters/telemetry/tracing" }
 storage_surrealdb = { path = "packages/adapters/storage/surrealdb" }
 storage_turso = { path = "packages/adapters/storage/turso" }
 runtime_tauri = { path = "packages/adapters/hosts/tauri" }
@@ -56,6 +117,8 @@ feature-auth = { path = "packages/features/auth" }
 feature-counter = { path = "packages/features/counter" }
 feature-admin = { path = "packages/features/admin" }
 feature-agent = { path = "packages/features/agent" }
+feature-chat = { path = "packages/features/chat" }
+feature-settings = { path = "packages/features/settings" }
 
 # Tauri
 tauri = { version = "2.10.3", features = ["tray-icon"] }
