@@ -1,510 +1,467 @@
-# 📁 Project Directory Architecture
+```markdown
+# 📁 项目目录架构：职责边界 · 依赖方向 · 注释规范
 
-> A **Rust-first · Go-fallback** microservice boilerplate for `tauri-sveltekit-axum-moon-template`. Clone via GitHub Template. Ship as a containerized monolith from day one.
-
----
-
-## 📊 Rust 替代方案可行性矩阵
-
-| 原方案 (Go/通用) | Rust 替代候选 | 成熟度 | 生产可用 | 迁移成本 | 建议 | 架构位置 |
-|-----------------|------------|--------|----------|----------|------|----------|
-| **Docker Engine** | Youki | ⭐⭐⭐⭐ | ✅ 边缘/测试 | 中 | ⚠️ 观察 | `infra/docker/` |
-| | Railcar | ⭐⭐ | ❌ 已归档 | - | ❌ 不推荐 | - |
-| **Kubernetes** | Nanocl | ⭐⭐⭐ | ⚠️ 小集群/边缘 | 高 | ⚠️ 边缘场景备用 | `infra/orchestrator/` |
-| | K8s (Rust operator) | ⭐⭐⭐⭐⭐ | ✅ 主流 | 低 | ✅ 继续用 + Rust 扩展 | `infra/k8s/` |
-| **Consul** | Corrosion (Fly) | ⭐⭐ | ❌ 文档少 | 高 | ❌ 暂不替代 | - |
-| | etcd + rust-client | ⭐⭐⭐⭐⭐ | ✅ 成熟 | 低 | ✅ 保留 + Rust SDK | `packages/shared/config/` |
-| **Prometheus+Grafana** | OpenObserve | ⭐⭐⭐⭐ | ✅ 生产可用 | 中 | ✅ 成本敏感场景首选 | `ops/observability/` |
-| **Log Aggregator** | Vector | ⭐⭐⭐⭐⭐ | ✅ 原生Rust | 低 | ✅ 直接使用 | `ops/observability/vector/` |
-| | WarpParse | ⭐⭐ | ❌ 未开源/不明 | - | ❌ 暂不评估 | - |
-| **OPA** | Regorus | ⭐⭐⭐⭐ | ✅ 嵌入式场景 | 低 | ✅ 策略引擎嵌入首选 | `infra/security/regorus/` |
-| **Kopia/Restic** | Rustic | ⭐⭐⭐⭐ | ✅ restic兼容 | 低 | ✅ 备份工具替代 | `ops/backup/rustic/` |
-| | Vykar | ⭐⭐ | ❌ 项目不明 | - | ❌ 暂不评估 | - |
-| **核心中间件** | async-nats / rdkafka / sqlx / redis-rs / opentelemetry-rust | ⭐⭐⭐⭐⭐ | ✅ 全成熟 | 低 | ✅ 全面采用 | `services/*/Cargo.toml` |
-| **开发工具链** | just / cargo-deny / cargo-tarpaulin / drill | ⭐⭐⭐⭐⭐ | ✅ 原生Rust | 无 | ✅ 强烈推荐 | `tools/` |
-
-> 📌 **结论**：  
-> - ✅ **立即可用**：Vector, OpenObserve, Regorus, Rustic, Rust核心库, 开发工具链  
-> - ⚠️ **观察/边缘场景**：Youki, Nanocl  
-> - ❌ **暂不替代**：Kubernetes(用Rust写Operator扩展), Consul(用etcd+Rust客户端)
+> **设计原则**：架构即约束，注释即契约，决策即文档。
+> 本文档仅保留**目录结构设计、职责定义、依赖规则**；架构哲学、工具链决策、存储策略等详见 [spec.md](./spec.md)。
 
 ---
 
-## 📁 最终目录树架构（带可行性注释）
-
+## 📦 目录架构总览
 ```
-tauri-sveltekit-axum-moon-template/
-├── 📦 apps/                          # 【应用层】用户入口 · 技术栈无关
-│   ├── 🖥️  client/                   # 客户端应用
-│   │   ├── 🌐  web/                  # ✅ SvelteKit 5 + Tailwind · 前端展示层
-│   │   ├── 💻  native/               # ✅ Tauri v2 + SvelteKit · 桌面端
-│   │   │   └── src-tauri/            # Tauri Rust 后端 (commands/plugins)
-│   │   ├── 📱  browser-extension/    # ⚠️ 预留 · 浏览器扩展
-│   │   └── 📲  desktop/              # ⚠️ 预留 · 独立桌面端
-│   │
-│   ├── 🚪  ops/                      # 运维工具应用
-│   │   ├── 📚  docs-site/            # ⚠️ 文档站点 (stub)
-│   │   └── 🎨  storybook/            # ⚠️ UI 组件文档 (stub)
-│   │
-│   └── 🔀  bff/                      # 🆕 后端聚合层 · 契约驱动
-│       ├── 📱  mobile-bff/           # 🆕 移动端聚合 (Axum) · 按需启用
-│       └── 💻  admin-bff/            # 🆕 后台聚合 (Axum) · 按需启用
+
+tauri-sveltekit-axum-turso-boilerplate/
 │
-├── 🔧 servers/                       # 【服务层】领域服务 · 组合层
-│   ├── 🔌  api/                      # ✅ 现有 Axum API 服务 (保留)
-│   │   ├── src/
-│   │   │   ├── routes/               # HTTP 路由 (控制器)
-│   │   │   ├── middleware/           # 中间件 (认证/限流/追踪)
-│   │   │   ├── state.rs              # 应用状态 (连接池/缓存)
-│   │   │   ├── error.rs              # 统一错误处理
-│   │   │   └── config.rs             # 服务配置
-│   │   ├── tests/
-│   │   │   ├── e2e/                  # 端到端测试
-│   │   │   ├── integration/          # 集成测试
-│   │   │   └── ui/                   # UI 契约测试
-│   │   └── Cargo.toml                # 独立 crate · 可单独 build
-│   │
-│   ├── 🚪  gateway/                  # ⚠️ 预留 · API 网关 (stub)
-│   │   └→ 未来: Pingora(Rust) · TLS/限流/XDP
-│   └── ⚡  realtime/                 # ⚠️ 预留 · 实时服务 (stub)
-│       └→ 未来: WebSocket/SSE · Chat 页面推送
+├── 📦 根配置层 · [必须] 工具链钉死 + 任务编排 + 工作区定义
+│ │ # 职责: 开发环境配置集中管理
+│ │ # 禁止: 散落业务逻辑或环境配置
+│ │
+│ ├── .mise.toml # [mise] 工具版本管理 [必须]
+│ │ # 职责: 钉死 Rust/Node/bun/moon/just/biome 等工具版本
+│ │ # 验证: `mise doctor` 必须通过
+│ │
+│ ├── justfile # [just] 统一命令入口 [必须]
+│ │ # 职责: 人类+Agent 的唯一命令入口，薄层转发到 moon
+│ │ # 验证: `just --list` 必须列出所有可用命令
+│ │
+│ ├── moon.yml # [moon] monorepo 任务编排 [必须]
+│ │ # 职责: 定义项目图、任务依赖、affected 计算规则
+│ │ # 验证: `moon ci:affected --base=main` 必须正确计算变更影响
+│ │
+│ ├── Cargo.toml # [cargo] Rust workspace 根 [必须]
+│ │ # 职责: 定义 workspace members, 统一依赖版本 (通过 cargo-hakari)
+│ │ # 验证: `cargo hack check --workspace` 必须通过
+│ │
+│ ├── package.json # [bun] JS workspace 根 [必须]
+│ │ # 职责: 定义前端工作区、共享 devDependencies
+│ │ # 验证: `bun --filter '!./apps/*' run build` 必须通过
+│ │
+│ ├── bun-workspace.yaml # [bun] 工作区定义 [必须]
+│ │ # 职责: 声明哪些目录属于 bun workspace
+│ │ # 验证: `bun --filter '*' echo $PWD` 必须只列出前端目录
+│ │
+│ ├── biome.json # [biome] 前端 lint/format [必须]
+│ │ # 职责: 统一 Svelte/TS/JS 的代码风格规则
+│ │ # 验证: `bun exec biome check .` 必须零警告
+│ │
+│ ├── rust-toolchain.toml # [rustup] 工具链版本 [必须]
+│ │ # 职责: 钉死 Rust channel + components
+│ │ # 验证: `rustc --version` 必须匹配
+│ │
+│ ├── .cargo/config.toml # [cargo] 全局配置 [必须]
+│ │ # 职责: 定义 registry mirror, alias, target-dir, linker
+│ │ # 验证: `cargo build --workspace` 必须使用配置的输出目录
+│ │
+│ ├── .gitattributes # [git] 文件属性 [必须]
+│ │ # 职责: 定义行尾符、二进制文件处理、diff 驱动
+│ │ # 验证: `git check-attr -a <file>` 必须返回预期属性
+│ │
+│ └── .gitignore # [git] 全局忽略 [必须]
+│ # 职责: 忽略构建产物、环境文件、本地配置
+│ # 验证: `git status --porcelain` 必须干净
 │
-├── 🧱 packages/                      # 【共享层】跨端复用 · 纯逻辑/契约
-│   ├── 🧩  adapters/                 # 适配器层 · 外部世界翻译层
-│   │   ├── auth/                     # 认证适配器
-│   │   │   ├── google/               # ✅ Google OAuth
-│   │   │   ├── oauth/                # ⚠️ 通用 OAuth (stub)
-│   │   │   ├── dpop/                 # ⚠️ DPoP (stub)
-│   │   │   └── passkey/              # ⚠️ WebAuthn/Passkey (stub)
-│   │   ├── hosts/                    # 宿主环境适配器
-│   │   │   ├── tauri/                # ✅ Tauri 命令适配
-│   │   │   ├── base-app/             # ⚠️ 基础应用 (stub)
-│   │   │   ├── browser-extension/    # ⚠️ 浏览器扩展 (stub)
-│   │   │   ├── telegram-miniapp/     # ⚠️ Telegram MiniApp (stub)
-│   │   │   └── farcaster-miniapp/    # ⚠️ Farcaster MiniApp (stub)
-│   │   ├── storage/                  # 存储适配器
-│   │   │   ├── surrealdb/            # ✅ SurrealDB 实现
-│   │   │   ├── turso/                # ✅ Turso/libSQL 实现
-│   │   │   ├── sqlite/               # ⚠️ 原生 SQLite (stub)
-│   │   │   ├── indexeddb/            # ⚠️ 浏览器 IndexedDB (stub)
-│   │   │   ├── extension-storage/    # ⚠️ 扩展存储 (stub)
-│   │   │   └── tauri-store/          # ⚠️ Tauri 文件系统存储 (stub)
-│   │   ├── chains/                   # ⚠️ 区块链适配器 (全部 stub)
-│   │   ├── protocols/                # ⚠️ 社交协议适配 (全部 stub)
-│   │   └── telemetry/                # 🆕 遥测适配器
-│   │       ├── otel/                 # OpenTelemetry 集成
-│   │       └── tracing/              # tracing 日志集成
-│   │
-│   ├── 📐  contracts/                # 契约定义层 · 类型唯一真理源
-│   │   ├── api/                      # ✅ API DTO 契约 (utoipa + ts-rs)
-│   │   ├── auth/                     # ✅ Auth 契约 (登录/注册/Token)
-│   │   ├── events/                   # ✅ Events 契约 (领域事件)
-│   │   ├── errors/                   # 🆕 统一错误契约 (thiserror 映射)
-│   │   ├── ui/                       # ⚠️ UI 组件契约 (stub)
-│   │   ├── protocols/                # ⚠️ 协议消息契约 (stub)
-│   │   ├── codegen/                  # 🆕 代码生成配置 (ts-rs/prost/utoipa)
-│   │   └── generated/                # 自动生成输出 (git-ignored)
-│   │
-│   ├── 🎯  core/                     # 核心抽象层 · 纯 Rust trait
-│   │   ├── domain/                   # ✅ 领域端口定义
-│   │   │   └── ports/                # Repository/EventBus trait
-│   │   ├── usecases/                 # ✅ 业务逻辑实现 (纯函数 + trait 实现)
-│   │   │   ├── admin_service.rs
-│   │   │   ├── agent_service.rs
-│   │   │   ├── counter_service.rs
-│   │   │   └── tenant_service.rs
-│   │   └── workspace-hack/           # ✅ cargo-hakari 依赖统一
-│   │
-│   ├── 🌟  features/                 # 特性定义层 · trait + 类型
-│   │   ├── auth/                     # ✅ 认证特性 (登录/注册/会话)
-│   │   ├── counter/                  # ✅ 计数器特性 (increment/decrement)
-│   │   ├── admin/                    # ⚠️ 管理面板特性 (stub)
-│   │   ├── agent/                    # ✅ Agent 特性 (配置/执行/结果)
-│   │   ├── chat/                     # 🆕 聊天特性 (消息/会话/推送)
-│   │   ├── settings/                 # 🆕 设置特性 (偏好/配置/主题)
-│   │   ├── feed/                     # ⚠️ 信息流特性 (stub)
-│   │   ├── notifications/            # ⚠️ 通知特性 (stub)
-│   │   ├── payments/                 # ⚠️ 支付特性 (stub)
-│   │   ├── profile/                  # ⚠️ 用户资料特性 (stub)
-│   │   └── social-graph/             # ⚠️ 社交图谱特性 (stub)
-│   │
-│   ├── 🛠️  shared/                   # 共享技术组件 · 无业务含义
-│   │   ├── config/                   # 🆕 多源配置管理 (env/file/etcd)
-│   │   ├── errors/                   # 🆕 统一错误处理 (AppError/Result)
-│   │   ├── tracing/                  # 🆕 追踪上下文 (OpenTelemetry)
-│   │   ├── utils/                    # 🆕 通用工具 (ID生成/加密/时间)
-│   │   └── cache/                    # 🆕 缓存抽象 (Moka/Redis 适配)
-│   │
-│   ├── 🎨  ui/                       # 前端共享 · UI 组件
-│   │   └── kit/                      # Svelte 组件库 (按钮/表单/对话框)
-│   │
-│   └── 🔗  api-contracts/            # 🆕 契约优先 · SDK 生成
-│       ├── proto/                    # Protobuf 定义 (gRPC · prost+tonic)
-│       ├── openapi/                  # OpenAPI 3.1 聚合 (utoipa 生成)
-│       ├── ts-rs-gen/                # Rust→TS 类型同步 (ts-rs)
-│       └── sdk-gen/                  # 多语言 SDK 生成 (CI 自动发布)
+├── 🤖 agent/ · [必须] Agent Harness 约束定义
+│ │ # 职责: 定义 Agent 生成代码的约束边界
+│ │ # 禁止: 业务逻辑代码出现在此目录
+│ │
+│ ├── README.md # [必须] Agent 首要阅读入口
+│ ├── codemap.yml # [必须] 模块边界 + 依赖约束 [核心]
+│ ├── boundaries.md # [必须] 目录修改边界定义
+│ ├── constraints/ # [必须] 约束规则集合
+│ │ ├── dependencies.yaml # [必须] 依赖白/黑名单
+│ │ ├── patterns.yaml # [必须] 禁止代码模式
+│ │ ├── contracts.yaml # [必须] 契约变更流程
+│ │ └── storage-policy.yaml # [必须] 存储策略约束 [关键]
+│ ├── prompts/ # [必须] Agent 生成操作模板
+│ │ ├── add-module.md / add-endpoint.md / add-sync-strategy.md / split-service.md
+│ ├── checklists/ # [必须] 关键操作检查清单
+│ │ ├── schema-change.md / migration.md / sync-conflict.md / release.md
+│ └── templates/ # [必须] 代码生成模板
+│ ├── module/ # [必须] 新模块脚手架 (domain/application/ports/contracts/sync)
+│ └── bff-endpoint/ # [必须] BFF 端点模板
 │
-├── 👷  workers/                      # 【后台任务】异步工作者
-│   ├── chains/                       # ⚠️ 区块链事件监听 (stub)
-│   ├── jobs/                         # ⚠️ 后台任务 (stub)
-│   └── protocols/                    # ⚠️ 协议同步 (stub)
+├── 🌐 apps/ · [必须] 多端应用入口 (纯展示层 · 零业务逻辑)
+│ │ # 依赖方向: apps/_ → packages/contracts/sdk + packages/ui
+│ │ # 禁止: 直接调用 services/_ 或 packages/adapters/_
+│ │
+│ ├── web/ # [必须] SvelteKit 5 Web 应用
+│ │ ├── src/
+│ │ │ ├── routes/ # [必须] 页面路由 (public/auth/tenant/platform/api)
+│ │ │ ├── lib/
+│ │ │ │ ├── api/ # [必须] 仅放 generated SDK
+│ │ │ │ ├── auth/ # [必须] 前端鉴权守卫
+│ │ │ │ ├── tenancy/ # [必须] 租户上下文管理
+│ │ │ │ ├── stores/ # [必须] 全局状态 (Svelte 5 runes)
+│ │ │ │ ├── sync/ # [必须] 前端同步协调器
+│ │ │ │ └── components/ # [可选] 应用级组件
+│ │ │ ├── hooks.server.ts # [必须] SSR 鉴权 + 租户注入
+│ │ │ └── app.html # [必须] HTML 模板
+│ │ ├── tests/ # [必须] e2e + unit 测试
+│ │ ├── package.json / svelte.config.js / vite.config.ts
+│ │ └── .gitkeep
+│ │
+│ ├── mobile/ # [预留] 移动端 (Tauri2 Mobile)
+│ │ ├── src/lib/api/ # 仅用 generated SDK
+│ │ ├── src/lib/sync/ # 移动端同步策略 (OfflineFirst)
+│ │ └── package.json / .gitkeep
+│ │
+│ └── desktop/ # [必须] Tauri v2 桌面应用
+│ ├── src/ # 前端部分 (SvelteKit, 与 web 共享逻辑)
+│ │ ├── lib/
+│ │ │ ├── tauri/ # [必须] Tauri 特有能力封装
+│ │ │ ├── sync/ # 桌面端同步协调 (调用 Rust commands)
+│ │ │ └── .gitkeep
+│ │ └── .gitkeep
+│ │
+│ ├── src-tauri/ # [必须] Tauri Rust 后端
+│ │ ├── capabilities/ # [必须] 细粒度权限 (Tauri v2)
+│ │ ├── src/
+│ │ │ ├── commands/ # [必须] 桌面壳命令 (store/sync)
+│ │ │ ├── deep_link/ # [必须] OIDC / magic-link / 自定义协议
+│ │ │ ├── system_tray/ # [可选] 系统托盘集成
+│ │ │ └── main.rs # [必须] Tauri 入口
+│ │ ├── tauri.conf.jsonc / Cargo.toml
+│ │ └── .gitkeep
+│ │
+│ └── package.json
 │
-├── 📡  services/                     # 🆕 【微服务层】未来独立部署
-│   │                                 # 每个服务 = 独立 Cargo workspace member
-│   ├── 👤  user-service/             # 用户域 · 认证/资料/权限
-│   │   ├── src/
-│   │   │   ├── domain/               # 【✅ 纯Rust】实体/值对象/事件
-│   │   │   ├── application/          # 【✅ 纯Rust】UseCase · 依赖 trait 抽象
-│   │   │   ├── interfaces/           # 【✅ Axum/gRPC】HTTP控制器 + DTO
-│   │   │   └── infrastructure/       # 【✅ sqlx/redis-rs】DB/Cache实现
-│   │   ├── Cargo.toml                # 独立crate · 可单独 build/deploy
-│   │   └── openapi.yaml              # 【✅ 契约源】CI自动生成SDK
-│   │
-│   ├── 🤖  agent-service/            # Agent 域 · 配置/执行/结果
-│   ├── 💬  chat-service/             # Chat 域 · 消息/会话/推送 (WebSocket)
-│   ├── 📊  counter-service/          # Counter 域 · 计数/统计
-│   ├── 🔔  notification-service/     # 通知域 · 推送/模板/渠道
-│   └── 📢  event-bus/                # 【✅ async-nats】事件总线适配层
-│       ├── src/
-│       │   ├── ports/                # EventBus trait (依赖倒置)
-│       │   ├── adapters/             # NATS/Kafka/in-memory 实现
-│       │   └── outbox/               # 【✅ Outbox Pattern】可靠事件投递
-│       └── Cargo.toml                # 共享crate · 被所有服务依赖
+├── ⚙️ servers/ · [必须] 服务端组合层 (聚合 · 协议转换 · 视图组装)
+│ │ # 依赖方向: servers/_ → services/_ (via trait) + packages/core + packages/contracts
+│ │ # 禁止: 包含领域业务逻辑，仅做聚合/转换/路由
+│ │ # 验证: 每个 server 必须可独立 `cargo build -p <server-name>`
+│ │
+│ ├── bff/ # [必须] Backend For Frontend 层
+│ │ │ # 职责: 按端聚合视图模型，处理端特定转换 (不写业务规则)
+│ │ │ # 依赖: services/_ (trait only) + packages/contracts
+│ │ │
+│ │ ├── web-bff/ # [必须] Web 端聚合 (Axum)
+│ │ │ ├── src/
+│ │ │ │ ├── handlers/ # [必须] 端特定视图模型组装
+│ │ │ │ ├── adapters/ # [必须] 调用 services 的 trait 实现
+│ │ │ │ ├── middleware/ # [必须] BFF 层中间件
+│ │ │ │ ├── config.rs / main.rs # [必须] 配置 + 入口
+│ │ │ │ └── .gitkeep
+│ │ │ ├── Cargo.toml # [必须] BFF 依赖声明
+│ │ │ ├── openapi.yaml # [必须] BFF 的 OpenAPI 契约
+│ │ │ └── .gitkeep
+│ │ │
+│ │ ├── mobile-bff/ # [预留] 移动端聚合
+│ │ │ ├── src/
+│ │ │ │ ├── handlers/ / adapters/ / middleware/
+│ │ │ │ └── middleware/offline*cache.rs.gitkeep
+│ │ │ ├── Cargo.toml / openapi.yaml / .gitkeep
+│ │ │
+│ │ └── admin-bff/ # [必须] 管理端聚合
+│ │ ├── src/handlers/
+│ │ │ ├── platform_admin/ # 跨租户操作 (需 PlatformAdmin 角色)
+│ │ │ └── tenant_admin/ # 租户内管理 (需 Admin 角色)
+│ │ ├── Cargo.toml / openapi.yaml / .gitkeep
+│ │
+│ ├── composition/ # [可选] 共享服务组合逻辑 (跨 BFF 复用)
+│ │ │ # 职责: 定义通用组合 trait + 实现，供多个 BFF 复用
+│ │ │ # 禁止: 包含业务规则，仅做数据聚合/转换
+│ │ │
+│ │ ├── src/
+│ │ │ ├── traits/ # 组合 trait 定义
+│ │ │ ├── composers/ # 具体组合实现
+│ │ │ └── lib.rs
+│ │ ├── Cargo.toml # 依赖: packages/core + packages/contracts
+│ │ └── .gitkeep
+│ │
+│ ├── indexer/ # [必须] 协议事件索引服务 (原 services/indexer 合并)
+│ │ │ # 职责: 按协议拆分拉取源 → 标准化为业务 DTO → 写入 Turso
+│ │ │ # 依赖: packages/web3 + packages/core + packages/adapters/turso
+│ │ │ # 禁止: 包含业务逻辑，仅做事件拉取/转换/写入
+│ │ │
+│ │ ├── src/
+│ │ │ ├── sources/ # 按协议拆分拉取源 (nostr/farcaster/evm/ton)
+│ │ │ ├── transformers/ # 原始事件 → 业务 DTO
+│ │ │ ├── sinks/ # 写入 Turso / 缓存 / 触发领域事件
+│ │ │ └── lib.rs
+│ │ ├── Cargo.toml
+│ │ └── .gitkeep
+│ │
+│ └── api-gateway/ # [Phase 2+] 统一网关 (可选)
+│ │ # 职责: 鉴权/限流/路由分发到各 BFF，不处理业务
+│ │
+│ ├── src/
+│ │ ├── middleware/ # 鉴权/限流/日志/链路追踪
+│ │ ├── router/ # 路由分发 (path → bff)
+│ │ └── main.rs
+│ ├── Cargo.toml
+│ └── .gitkeep
 │
-├── ⚙️  infra/                        # 🆕 【基础设施】声明式运维 · Rust工具链优先
-│   ├── 🐳  docker/                   # Docker 开发环境
-│   │   ├── compose.dev.yml           # 开发环境 (Postgres/Redis/NATS)
-│   │   ├── compose.prod.yml          # 生产环境 (集群模式)
-│   │   └── youki/                    # ⚠️ 观察: Youki runtime 配置
-│   │
-│   ├── ☸️  k8s/                      # Kubernetes 生产编排 · Rust Operator扩展
-│   │   ├── base/                     # 通用配置 (Deployment/Service)
-│   │   ├── overlays/                 # 环境差异化 (dev/staging/prod)
-│   │   ├── istio/                    # 【✅ Istio】Service Mesh · mTLS/金丝雀
-│   │   └── nanocl/                   # ⚠️ 边缘备用: Nanocl 配置
-│   │
-│   ├── 🌍  terraform/                # 云资源编排
-│   │   ├── modules/                  # RDS/Redis/NATS/K8s 可复用模块
-│   │   └── environments/             # dev/prod 多环境实例
-│   │
-│   └── 🔐  security/                 # 安全栈
-│       ├── regorus/                  # 【✅ Regorus】OPA策略引擎 · Rust嵌入
-│       ├── casbin-rs/                # 【✅ casbin-rs】RBAC/ABAC · 内存策略
-│       ├── crowdsec/                 # 【✅ CrowdSec(Rust)】威胁情报 + 自动封禁
-│       └── lego/                     # 【✅ lego】ACME证书自动续签 · Rust CLI
+├── ⚙️ services/ · [必须] 领域服务层 (模块化核心 · 独立业务边界)
+│ │ # 依赖方向: services/* → packages/core + packages/contracts
+│ │ # 禁止: services 之间直接依赖，必须通过 contracts/events 通信
+│ │ # 验证: 每个服务必须可独立 `cargo build -p <service>` + `cargo test -p <service>`
+│ │
+│ ├── user/ # [必须] 用户域: 认证/资料/权限/会话
+│ │ ├── src/
+│ │ │ ├── domain/ # [必须] 纯领域逻辑
+│ │ │ ├── application/ # [必须] 用例逻辑 (纯函数)
+│ │ │ ├── ports/ # [必须] 外部依赖抽象
+│ │ │ ├── contracts/ # [必须] 稳定契约定义
+│ │ │ └── sync/ # [必须] 同步策略定义
+│ │ ├── tests/ / migrations/ / Cargo.toml / README.md
+│ │ └── .gitkeep
+│ │
+│ ├── tenant/ # [必须] 多租户域: 隔离策略 + 成员管理
+│ │ ├── src/domain/ / application/ / ports/ / contracts/ / sync/
+│ │ ├── tests/ / migrations/ / Cargo.toml / .gitkeep
+│ │
+│ ├── counter/ # [必须] 【黄金示例】最小完整模块
+│ │ │ # 用途: Agent 复制此模块创建新业务模块的模板
+│ │ │ # 验证: `cargo test -p counter` 必须 100% 通过
+│ │ │
+│ │ ├── src/domain/ / application/ / ports/ / contracts/ / sync/ / lib.rs
+│ │ ├── tests/unit/ / integration/ / contract/ / sync/
+│ │ ├── migrations/ / Cargo.toml / README.md / .gitkeep
+│ │
+│ ├── admin/ # [必须] 平台管理域: 跨租户操作 + 审计
+│ │ ├── src/ / tests/ / migrations/ / Cargo.toml / .gitkeep
+│ │
+│ └── event-bus/ # [必须] 事件总线抽象 + Outbox 实现
+│ ├── src/
+│ │ ├── ports/ # [必须] EventBus trait
+│ │ ├── adapters/ # [必须] 具体实现 (feature 切换)
+│ │ │ ├── memory/ # Phase 1: 开发/测试用
+│ │ │ └── nats/ # Phase 2+: NATS JetStream
+│ │ ├── outbox/ # [必须] Outbox Pattern 实现
+│ │ └── config.rs # [必须] 事件总线配置
+│ ├── Cargo.toml # [必须] features = ["memory", "nats"]
+│ └── .gitkeep
 │
-├── 🛠️  ops/                          # 🆕 【运维层】可执行流程 · Rust工具优先
-│   ├── 🗄️  migrations/               # 数据库迁移 · 按服务隔离
-│   │   ├── api/                      # API 服务迁移
-│   │   ├── user-service/             # 用户服务迁移
-│   │   └── chat-service/             # 聊天服务迁移
-│   │
-│   ├── 📊  observability/            # 可观测栈
-│   │   ├── openobserve/              # 【✅ OpenObserve】统一日志/指标/追踪
-│   │   ├── vector/                   # 【✅ Vector】日志路由 + 转换 · Rust原生
-│   │   ├── prometheus/               # 【✅ 兼容】业务指标定义 (备用)
-│   │   └── grafana/                  # 【✅ 兼容】预置Dashboard (备用)
-│   │
-│   ├── 🚀  deploy/                   # 声明式部署
-│   │   ├── canary.sh                 # Istio + Prometheus SLO 金丝雀发布
-│   │   ├── rollback.sh               # Helm history + K8s 一键回滚
-│   │   └── health-check.sh           # 多端健康检查 (DB/Cache/MQ/HTTP)
-│   │
-│   ├── 🧪  testing/                  # 专项测试
-│   │   ├── contract/                 # 【✅ pact-rust】契约测试 · 确保接口兼容
-│   │   ├── load/                     # 【✅ drill/lumen】Rust压测 · 高并发场景
-│   │   └── chaos/                    # 【✅ chaos-mesh】故障注入 · K8s集成
-│   │
-│   └── 💾  backup/                   # 备份
-│       ├── rustic/                   # 【✅ Rustic】restic兼容 · 加密增量备份
-│       └── kopia/                    # 【✅ 兼容备用】大文件/冷备场景
+├── 🌐 packages/ · [必须] 共享层 (跨服务复用 · 无业务逻辑)
+│ │ # 依赖方向: packages/_ → 无 (最底层) 或 packages/core
+│ │ # 禁止: 包含业务逻辑或具体基础设施实现
+│ │ # 验证: 所有 packages/_ 必须可独立 `cargo build -p <package>`
+│ │
+│ ├── contracts/ # [必须] 【唯一真理源】契约定义 + 代码生成
+│ │ │ # 职责: HTTP/Event/DTO 契约的唯一来源, CI 自动生成多语言 SDK
+│ │ │ # 验证: `just gen-openapi` + `just gen-frontend-sdk` 必须零 diff
+│ │ │
+│ │ ├── http/ # [必须] HTTP API 契约
+│ │ ├── events/ # [必须] 事件契约 (AsyncAPI 3.1)
+│ │ ├── jsonschema/ # [必须] Payload Schema
+│ │ └── sdk-gen/ # [必须] 代码生成配置
+│ │
+│ ├── core/ # [必须] 【核心抽象】纯 Rust trait + 基础类型
+│ │ │ # 职责: 定义系统级抽象 (TenantId/Error/Config/Telemetry)
+│ │ │ # 依赖: 无 (最底层)
+│ │ │
+│ │ ├── kernel/ # [必须] 基础类型 (TenantId/UserId/Error/Cursor)
+│ │ ├── platform/ # [必须] 平台能力抽象 (config/telemetry/clock)
+│ │ └── .gitkeep
+│ │
+│ ├── adapters/ # [必须] 【外部依赖适配】基础设施实现
+│ │ │ # 设计: 只实现 packages/core 定义的 trait, 不写业务逻辑
+│ │ │ # 依赖方向: adapters/\_ → packages/core + external crates
+│ │ │ # 禁止: adapters 被业务模块直接依赖 (必须通过 ports/ 抽象)
+│ │ │
+│ │ ├── store/ # [必须] 前端本地配置存储 (Tauri Store)
+│ │ ├── turso/ # [必须] Turso 核心适配器 (跳过 libSQL)
+│ │ ├── surreal/ # [可选] SurrealDB 适配器 (实验/复杂模型)
+│ │ ├── cache/ # [必须] 缓存抽象 (Moka + Redis 可选)
+│ │ ├── auth/ # [必须] 认证适配器
+│ │ └── storage/ # [必须] 文件存储适配器
+│ │
+│ ├── 🌐 web3/ # [必须] 去中心化协议适配层 (独立 workspace)
+│ │ │ # 职责: 协议 SDK 封装、链上交互 trait、中继客户端、签名验证
+│ │ │ # 依赖: packages/core + protocol-specific crates
+│ │ │ # 禁止: 包含业务逻辑或中心化 DB 调用
+│ │ │ # 验证: `cargo build -p web3 --features nostr` 必须成功
+│ │ │
+│ │ ├── README.md # 协议集成原则 + 信任边界说明
+│ │ ├── traits/ # [必须] 统一抽象 (IdentityProvider/StatePublisher)
+│ │ ├── at-protocol/ # AT Protocol 封装
+│ │ ├── farcaster/ # Farcaster Hub/Signer/Frame 封装
+│ │ ├── nostr/ # Nostr 中继客户端 + 签名验证
+│ │ ├── evm/ # EVM 基础 (Base/其他 L2 共享)
+│ │ │ ├── base/ # Base L2 特定配置
+│ │ │ └── contracts/ # 生成的 ABI + Rust bindings (ethers/alloy)
+│ │ ├── ton/ # TON SDK 封装
+│ │ ├── solana/ # Solana 程序交互
+│ │ ├── indexer/ # [必须] 链下索引器 (解析事件 → 写入 Turso)
+│ │ └── Cargo.toml # 各协议默认 feature = "stub", 按需启用
+│ │
+│ ├── sdk/ # [必须] 【多语言 SDK】自动生成输出 (git-ignored)
+│ │ │ # 职责: 存储由 contracts/ 自动生成的 SDK
+│ │ │ # 禁止: 手动修改此目录内容 (必须由 CI 生成)
+│ │ │
+│ │ ├── typescript/ # 前端用 (由 ts-rs + openapi-gen 生成)
+│ │ ├── rust/ # 其他 Rust 服务用 (由 prost/utoipa 生成)
+│ │ └── .gitkeep
+│ │
+│ └── ui/ # [必须] 【共享 UI】Svelte 组件库 + design tokens
+│ │ # 职责: 跨端复用的基础组件 + 主题配置
+│ │ # 禁止: 包含业务逻辑或端特定代码
+│ │
+│ ├── src/
+│ │ ├── components/ # 基础组件 (Button/Input/Modal)
+│ │ ├── layouts/ # 布局组件 (TenantLayout/AdminLayout)
+│ │ └── themes/ # 主题配置 (light/dark/tenant-branded)
+│ ├── package.json / .gitkeep
 │
-├── 📚  docs/                         # 🆕 【知识层】架构资产
-│   ├── 🗺️  architecture/             # ADR + 上下文映射
-│   │   ├── ADR-001-rust-first.md     # 为什么Rust优先 + Go替补场景
-│   │   ├── ADR-002-modular-monolith.md # 模块化单体演进策略
-│   │   ├── ADR-003-stun-command.md   # stun 命令设计与使用指南
-│   │   └── context-maps/             # DDD上下文映射图 (Mermaid)
-│   │
-│   ├── 🔌  api/                      # 接口文档源
-│   │   ├── openapi/                  # 聚合所有服务的OpenAPI
-│   │   └── graphql/                  # BFF层GraphQL Schema
-│   │
-│   └── 🧭  runbooks/                 # 运维手册
-│       ├── incident-response.md      # 故障处理流程
-│       └── scaling-guide.md          # 弹性扩缩容指南
+🌐 infra/ · [必须] 基础设施声明层 (云原生就绪 · 轻量起步)
+│ # 原则: 声明式配置 + 阶段化部署, 业务代码零感知
+│ # 验证: `just deploy dev` 启动 compose | `just deploy prod` 部署 k3s
 │
-├── 🛠️  tools/                        # 【工程层】Rust原生工具链
-│   ├── 🎯  just/                     # just 任务模块 (已在 justfiles/)
-│   ├── 🔍  quality/                  # 代码质量配置
-│   │   ├── cargo-deny.ron            # 依赖许可证/安全审计 · CI强制
-│   │   ├── clippy.toml               # Rust Lint规则 · 严格模式
-│   │   └── golangci.yaml             # Go Lint规则 · 替补模块专用
-│   ├── 🧪  testing/                  # 测试基础设施
-│   │   ├── testcontainers/           # 【✅ testcontainers-rs】集成测试容器
-│   │   └── mock-server/              # 【✅ mockito】外部依赖模拟
-│   │
-│   ├── 🤖  codegen/                  # 代码生成
-│   │   ├── ts-rs.config.ts           # Rust→TS 类型同步 · 前端类型安全
-│   │   ├── prost.config.rs           # Protobuf→Rust/Go · gRPC SDK生成
-│   │   └── openapi-gen.yaml          # OpenAPI→SDK · 自动发布
-│   │
-│   ├── evals/                        # ⚠️ 评估 (stub)
-│   ├── generators/                   # ⚠️ 生成器 (stub)
-│   ├── mcp/                          # ⚠️ MCP 工具 (stub)
-│   └── scripts/                      # ⚠️ 脚本 (stub)
+├── docker/ # [必须] 本地开发与 CI 缓存 (Podman 替代docker)
+│ │ # 职责: 仅用于开发环境与 CI 镜像构建
+│ │ # 禁止: 用于生产环境部署
+│ │
+│ ├── compose/
+│ │ ├── app.yaml # 主应用 + 依赖 (turso/nats-rs/otel 开发镜像)
+│ │ └── observability.yaml # 轻量可观测 (OpenObserve + Vector)
+│ ├── Dockerfile.api # distroless + multi-stage 构建
+│ └── Dockerfile.web
 │
-├── 🧪  e2e-desktop-playwright/       # ✅ 桌面端 E2E 测试
-├── 📜  scripts/                      # ✅ TypeScript 构建脚本
-├── 📋  justfiles/                    # ✅ Just 命令模块
-├── 📄  .github/workflows/            # ✅ CI/CD
-├── 🎯  .agents/                      # ✅ AI Agent 技能
-├── 🔧  .cargo/                       # ✅ Cargo 配置
-├── ⚙️  .config/                      # ✅ hakari/nextest 配置
-├── 📋  .planning/                    # ✅ 项目规划
-├── 📦  Cargo.toml                    # ✅ Rust workspace
-├── 📦  Cargo.lock
-├── 📦  package.json                  # ✅ Bun 包管理
-├── 📦  package-lock.json
-├── 📋  Justfile                      # ✅ 命令入口
-├── 🌙  moon.yml                      # ✅ moon 任务
-├── 📋  AGENTS.md                     # ✅ AI 协作协议
-├── 🎯  GOAL.md                       # 🆕 项目目标文档
-├── 📐  DESIGN.md                     # ⚠️ 设计文档 (待填充)
-├── 📋  clippy.toml
-├── 📋  deny.toml
-├── 📋  rustfmt.toml
-├── 📋  rust-toolchain.toml
-├── 🔧  .tool-versions
-├── 🔧  .mise.toml
-├── 🌍  .env.example
-├── 📋  .gitignore
-└── 📋  .gitattributes
+├── k3s/ # [必须] 生产编排 (单二进制 K8s)
+│ │ # 职责: 替代 full K8s, 内置 containerd/traefik/local-path
+│ │ # 阶段: Phase 1 (单体) → Phase 2 (服务拆分)
+│ │
+│ ├── base/ # 通用清单 (不依赖环境)
+│ │ ├── namespace.yaml # app 命名空间
+│ │ ├── configmap.yaml # 环境变量注入
+│ │ ├── deployment.yaml # 滚动更新策略 (replicas=1 → autoscale)
+│ │ ├── service.yaml # ClusterIP / LoadBalancer
+│ │ └── ingress.yaml # Traefik 路由规则
+│ ├── overlays/ # 环境差异化
+│ │ ├── dev/ # 资源限制宽松, 开启 debug
+│ │ ├── staging/ # 贴近生产配置
+│ │ └── prod/ # 严格资源配额, HPA 配置
+│ └── scripts/
+│ ├── bootstrap-k3s.sh # 一键安装 k3s + 依赖 (containerd/traefik)
+│ └── deploy.sh # kubectl/kustomize 部署入口
+│
+├── security/ # [必须] 安全栈 (轻量化)
+│ │ # 职责: 密钥管理 + 基础策略, 禁止过度工程
+│ │
+│ ├── sops/ # 密钥加密 (age + .sops.yaml)
+│ │ ├── .sops.yaml # 加密规则 (按 env 路径)
+│ │ └── secrets.enc.yaml # 加密后的配置模板
+│ └── policies/ # [必须] 基础安全策略
+│ ├── network-policy.yaml # 禁止跨 namespace 默认访问
+│ └── pod-security.yaml # restricted 模式 (非 root, 只读根文件系统)
+│
+└── .gitkeep
+│
+├── 🛠️ ops/ · [必须] 运维可执行层 (自动化 + 文档)
+│ │ # 设计: 所有运维操作必须通过 just 命令, 禁止手写脚本
+│ │ # 禁止: 业务代码依赖 ops/ 脚本 (必须通过 API/配置)
+│ │ # 验证: `just --list` 必须列出所有运维命令
+│ │
+│ ├── migrations/ # [必须] 数据库迁移 (按服务隔离)
+│ │ └── runner/ # 迁移执行器 (CLI)
+│ │
+│ ├── observability/ # [必须] 可观测性配置
+│ │ ├── otel/ # OpenTelemetry 配置
+│ │ └── vector/ # 日志路由 + 转换
+│ │
+│ ├── scripts/ # [必须] 运维脚本 (最小化)
+│ │ ├── bootstrap/
+│ │ │ └── vps.sh.gitkeep # 裸机初始化 (仅安装 just/docker/mise)
+│ │ ├── verify-contracts.sh.gitkeep # 契约校验脚本
+│ │ └── sync-health-check.sh.gitkeep # 同步健康检查
+│ │
+│ ├── runbooks/ # [必须] 故障处理手册
+│ │ ├── incident-response.md.gitkeep
+│ │ └── sync-conflict-resolution.md.gitkeep
+│ │
+│ └── .gitkeep
+│
+├── 🌐 tools/web3/ # [必须] Web3 本地测试工具
+│ │ # 设计: 本地测试网/中继容器/部署脚本，仅做开发环境辅助
+│ │ # 禁止: 包含业务逻辑
+│ │
+│ ├── anvil.sh # 本地 EVM 测试网
+│ ├── nostr-relay-docker.yml # 本地 Nostr 中继
+│ ├── ton-local-testnet.sh # TON 测试环境
+│ └── .gitkeep
+│
+├── 📚 docs/ · [必须] 知识资产 (架构决策 + 契约文档)
+│ │ # 设计: 所有架构决策必须记录为 ADR, 所有契约必须可渲染
+│ │ # 禁止: 口头约定 (必须文档化)
+│ │ # 验证: 新成员必须能通过 docs/ 理解架构
+│ │
+│ ├── adr/ # [必须] Architecture Decision Records
+│ │ ├── 001-modular-first-not-monolith.md.gitkeep
+│ │ ├── 002-bff-layer-necessity.md.gitkeep
+│ │ ├── 003-database-strategy-turso-first.md.gitkeep
+│ │ ├── 004-agent-harness-constraints.md.gitkeep
+│ │ ├── 005-local-first-storage-strategy.md.gitkeep
+│ │ └── .gitkeep
+│ │
+│ ├── architecture/ # [必须] C4 + 上下文映射
+│ │ ├── context/ # System Context 图
+│ │ ├── container/ # Container 图 (BFF/Services/Infra)
+│ │ ├── component/ # 关键组件序列图
+│ │ └── sync-flow/ # 同步流程序列图
+│ │
+│ ├── contracts/ # [必须] 契约文档源 (渲染用)
+│ │ ├── http/ # OpenAPI 文档 (Scalar 渲染)
+│ │ └── events/ # AsyncAPI 文档
+│ │
+│ ├── tenancy-model.md # [必须] 多租户隔离策略详解
+│ ├── storage-strategy.md # [必须] 三层存储策略详解 [关键]
+│ ├── sync-conflict-guide.md # [必须] 冲突解决策略指南
+│ ├── dependency-rules.md # [必须] 依赖方向规则 + 校验方式
+│ └── .gitkeep
+│
+├── 🧪 fixtures/ · [必须] 测试数据 + 种子
+│ │ # 设计: 所有测试数据必须版本控制, 禁止硬编码
+│ │ # 禁止: 生产数据混入 fixtures
+│ │ # 验证: `cargo test` 必须使用 fixtures/ 数据
+│ │
+│ ├── tenants/ # 多租户测试数据
+│ ├── seeds/ # 初始化数据
+│ ├── sync-scenarios/ # 同步测试场景
+│ └── .gitkeep
+│
+├── 📋 根文档
+│ ├── README.md # [必须] 项目入口 + 快速开始
+│ ├── GOAL.md # [必须] 项目目标 + 成功标准
+│ ├── AGENTS.md # [必须] AI Agent 协作协议 [关键]
+│ ├── CONTRIBUTING.md # [必须] 贡献指南 + 架构约束
+│ └── .gitkeep
+│
+├── .github/workflows/ # [必须] CI/CD 流水线
+│ ├── ci-web3.yml # 链上程序编译 + 本地测试网集成测试
+│ ├── deploy-contracts.yml # 链上部署/升级 (独立于 K8s)
+│ └── .gitkeep
+│
+└── .gitkeep # [必须] 确保空目录被 Git 追踪
+
 ```
 
 ---
 
-## 🔑 关键设计原则（一句话原则）
-
-| 目录 | 核心原则 | 为什么这样设计 |
-|------|----------|----------------|
-| `packages/contracts/` | 契约唯一源 · CI自动生成多语言SDK | 前端/其他服务只依赖契约，不依赖实现，后端重构不影响调用方 |
-| `packages/core/` | 定义 trait · 基础设施层实现 | 业务逻辑可纯单元测试，数据库/缓存/消息队列可热替换（如 SQLite → TiDB） |
-| `packages/adapters/` | 薄翻译层 · 无业务逻辑 | 外部协议变更只影响适配器，核心逻辑零感知 |
-| `packages/features/` | 定义 trait + 类型 · 不包含实现 | 特性开关 + 接口契约，未来按特性拆分服务 |
-| `servers/api/` | 组合层 · 无业务逻辑 | 路由 → UseCase → 适配器，职责单一可测试 |
-| `services/*/` | 每个服务 = 独立 Cargo member + 独立 DB Schema | 未来拆微服务只需 `cargo build -p xxx` + 独立部署，零业务代码改造 |
-| `services/event-bus/` | Outbox Pattern + 适配器模式 | 模块间解耦，拆分服务时只需替换 NATS→Kafka 实现，业务逻辑零感知 |
-| `packages/api-contracts/` | proto/openapi/ts-rs 三源合一 · CI生成SDK | 前后端类型安全，接口变更自动编译失败，杜绝运行时错误 |
-| `ops/observability/openobserve/` | 统一可观测平台 · 替代 Prometheus+ES+Jaeger | 存储成本降低 50%+，运维复杂度降低，查询语言统一 |
-| `infra/security/regorus/` | 嵌入式策略引擎 · Rust原生集成 | 策略校验与业务代码同进程，无网络开销，审计日志自动归集 |
-| `tools/` | Rust原生工具链 · 替代Make/Shell | 跨平台一致性，类型安全，缓存友好，新人上手成本降低 |
-
----
-
-## 🔄 演进路径（模块化单体 → 微服务）
-
-### 阶段 0: 模块化单体 (当前)
+## 📌 核心依赖规则
 
 ```
-├─ packages/core/usecases/ 进程内 trait 调用
-├─ services/ 目录预留，逻辑在 packages/
-├─ event-bus 用 in-memory channel + Outbox 表
-├─ 数据库: Turso/SurrealDB 单实例
-├─ 部署: 单个 binary + docker-compose
-└─ 可观测: Vector → OpenObserve 单节点
-```
 
-**触发条件**: 服务变更频率 > 3次/周 或 团队 > 5人
+# 依赖方向 (箭头 = "依赖")
 
-       ↓
+apps/_ → packages/contracts/sdk + packages/ui
+servers/_ → packages/core + packages/contracts + services/_ (trait only)
+services/_ → packages/core + packages/contracts + packages/adapters (via ports/)
+packages/\* → packages/core (仅 core 无依赖)
 
-### 阶段 1: 独立构建 (准备拆分)
+# 禁止规则
 
-```
-├─ 每个服务可单独 `cargo build -p xxx-service`
-├─ event-bus 适配 async-nats (dev用docker-compose启动)
-├─ 数据库: 按服务分 schema + 禁止跨schema JOIN
-├─ 部署: 每个服务独立 Docker 镜像 + 同一 K8s Deployment
-└─ 可观测: OpenObserve 集群模式 + 多租户隔离
-```
+❌ apps/_ → services/_ 或 packages/adapters/_
+❌ services/_ → services/_ (必须通过 contracts/events 通信)
+❌ packages/_ 包含业务逻辑或具体实现
+❌ servers/\* 包含领域业务规则
 
-**触发条件**: 服务需独立扩缩容 或 技术栈差异化
-
-       ↓
-
-### 阶段 2: 独立部署 (微服务化)
-
-```
-├─ 服务间通信: in-memory → gRPC (via Istio Sidecar)
-├─ event-bus: dev NATS → prod Kafka Cluster
-├─ 数据库: 物理隔离 (RDS实例/独立连接池)
-├─ 部署: 每个服务独立 K8s Deployment + HPA + Istio
-├─ 安全: Regorus 策略引擎嵌入每个服务 + CrowdSec 实时防护
-└─ 可观测: OpenObserve + Vector 多节点 + 链路追踪
-```
-
-       ↓
-
-### 阶段 3: 边缘/混合云 (可选)
-
-```
-├─ 边缘节点: Nanocl 替代 K8s + Youki 替代 runc
-├─ 服务发现: etcd + rust-client 替代 Consul
-├─ 备份: Rustic 加密增量备份 + 冷热分层
-└─ 部署: GitOps (ArgoCD) + 多区域容灾 + 自动故障转移
 ```
 
 ---
 
-## 🎯 Command Surface: Just + xx.just Only
+## 🔑 关键说明
 
-### Philosophy
-
-**Shell scripts are limited to bare VPS bootstrapping.** Everything else — dev, test, build, deploy, migrate — is driven by `just` and `justfiles/*.just` modules.
-
+1. **BFF 位置**：`servers/bff/` 按端聚合视图模型，仅依赖 services trait，不写业务规则
+2. **Indexer 合并**：`servers/indexer/` 负责协议事件拉取→转换→写入，无业务逻辑
+3. **Trait-Only 依赖**：services 通过 Cargo feature 控制 `trait-only` 导出，确保 BFF 仅依赖抽象
+4. **验证命令**：`cargo build -p <module> --features trait-only` 必须独立通过
 ```
-scripts/bootstrap/
-└── vps.sh                    # ONLY shell script — installs just, docker, git, and essential ops CLI
-                                # (jq, yq, rg, fd, mise, etc.)
-
-justfiles/                      # ALL operations live here
-├── setup.just                  # Toolchain installation, doctor, sccache, hakari
-├── dev.just                   # Dev servers (fullstack, web, API, desktop, Tauri)
-├── test.just                  # Unit, integration, contract, E2E, coverage
-├── quality.just               # Format, lint, boundary-check, verify
-├── build.just                 # Workspace build, single-service build, cross-compile
-├── deploy.just                # Docker Compose deploy, systemd deploy, K8s deploy
-├── migrate.just               # DB migrations up/down, status, rollback
-├── processes.just             # Cross-platform process management (ps, stop, ports)
-├── clean.just                 # cargo clean, sweep, coverage cleanup
-└── skills.just                # Agent skills integration
-```
-
-### VPS Bootstrap Script (`scripts/bootstrap/vps.sh`)
-
-This is the **only** shell script in the project. It sets up a bare VPS with the minimum required tools:
-
-```bash
-#!/usr/bin/env bash
-# scripts/bootstrap/vps.sh
-# Purpose: Bootstrap a bare VPS with essential tools
-# Idempotent: Safe to run multiple times
-
-set -euo pipefail
-
-# 1. Install just (cross-platform command runner)
-if ! command -v just &>/dev/null; then
-  curl -sSf https://github.com/casey/just/releases/latest/download/just-x86_64-unknown-linux-musl.tar.gz | tar -xz -C /usr/local/bin/ just
-  chmod +x /usr/local/bin/just
-fi
-
-# 2. Install Docker
-if ! command -v docker &>/dev/null; then
-  curl -fsSL https://get.docker.com | sh
-  usermod -aG docker "${USER}"
-fi
-
-# 3. Install essential ops CLI tools
-if ! command -v mise &>/dev/null; then
-  curl -sSf https://github.com/jdx/mise/releases/latest/download/mise-latest-linux-x64.tar.gz | tar -xz -C /usr/local/bin/ mise
-  chmod +x /usr/local/bin/mise
-fi
-
-# ... (jq, yq, rg, fd, etc.)
-
-echo "✅ VPS bootstrapped. Run: just setup"
-```
-
-### Just Command Surface
-
-```bash
-# === Setup ===
-just setup                      # Install all toolchains (Rust, Bun, just, mise, etc.)
-just doctor                     # Verify all dependencies are installed
-
-# === Development ===
-just dev up                     # Start full dev environment (web + API + DB)
-just dev web                    # Start SvelteKit dev server only
-just dev api                    # Start Axum API server only
-just dev tauri                  # Start Tauri desktop app
-just dev desktop                # Start desktop client
-
-# === Testing ===
-just test unit                  # Run unit tests
-just test integration           # Run integration tests
-just test e2e                   # Run E2E tests (Playwright)
-just test contract              # Run contract tests (pact-rust)
-just test coverage              # Run tests with coverage
-just test load                  # Run load tests (drill)
-
-# === Quality ===
-just quality                    # Run all quality checks (format + lint + deny + boundary)
-just quality format             # Format all code
-just quality lint               # Run clippy + biome
-just quality deny               # Run cargo-deny
-just quality boundary           # Check architecture boundary violations
-
-# === Build ===
-just build                      # Build entire workspace
-just build -p user-service      # Build single service
-just build --release            # Release build
-just build --target x86_64-unknown-linux-musl  # Cross-compile
-
-# === Deploy ===
-just deploy compose             # Deploy via Docker Compose
-just deploy systemd             # Deploy to systemd (Linux server)
-just deploy k8s                 # Deploy to Kubernetes
-just deploy canary              # Canary deployment (Istio)
-just deploy rollback            # Rollback last deployment
-
-# === Migrate ===
-just migrate up                 # Run all pending migrations
-just migrate down               # Rollback last migration
-just migrate status             # Show migration status
-just migrate create add_users_table  # Create new migration
-
-# === Process Management ===
-just ps                         # Show running processes
-just ps stop                    # Stop all processes
-just ps ports                   # Show listening ports
-
-# === Cleanup ===
-just clean                      # Clean all build artifacts
-just clean cargo                # cargo clean
-just clean coverage             # Clean coverage reports
-```
-
-### Why Just, Not Shell Scripts?
-
-| Aspect | Shell Scripts (.sh) | Just + xx.just |
-|--------|-------------------|----------------|
-| **Cross-platform** | ❌ Platform-specific, needs bash/zsh/PowerShell variants | ✅ Works on macOS/Linux/Windows (WSL) |
-| **Type safety** | ❌ Stringly-typed, no validation | ✅ Justfile syntax is validated |
-| **Discoverability** | ❌ Must read source or `--help` | ✅ `just --list` shows all commands |
-| **Dependencies** | ❌ Manual dependency management | ✅ Just handles recipe dependencies |
-| **Caching** | ❌ Always re-runs | ✅ Can integrate with sccache, cargo caching |
-| **Composability** | ❌ Hard to chain scripts | ✅ Recipe composition, variable passing |
-| **Agent-friendly** | ❌ AI agents struggle with shell nuances | ✅ Structured, predictable syntax |
-
-**Rule of thumb**: If it needs to run on a bare VPS before anything else exists, it's a `.sh` script. Everything else is `just`.
-
----
-
-## 🎯 Acceptance Criteria (How to Know the Architecture Succeeds)
-
-1. **Painless Split**: Extracting `user-service` into its own repo requires only `Cargo.toml` path + deploy config changes, zero business logic modification
-2. **Frontend Agnostic**: BFF layer aggregates interfaces; frontend depends only on `api-contracts/sdk-gen/typescript`; backend topology changes don't affect frontend
-3. **Ops Control**: `just deploy compose` one-command deploy; `ops/observability/openobserve/` pre-configured business dashboard
-4. **Security Compliance**: `cargo-deny` + `crowdsec` + `regorus` three-layer protection; audit logs auto-collected
-5. **Efficiency**: `just build -p user-service` compiles only changed modules; CI < 5 min; newcomer `just dev up` starts full stack in 3 min
-6. **Cost Optimization**: OpenObserve replaces Prometheus+ES+Jaeger; storage cost reduced 50%+; unified query language
-7. **Template Ready**: GitHub "Use this template" → `git clone` → `just setup` → `just dev up` → running app. Newcomer needs zero architecture design knowledge to start developing
-
----
-
-> 💡 **Core Philosophy**:
-> **Use Rust's type system and ownership model to gain determinism and safety in microservice evolution**.
-> Spend 1 hour today defining `Repository trait`, save 100 hours tomorrow refactoring business logic;
-> Spend 1 hour today configuring `OpenObserve`, save 100 hours maintaining multiple monitoring systems.
-> **Design discipline + Rust ecosystem = evolution freedom + ops cost reduction**.
