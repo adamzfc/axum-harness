@@ -2,8 +2,8 @@ projects:
   # Root project (this repo)
   repo: '.'
   # Active projects (have moon.yml or package.json)
-  client-native: 'apps/client/native'
-  client-web: 'apps/client/web/app'
+  desktop-tauri: 'apps/desktop/src-tauri'
+  web: 'apps/web'
   core-domain: 'packages/core/domain'
   core-usecases: 'packages/core/usecases'
   contracts-api: 'packages/contracts/api'

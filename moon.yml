@@ -83,14 +83,14 @@ tasks:
   # ==========================================================================
 
   dev-web:
-    script: 'cd apps/client/web/app && bun run dev'
+    script: 'cd apps/web && bun run dev'
     inputs:
-      - 'apps/client/web/app/**/*'
+      - 'apps/web/**/*'
 
   dev-desktop:
     script: 'bun run scripts/dev-desktop.ts'
     inputs:
-      - 'apps/client/native/**/*'
+      - 'apps/desktop/**/*'
       - 'servers/api/**/*'
       - 'scripts/dev-desktop.ts'
       - 'scripts/lib/spawn.ts'
@@ -114,17 +114,17 @@ tasks:
   fmt:
     deps:
       - 'format'
-      - 'client-web:format'
+      - 'web:format'
 
   quality-lint:
     deps:
       - 'lint'
-      - 'client-web:lint'
+      - 'web:lint'
 
   typecheck:
     deps:
       - 'check'
-      - 'client-web:check'
+      - 'web:check'
 
   contracts-check:
     script: |
@@ -132,7 +132,7 @@ tasks:
       moon run repo:typegen
       echo "=== Checking for drift ==="
       git diff --exit-code packages/contracts/generated/ && echo "DRIFT CHECK PASSED" || (echo "DRIFT CHECK FAILED - generated types differ from committed" && exit 1)
-      git diff --exit-code apps/client/web/app/src/lib/generated/ && echo "FRONTEND SYNC PASSED" || (echo "FRONTEND SYNC FAILED - frontend types differ from committed" && exit 1)
+      git diff --exit-code apps/web/src/lib/generated/ && echo "FRONTEND SYNC PASSED" || (echo "FRONTEND SYNC FAILED - frontend types differ from committed" && exit 1)
     inputs:
       - 'packages/contracts/**/src/**'
       - 'packages/contracts/**/Cargo.toml'
@@ -179,13 +179,13 @@ tasks:
     command: 'cargo test --workspace -- --ignored'
 
   test-e2e:
-    script: 'cd apps/client/web/app && bun run test:e2e'
+    script: 'cd apps/web && bun run test:e2e'
 
   # Build desktop binary once (cached for subsequent E2E runs)
   build-desktop-bin:
     command: 'cargo build -p native-tauri --profile e2e --features e2e-testing'
     inputs:
-      - 'apps/client/native/**/*'
+      - 'apps/desktop/**/*'
       - 'packages/contracts/**/*'
       - 'packages/domain/**/*'
       - 'packages/usecases/**/*'
@@ -196,12 +196,12 @@ tasks:
       - 'target/e2e/native-tauri.exe'
 
   test-desktop:
-    script: 'cd e2e-desktop-playwright && bun run test:desktop:core'
+    script: 'cd apps/desktop/tests/e2e && bun run test:desktop:core'
     inputs:
-      - 'e2e-desktop-playwright/**/*.ts'
-      - 'e2e-desktop-playwright/package.json'
-      - 'apps/client/native/**/*'
-      - 'apps/client/web/app/**/*'
+      - 'apps/desktop/tests/e2e/**/*.ts'
+      - 'apps/desktop/tests/e2e/package.json'
+      - 'apps/desktop/**/*'
+      - 'apps/web/**/*'
     deps:
       - '~:build-desktop-bin'
       - '~:setup'
@@ -215,8 +215,8 @@ tasks:
       - 'scripts/e2e/run-e2e-gate.ts'
       - 'scripts/e2e/runtime-preflight.ts'
       - 'scripts/lib/spawn.ts'
-      - 'apps/client/web/app/**'
-      - 'e2e-desktop-playwright/**'
+      - 'apps/web/**'
+      - 'apps/desktop/tests/e2e/**'
 
   check-storage-turso:
     command: 'cargo check -p runtime_server'
@@ -234,8 +234,8 @@ tasks:
 
   test-all-frontend:
     deps:
-      - 'client-web:check'
-      - 'client-web:lint'
+      - 'web:check'
+      - 'web:lint'
       - 'test-e2e'
       - 'test-desktop'
 

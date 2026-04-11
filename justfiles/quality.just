@@ -32,9 +32,9 @@ boundary-check:
 verify:
     moon run repo:verify
 
-# Rust 二进制体积分析
-bloat:
-    moon run repo:bloat
+# 生成目录分类索引（Agent 搜索优先级提示）
+gen-dir-cats:
+    bun run scripts/gen-directory-categories.ts
 
 # ── 内部工具 ──────────────────────────────────────────────────
 
