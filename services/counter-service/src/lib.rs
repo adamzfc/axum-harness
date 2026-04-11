@@ -1,23 +1,53 @@
-//! Counter domain service — counting, statistics, analytics.
+//! Counter Service — Golden Module 🏆
 //!
-//! ## Status
-//! - [ ] Phase 0: Stub — business logic lives in `packages/core/usecases/`
-//! - [ ] Phase 1: Implement domain/application/ports
-//! - [ ] Phase 2: Independent deployment
+//! This is the reference implementation for all services in this project.
+//! New services should copy this structure and conventions.
 //!
-//! ## Architecture
-//! - `domain/` — Counter entity, value objects, invariants
-//! - `application/` — Use cases (increment, decrement, reset)
-//! - `ports/` — External dependency abstractions (CounterRepository)
-//! - `contracts/` — Stable contract definitions
-//! - `sync/` — OfflineFirst sync strategies
-//! - `infrastructure/` — Database implementations
-//! - `interfaces/` — API route handlers
+//! ## Architecture (Clean Architecture / Hexagonal)
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────┐
+//! │  interfaces/  (future: gRPC, HTTP routes)       │  ← Outer: protocol adapters
+//! ├─────────────────────────────────────────────────┤
+//! │  infrastructure/ (LibSqlCounterRepository)      │  ← Outer: storage adapters
+//! ├─────────────────────────────────────────────────┤
+//! │  application/   (TenantScopedCounterService)    │  ← Inner: use case orchestration
+//! ├─────────────────────────────────────────────────┤
+//! │  ports/         (CounterRepository trait)       │  ← Inner: external dependency abstract
+//! ├─────────────────────────────────────────────────┤
+//! │  domain/        (Counter, CounterId, errors)    │  ← Core: entities & invariants
+//! └─────────────────────────────────────────────────┘
+//!
+//!  contracts/     (DTO re-exports from packages/contracts/)
+//!  sync/          (OfflineFirst sync strategies)
+//! ```
+//!
+//! ## Dependency rules
+//! - `domain/` → zero external dependencies (pure Rust types)
+//! - `ports/` → only `domain/` + async-trait
+//! - `application/` → `domain/` + `ports/` + feature traits
+//! - `infrastructure/` → `ports/` + specific storage crates
+//! - `interfaces/` → `application/` + HTTP/gRPC frameworks
+//!
+//! ## Feature flags
+//! - `trait-only` — exports only trait definitions (for BFF compile-time dependency)
+//!
+//! ## Migration
+//! The `COUNTER_MIGRATION` constant in `application::service` contains the SQL
+//! DDL. Run this at startup from the composition root:
+//!
+//! ```ignore
+//! use counter_service::application::service::COUNTER_MIGRATION;
+//! db.execute(COUNTER_MIGRATION, vec![]).await?;
+//! ```
 
+// ── Core layers ──
+pub mod domain;
+pub mod ports;
 pub mod application;
 pub mod contracts;
-pub mod domain;
+pub mod sync;
+
+// ── Outer layers ──
 pub mod infrastructure;
 pub mod interfaces;
-pub mod ports;
-pub mod sync;

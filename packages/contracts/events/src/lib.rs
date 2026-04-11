@@ -21,6 +21,41 @@ pub struct TenantMemberAdded {
     pub role: String,
 }
 
+/// Counter value changed event.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export, export_to = "events/")]
+pub struct CounterChanged {
+    pub tenant_id: String,
+    pub new_value: i64,
+    pub delta: i64,
+}
+
+/// Chat message sent event.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export, export_to = "events/")]
+pub struct ChatMessageSent {
+    pub conversation_id: String,
+    pub message_id: String,
+    pub sender_id: String,
+}
+
+/// Unified application event envelope.
+///
+/// This is the single type that flows through the EventBus.
+/// All services publish and consume via this enum.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", content = "payload")]
+pub enum AppEvent {
+    #[serde(rename = "tenant.created")]
+    TenantCreated(TenantCreated),
+    #[serde(rename = "tenant.member_added")]
+    TenantMemberAdded(TenantMemberAdded),
+    #[serde(rename = "counter.changed")]
+    CounterChanged(CounterChanged),
+    #[serde(rename = "chat.message_sent")]
+    ChatMessageSent(ChatMessageSent),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

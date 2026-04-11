@@ -2,13 +2,41 @@
 name = "event-bus"
 version = "0.1.0"
 edition = "2024"
-description = "Shared event bus: async-nats adapter + Outbox pattern"
+description = "Shared event bus: in-memory adapter + Outbox pattern"
+license = "MIT"
+rust-version.workspace = true
 
 [dependencies]
-async-trait = { workspace = true }
+# Core types
+contracts_events = { workspace = true }
+kernel = { workspace = true }
+
+# Runtime
 serde = { workspace = true }
 serde_json = { workspace = true }
-tokio = { workspace = true }
-# Phase 1: in-memory channel (dev)
-# Phase 2: async-nats (prod)
+async-trait = { workspace = true }
+tokio = { workspace = true, features = ["sync"] }
+tracing = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true, features = ["v7"] }
+thiserror = { workspace = true }
+
+# Phase 2: NATS (uncomment when ready)
 # async-nats = "0.38"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt", "sync"] }
+
+[features]
+default = ["memory"]
+# Phase 1: in-memory event bus (dev/test)
+memory = []
+# Phase 2: NATS JetStream (production)
+# nats = ["dep:async-nats"]
+
+[[test]]
+name = "event_bus_tests"
+path = "tests/event_bus_test.rs"
+
+[lints]
+workspace = true

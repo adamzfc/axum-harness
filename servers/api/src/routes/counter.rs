@@ -1,4 +1,8 @@
 //! Counter REST API routes.
+//!
+//! These handlers depend on `feature_counter::CounterService` trait only —
+//! the concrete implementation (counter-service or usecases) is injected
+//! via Axum State at the composition root.
 
 use crate::state::AppState;
 use axum::{
@@ -7,7 +11,6 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
-use contracts_api::{CounterResponse, ErrorResponse};
 use domain::ports::TenantId;
 use feature_counter::CounterService;
 use utoipa::OpenApi;
@@ -27,53 +30,38 @@ pub fn router() -> Router<AppState> {
     tag = "counter",
     security(("tenant_auth" = [])),
     responses(
-        (status = 200, description = "Counter incremented successfully", body = CounterResponse, content_type = "application/json"),
-        (status = 401, description = "Unauthorized — missing tenant context", body = ErrorResponse, content_type = "application/json"),
-        (status = 500, description = "Internal server error", body = ErrorResponse, content_type = "application/json"),
+        (status = 200, description = "Counter incremented successfully", body = serde_json::Value, content_type = "application/json"),
+        (status = 401, description = "Unauthorized — missing tenant context"),
+        (status = 500, description = "Internal server error"),
     ),
 )]
 async fn increment(
     State(state): State<AppState>,
     tenant: Option<Extension<TenantId>>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let db = match get_db(&state) {
-        Ok(db) => db,
-        Err(e) => return e,
+    let db = match state.embedded_db.clone() {
+        Some(db) => db,
+        None => return db_not_ready(),
     };
-    let tenant_id = match get_tenant(tenant) {
+    let tenant_id = match extract_tenant(tenant) {
         Ok(id) => id,
         Err(e) => return e,
     };
-    let service = usecases::counter_service::LibSqlCounterService::new(db);
-    match service.increment_for_tenant(&tenant_id).await {
+
+    // Use the counter-service implementation via its repository
+    let repo = counter_service::infrastructure::LibSqlCounterRepository::new(db);
+    let service = counter_service::application::TenantScopedCounterService::new(repo);
+
+    // Convert domain TenantId to kernel TenantId
+    let kernel_tid = kernel::TenantId(tenant_id.0.clone());
+
+    match service.increment(&kernel_tid).await {
         Ok(value) => (StatusCode::OK, Json(serde_json::json!({ "value": value }))),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({ "error": e.to_string() })),
         ),
     }
-}
-
-fn get_db(
-    state: &AppState,
-) -> Result<storage_turso::EmbeddedTurso, (StatusCode, Json<serde_json::Value>)> {
-    state.embedded_db.clone().ok_or_else(|| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": "Embedded database not initialized" })),
-        )
-    })
-}
-
-fn get_tenant(
-    tenant: Option<Extension<TenantId>>,
-) -> Result<TenantId, (StatusCode, Json<serde_json::Value>)> {
-    tenant.map(|Extension(id)| id).ok_or_else(|| {
-        (
-            StatusCode::UNAUTHORIZED,
-            Json(serde_json::json!({ "error": "Missing tenant context" })),
-        )
-    })
 }
 
 /// Decrement the tenant's counter value.
@@ -83,25 +71,30 @@ fn get_tenant(
     tag = "counter",
     security(("tenant_auth" = [])),
     responses(
-        (status = 200, description = "Counter decremented successfully", body = CounterResponse, content_type = "application/json"),
-        (status = 401, description = "Unauthorized — missing tenant context", body = ErrorResponse, content_type = "application/json"),
-        (status = 500, description = "Internal server error", body = ErrorResponse, content_type = "application/json"),
+        (status = 200, description = "Counter decremented successfully", body = serde_json::Value, content_type = "application/json"),
+        (status = 401, description = "Unauthorized — missing tenant context"),
+        (status = 500, description = "Internal server error"),
     ),
 )]
 async fn decrement(
     State(state): State<AppState>,
     tenant: Option<Extension<TenantId>>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let db = match get_db(&state) {
-        Ok(db) => db,
-        Err(e) => return e,
+    let db = match state.embedded_db.clone() {
+        Some(db) => db,
+        None => return db_not_ready(),
     };
-    let tenant_id = match get_tenant(tenant) {
+    let tenant_id = match extract_tenant(tenant) {
         Ok(id) => id,
         Err(e) => return e,
     };
-    let service = usecases::counter_service::LibSqlCounterService::new(db);
-    match service.decrement_for_tenant(&tenant_id).await {
+
+    let repo = counter_service::infrastructure::LibSqlCounterRepository::new(db);
+    let service = counter_service::application::TenantScopedCounterService::new(repo);
+
+    let kernel_tid = kernel::TenantId(tenant_id.0.clone());
+
+    match service.decrement(&kernel_tid).await {
         Ok(value) => (StatusCode::OK, Json(serde_json::json!({ "value": value }))),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -117,25 +110,30 @@ async fn decrement(
     tag = "counter",
     security(("tenant_auth" = [])),
     responses(
-        (status = 200, description = "Counter reset successfully", body = CounterResponse, content_type = "application/json"),
-        (status = 401, description = "Unauthorized — missing tenant context", body = ErrorResponse, content_type = "application/json"),
-        (status = 500, description = "Internal server error", body = ErrorResponse, content_type = "application/json"),
+        (status = 200, description = "Counter reset successfully", body = serde_json::Value, content_type = "application/json"),
+        (status = 401, description = "Unauthorized — missing tenant context"),
+        (status = 500, description = "Internal server error"),
     ),
 )]
 async fn reset(
     State(state): State<AppState>,
     tenant: Option<Extension<TenantId>>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let db = match get_db(&state) {
-        Ok(db) => db,
-        Err(e) => return e,
+    let db = match state.embedded_db.clone() {
+        Some(db) => db,
+        None => return db_not_ready(),
     };
-    let tenant_id = match get_tenant(tenant) {
+    let tenant_id = match extract_tenant(tenant) {
         Ok(id) => id,
         Err(e) => return e,
     };
-    let service = usecases::counter_service::LibSqlCounterService::new(db);
-    match service.reset_for_tenant(&tenant_id).await {
+
+    let repo = counter_service::infrastructure::LibSqlCounterRepository::new(db);
+    let service = counter_service::application::TenantScopedCounterService::new(repo);
+
+    let kernel_tid = kernel::TenantId(tenant_id.0.clone());
+
+    match service.reset(&kernel_tid).await {
         Ok(value) => (StatusCode::OK, Json(serde_json::json!({ "value": value }))),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -151,29 +149,52 @@ async fn reset(
     tag = "counter",
     security(("tenant_auth" = [])),
     responses(
-        (status = 200, description = "Current counter value", body = CounterResponse, content_type = "application/json"),
-        (status = 401, description = "Unauthorized — missing tenant context", body = ErrorResponse, content_type = "application/json"),
-        (status = 500, description = "Internal server error", body = ErrorResponse, content_type = "application/json"),
+        (status = 200, description = "Current counter value", body = serde_json::Value, content_type = "application/json"),
+        (status = 401, description = "Unauthorized — missing tenant context"),
+        (status = 500, description = "Internal server error"),
     ),
 )]
 async fn get_value(
     State(state): State<AppState>,
     tenant: Option<Extension<TenantId>>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let db = match get_db(&state) {
-        Ok(db) => db,
-        Err(e) => return e,
+    let db = match state.embedded_db.clone() {
+        Some(db) => db,
+        None => return db_not_ready(),
     };
-    let tenant_id = match get_tenant(tenant) {
+    let tenant_id = match extract_tenant(tenant) {
         Ok(id) => id,
         Err(e) => return e,
     };
-    let service = usecases::counter_service::LibSqlCounterService::new(db);
-    match service.get_value_for_tenant(&tenant_id).await {
+
+    let repo = counter_service::infrastructure::LibSqlCounterRepository::new(db);
+    let service = counter_service::application::TenantScopedCounterService::new(repo);
+
+    let kernel_tid = kernel::TenantId(tenant_id.0.clone());
+
+    match service.get_value(&kernel_tid).await {
         Ok(value) => (StatusCode::OK, Json(serde_json::json!({ "value": value }))),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({ "error": e.to_string() })),
         ),
     }
+}
+
+// ── Helpers ──────────────────────────────────────────────────
+
+fn db_not_ready() -> (StatusCode, Json<serde_json::Value>) {
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Json(serde_json::json!({ "error": "Embedded database not initialized" })),
+    )
+}
+
+fn extract_tenant(tenant: Option<Extension<TenantId>>) -> Result<TenantId, (StatusCode, Json<serde_json::Value>)> {
+    tenant.map(|Extension(id)| id).ok_or_else(|| {
+        (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({ "error": "Missing tenant context" })),
+        )
+    })
 }
