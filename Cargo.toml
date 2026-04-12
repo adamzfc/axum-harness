@@ -5,8 +5,9 @@ members = [
     # Core
     "packages/core/workspace-hack",
     "packages/core/domain",
-    "packages/core/kernel",
-    "packages/core/platform",
+    # Packages (flat structure per ARCHITECTURE.md)
+    "packages/kernel",
+    "packages/platform",
     # Contracts
     "packages/contracts/api",
     "packages/contracts/auth",
@@ -115,8 +116,8 @@ rust-version = "1.94"
 [workspace.dependencies]
 # Internal crates
 domain = { path = "packages/core/domain" }
-kernel = { path = "packages/core/kernel" }
-platform = { path = "packages/core/platform" }
+kernel = { path = "packages/kernel" }
+platform = { path = "packages/platform" }
 contracts_api = { path = "packages/contracts/api" }
 contracts_auth = { path = "packages/contracts/auth" }
 contracts_events = { path = "packages/contracts/events" }
