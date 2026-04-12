@@ -72,6 +72,12 @@ members = [
     "servers/gateway",
     "servers/indexer",
     "servers/bff/web-bff",
+    # Workers
+    "workers/outbox-relay",
+    "workers/indexer",
+    "workers/projector",
+    "workers/scheduler",
+    "workers/sync-reconciler",
     # Platform
     "platform/validators/model-lint",
     "platform/generators",

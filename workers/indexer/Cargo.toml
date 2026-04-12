@@ -1,0 +1,34 @@
+[package]
+name = "indexer-worker"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "indexer-worker"
+path = "src/main.rs"
+
+[dependencies]
+# Internal
+contracts_events = { path = "../../packages/contracts/events" }
+domain = { workspace = true }
+
+# Core
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true, features = ["v7"] }
+anyhow = { workspace = true }
+
+# HTTP server for health checks
+axum = { workspace = true }
+
+[dev-dependencies]
+
+[lints]
+workspace = true

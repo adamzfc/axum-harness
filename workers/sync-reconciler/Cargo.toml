@@ -1,0 +1,30 @@
+[package]
+name = "sync-reconciler-worker"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "sync-reconciler-worker"
+path = "src/main.rs"
+
+[dependencies]
+# Core
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true, features = ["v7"] }
+anyhow = { workspace = true }
+
+# HTTP server for health checks
+axum = { workspace = true }
+
+[dev-dependencies]
+
+[lints]
+workspace = true

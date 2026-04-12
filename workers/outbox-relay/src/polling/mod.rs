@@ -1,0 +1,198 @@
+//! Outbox poller — queries the database for pending outbox entries.
+
+use std::time::Duration;
+
+use async_trait::async_trait;
+use tokio::time;
+use tracing::{debug, warn};
+
+use crate::checkpoint::CheckpointStore;
+use crate::dedupe::MessageDedup;
+
+/// Represents a pending outbox entry.
+#[derive(Debug, Clone)]
+pub struct PendingOutboxEntry {
+    pub id: String,
+    pub sequence: u64,
+    pub event_type: String,
+    pub payload: String,
+    pub source_service: String,
+    pub retry_count: u32,
+}
+
+/// Abstract port for reading pending outbox entries.
+#[async_trait]
+pub trait OutboxReader: Send + Sync {
+    /// Fetch pending outbox entries since the given checkpoint.
+    async fn fetch_pending(
+        &self,
+        since_sequence: u64,
+        limit: usize,
+    ) -> Result<Vec<PendingOutboxEntry>, Box<dyn std::error::Error + Send + Sync>>;
+}
+
+/// In-memory stub reader for testing.
+pub struct MemoryOutboxReader {
+    pub entries: Vec<PendingOutboxEntry>,
+}
+
+impl MemoryOutboxReader {
+    pub fn new(entries: Vec<PendingOutboxEntry>) -> Self {
+        Self { entries }
+    }
+}
+
+#[async_trait]
+impl OutboxReader for MemoryOutboxReader {
+    async fn fetch_pending(
+        &self,
+        since_sequence: u64,
+        _limit: usize,
+    ) -> Result<Vec<PendingOutboxEntry>, Box<dyn std::error::Error + Send + Sync>> {
+        Ok(self
+            .entries
+            .iter()
+            .filter(|e| e.sequence > since_sequence)
+            .cloned()
+            .collect())
+    }
+}
+
+/// Configuration for the outbox poller.
+#[derive(Debug, Clone)]
+pub struct PollerConfig {
+    pub poll_interval: Duration,
+    pub batch_size: usize,
+}
+
+impl Default for PollerConfig {
+    fn default() -> Self {
+        Self {
+            poll_interval: Duration::from_secs(5),
+            batch_size: 100,
+        }
+    }
+}
+
+/// Polls the outbox and yields pending entries to the publisher.
+pub struct OutboxPoller<R: OutboxReader> {
+    reader: R,
+    config: PollerConfig,
+    checkpoint: CheckpointStore,
+    dedup: MessageDedup,
+}
+
+impl<R: OutboxReader> OutboxPoller<R> {
+    pub fn new(reader: R, config: PollerConfig) -> Self {
+        Self {
+            reader,
+            config,
+            checkpoint: CheckpointStore::new(0),
+            dedup: MessageDedup::default(),
+        }
+    }
+
+    /// Run one poll cycle, returning entries to process.
+    pub async fn poll_cycle(&mut self) -> Vec<PendingOutboxEntry> {
+        let since = self.checkpoint.get();
+
+        match self.reader.fetch_pending(since, self.config.batch_size).await {
+            Ok(entries) => {
+                let mut result = Vec::new();
+                for entry in entries {
+                    if !self.dedup.is_duplicate(&entry.id) {
+                        result.push(entry);
+                    } else {
+                        debug!(entry_id = %entry.id, "skipping duplicate outbox entry");
+                    }
+                }
+
+                debug!(count = result.len(), "fetched pending outbox entries");
+                result
+            }
+            Err(e) => {
+                warn!(error = %e, "failed to fetch pending outbox entries");
+                Vec::new()
+            }
+        }
+    }
+
+    /// Mark entries as processed and advance the checkpoint.
+    pub fn mark_processed(&mut self, entries: &[PendingOutboxEntry]) {
+        for entry in entries {
+            self.dedup.mark_processed(&entry.id);
+            if entry.sequence > self.checkpoint.get() {
+                self.checkpoint.advance(entry.sequence);
+            }
+        }
+    }
+
+    /// Run the poller loop (for integration into a larger worker).
+    pub async fn run<F, Fut>(&mut self, mut handler: F)
+    where
+        F: FnMut(Vec<PendingOutboxEntry>) -> Fut + Send,
+        Fut: std::future::Future<Output = ()> + Send,
+    {
+        let mut interval = time::interval(self.config.poll_interval);
+        loop {
+            interval.tick().await;
+            let entries = self.poll_cycle().await;
+            if !entries.is_empty() {
+                handler(entries.clone()).await;
+                self.mark_processed(&entries);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn poll_cycle_returns_pending_entries() {
+        let entries = vec![
+            PendingOutboxEntry {
+                id: "entry-1".to_string(),
+                sequence: 1,
+                event_type: "counter.changed".to_string(),
+                payload: "{}".to_string(),
+                source_service: "counter-service".to_string(),
+                retry_count: 0,
+            },
+        ];
+        let reader = MemoryOutboxReader::new(entries);
+        let mut poller = OutboxPoller::new(reader, PollerConfig::default());
+
+        let result = poller.poll_cycle().await;
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].id, "entry-1");
+    }
+
+    #[tokio::test]
+    async fn poll_cycle_skips_duplicates() {
+        let entries = vec![
+            PendingOutboxEntry {
+                id: "entry-1".to_string(),
+                sequence: 1,
+                event_type: "counter.changed".to_string(),
+                payload: "{}".to_string(),
+                source_service: "counter-service".to_string(),
+                retry_count: 0,
+            },
+        ];
+        let reader = MemoryOutboxReader::new(entries.clone());
+        let mut poller = OutboxPoller::new(reader, PollerConfig::default());
+
+        // First poll
+        let result1 = poller.poll_cycle().await;
+        assert_eq!(result1.len(), 1);
+        poller.mark_processed(&result1);
+
+        // Second poll — should skip the duplicate
+        let reader2 = MemoryOutboxReader::new(entries);
+        poller.reader = reader2;
+        let result2 = poller.poll_cycle().await;
+        assert_eq!(result2.len(), 0);
+    }
+}

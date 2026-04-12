@@ -97,3 +97,58 @@ ports:
     else \
         lsof -i :1420 2>/dev/null | grep -v COMMAND || echo "  [FREE]"; \
     fi
+
+# ── Worker Management ─────────────────────────────────────────
+
+# 启动所有 workers（后台运行）
+dev-workers:
+    @echo "Starting workers..."
+    @echo "  - outbox-relay-worker (health: :3030)"
+    @echo "  - indexer-worker (health: :3031)"
+    @echo "  - projector-worker (health: :3032)"
+    @echo "  - scheduler-worker (health: :3033)"
+    @echo "  - sync-reconciler-worker (health: :3034)"
+    @echo ""
+    @echo "Workers run in background. Use 'just stop-workers' to stop."
+    cargo run -p outbox-relay-worker &
+    cargo run -p indexer-worker &
+    cargo run -p projector-worker &
+    cargo run -p scheduler-worker &
+    cargo run -p sync-reconciler-worker &
+    @echo "All workers started."
+
+# 停止所有 workers
+stop-workers:
+    @echo "Stopping workers..."
+    @pkill -f "outbox-relay-worker" 2>/dev/null && echo "  ✓ outbox-relay-worker stopped" || echo "  - outbox-relay-worker not running"
+    @pkill -f "indexer-worker" 2>/dev/null && echo "  ✓ indexer-worker stopped" || echo "  - indexer-worker not running"
+    @pkill -f "projector-worker" 2>/dev/null && echo "  ✓ projector-worker stopped" || echo "  - projector-worker not running"
+    @pkill -f "scheduler-worker" 2>/dev/null && echo "  ✓ scheduler-worker stopped" || echo "  - scheduler-worker not running"
+    @pkill -f "sync-reconciler-worker" 2>/dev/null && echo "  ✓ sync-reconciler-worker stopped" || echo "  - sync-reconciler-worker not running"
+    @echo "Done."
+
+# 启动单个 worker
+run-worker WORKER='':
+    @test -n "{{WORKER}}" || (echo "Usage: just run-worker WORKER=outbox-relay" && exit 1)
+    @echo "Starting {{WORKER}}-worker..."
+    cargo run -p {{WORKER}}-worker
+
+# 查看 workers 健康状态
+health-workers:
+    @echo "=== Worker Health ==="
+    @echo ""
+    @echo "outbox-relay-worker (:3030):"
+    @curl -s http://localhost:3030/healthz 2>/dev/null || echo "  [UNREACHABLE]"
+    @echo ""
+    @echo "indexer-worker (:3031):"
+    @curl -s http://localhost:3031/healthz 2>/dev/null || echo "  [UNREACHABLE]"
+    @echo ""
+    @echo "projector-worker (:3032):"
+    @curl -s http://localhost:3032/healthz 2>/dev/null || echo "  [UNREACHABLE]"
+    @echo ""
+    @echo "scheduler-worker (:3033):"
+    @curl -s http://localhost:3033/healthz 2>/dev/null || echo "  [UNREACHABLE]"
+    @echo ""
+    @echo "sync-reconciler-worker (:3034):"
+    @curl -s http://localhost:3034/healthz 2>/dev/null || echo "  [UNREACHABLE]"
+    @echo ""

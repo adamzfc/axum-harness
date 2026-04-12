@@ -1,0 +1,33 @@
+[package]
+name = "scheduler-worker"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "scheduler-worker"
+path = "src/main.rs"
+
+[dependencies]
+# Core
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+uuid = { workspace = true, features = ["v7"] }
+anyhow = { workspace = true }
+
+# HTTP server for health checks
+axum = { workspace = true }
+
+# Scheduling
+cron = "0.15"
+
+[dev-dependencies]
+
+[lints]
+workspace = true
