@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 
 const API_HOST = '127.0.0.1';
-const API_PORT = 3001;
+const API_PORT = 3010;
 const WEB_PORT = 5173;
 const READYZ_URL = `http://${API_HOST}:${API_PORT}/readyz`;
 const READYZ_TIMEOUT_MS = 20_000;
@@ -28,7 +28,7 @@ function fail(message: string, suggestions: string[] = []): never {
 }
 
 function info(message: string): void {
-  console.log(`[runtime-preflight] ℹ️  ${message}`);
+  console.log(`[runtime-preflight] ℹ︝  ${message}`);
 }
 
 /**
@@ -96,7 +96,7 @@ async function main(): Promise<void> {
   const ready = await checkReadyz();
   if (!ready) {
     fail(`API runtime is not ready at ${READYZ_URL} (timeout ${READYZ_TIMEOUT_MS}ms)`, [
-      'start runtime server first: rtk cargo run -p runtime_server',
+      'start web-bff first: rtk cargo run -p web-bff',
       'or run full desktop stack: rtk moon run repo:dev-desktop'
     ]);
   }
@@ -109,7 +109,7 @@ async function main(): Promise<void> {
     ]);
   }
 
-  info('checking port hygiene (5173/3001)...');
+  info('checking port hygiene (5173/3010)...');
   const webPortBusy = await isPortOccupied(WEB_PORT);
   if (webPortBusy) {
     fail(`port ${WEB_PORT} is occupied before web lane bootstrap`, [
@@ -120,7 +120,7 @@ async function main(): Promise<void> {
   const apiPortBusy = await isPortOccupied(API_PORT);
   if (!apiPortBusy) {
     fail(`port ${API_PORT} is not listening although readyz check passed`, [
-      'confirm runtime_server startup logs and retry'
+      'confirm web-bff startup logs and retry'
     ]);
   }
 

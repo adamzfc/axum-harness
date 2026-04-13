@@ -4,13 +4,14 @@
 #   podman compose -f infra/docker/compose/app.yaml up -d
 #   podman compose -f infra/docker/compose/app.yaml down
 #
-# This starts the API service with SurrealDB sidecar and Pingora gateway.
+# This starts the BFF services with SurrealDB sidecar and Pingora gateway.
 # The SvelteKit web frontend and Tauri desktop app run
 # natively on the host (via `just dev-web` / `just dev-desktop`).
 #
 # Stack:
 #   - gateway:3000        — Pingora reverse proxy (entry point)
-#   - api:3001            — Axum API server (distroless)
+#   - web-bff:3010        — Web BFF server (distroless)
+#   - admin-bff:3020      — Admin BFF server (distroless)
 #   - surrealdb:8000      — SurrealDB (dev sidecar, kv-mem)
 #   - web-static:3002     — static-web-server (SvelteKit SPA)
 #
@@ -23,7 +24,7 @@
 services:
   # ── Pingora Gateway (Reverse Proxy) ────────────────────────
   # Single entry point for all HTTP traffic.
-  # Routes /api/* → api:3001, /* → web-static:3002
+  # Routes /api/* → web-bff:3010, /admin/* → admin-bff:3020, /* → web-static:3002
   gateway:
     build:
       context: ../../..
@@ -31,11 +32,14 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - API_UPSTREAM=api:3001
+      - API_UPSTREAM=web-bff:3010
+      - ADMIN_UPSTREAM=admin-bff:3020
       - WEB_UPSTREAM=web-static:3002
       - BIND=0.0.0.0:3000
     depends_on:
-      api:
+      web-bff:
+        condition: service_healthy
+      admin-bff:
         condition: service_healthy
       web-static:
         condition: service_started
@@ -46,27 +50,43 @@ services:
       retries: 3
       start_period: 10s
 
-  # ── API Service (Axum) ──────────────────────────────────────
-  api:
+  # ── Web BFF Service (Axum) ──────────────────────────────────
+  web-bff:
     build:
       context: ../../..
-      dockerfile: infra/docker/Dockerfile.api
+      dockerfile: infra/docker/Dockerfile.web-bff
     expose:
-      - "3001"
+      - "3010"
     environment:
-      - APP_DATABASE__PROVIDER=surrealdb
-      - APP_DATABASE__URL=ws://surrealdb:8000/rpc
-      - APP_SERVER__HOST=0.0.0.0
-      - APP_SERVER__PORT=3001
-      - APP_AUTH__JWT_SECRET=dev-secret-change-in-production
-      - RUST_LOG=info,runtime_server=debug
+      - WEB_BFF_DATABASE__URL=file:/data/web-bff.db
+      - WEB_BFF_SERVER__HOST=0.0.0.0
+      - WEB_BFF_SERVER__PORT=3010
+      - RUST_LOG=info,web-bff=debug
     volumes:
-      - api-data:/data
-    depends_on:
-      surrealdb:
-        condition: service_healthy
+      - web-bff-data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/healthz"]
+      test: ["CMD", "curl", "-f", "http://localhost:3010/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ── Admin BFF Service (Axum) ────────────────────────────────
+  admin-bff:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/Dockerfile.admin-bff
+    expose:
+      - "3020"
+    environment:
+      - ADMIN_BFF_DATABASE__URL=file:/data/admin-bff.db
+      - ADMIN_BFF_SERVER__HOST=0.0.0.0
+      - ADMIN_BFF_SERVER__PORT=3020
+      - RUST_LOG=info,admin-bff=debug
+    volumes:
+      - admin-bff-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3020/healthz"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -124,4 +144,5 @@ services:
       start_period: 10s
 
 volumes:
-  api-data:
+  web-bff-data:
+  admin-bff-data:

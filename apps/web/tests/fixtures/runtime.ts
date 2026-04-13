@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 const API_HOST = '127.0.0.1';
-const API_PORT = 3001;
+const API_PORT = 3010;
 const API_READY_URL = `http://${API_HOST}:${API_PORT}/readyz`;
 const DEFAULT_BOOTSTRAP_TIMEOUT_MS = 120_000;
 const WEB_TYPES_DIR = path.join('apps', 'client', 'web', 'app', '.svelte-kit', 'types');
@@ -17,8 +17,8 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function runtimeServerBinaryPath(): string {
-  const binary = process.platform === 'win32' ? 'runtime_server.exe' : 'runtime_server';
+function webBffBinaryPath(): string {
+  const binary = process.platform === 'win32' ? 'web-bff.exe' : 'web-bff';
   return path.join(workspaceRoot, 'target', 'debug', binary);
 }
 
@@ -56,9 +56,9 @@ function startOwnedApiProcess(): void {
     return;
   }
 
-  const runtimeBinary = runtimeServerBinaryPath();
-  if (existsSync(runtimeBinary)) {
-    ownedApiProcess = spawn(runtimeBinary, [], {
+  const webBffBinary = webBffBinaryPath();
+  if (existsSync(webBffBinary)) {
+    ownedApiProcess = spawn(webBffBinary, [], {
       cwd: workspaceRoot,
       stdio: 'ignore',
       shell: false,
@@ -66,7 +66,7 @@ function startOwnedApiProcess(): void {
     return;
   }
 
-  ownedApiProcess = spawn('cargo', ['run', '-p', 'runtime_server'], {
+  ownedApiProcess = spawn('cargo', ['run', '-p', 'web-bff'], {
     cwd: workspaceRoot,
     stdio: 'ignore',
     shell: process.platform === 'win32',

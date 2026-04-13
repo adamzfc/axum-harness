@@ -1,0 +1,59 @@
+# Multi-stage Dockerfile for the Admin BFF service
+#
+# Build:
+#   podman build -f infra/docker/Dockerfile.admin-bff -t admin-bff .
+#
+# Run:
+#   podman run -p 3020:3020 admin-bff
+#
+# Uses distroless/static for minimal attack surface (~6MB runtime image).
+
+# ── Stage 1: Builder ─────────────────────────────────────────
+FROM rust:1.94-slim AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy dependency definitions first for layer caching
+COPY Cargo.toml Cargo.lock ./
+COPY justfiles/ ./justfiles/
+COPY Justfile ./
+
+# Copy all workspace crates
+COPY packages/ ./packages/
+COPY servers/ ./servers/
+COPY apps/ ./apps/
+
+# Build the Admin BFF service only
+RUN cargo build --release --package admin-bff
+
+# ── Stage 2: Runtime (distroless/static) ─────────────────────
+FROM gcr.io/distroless/static-debian12:nonroot AS runtime
+
+# Copy CA certificates for HTTPS (TLS, OIDC, external APIs)
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# Copy the built binary
+COPY --from=builder /app/target/release/admin-bff /usr/local/bin/admin-bff
+
+# Create data directory (owned by nonroot user: 65532)
+RUN mkdir -p /data
+
+WORKDIR /
+
+EXPOSE 3020
+
+ENV RUST_LOG=info,admin-bff=debug
+ENV ADMIN_BFF_SERVER__HOST=0.0.0.0
+ENV ADMIN_BFF_SERVER__PORT=3020
+ENV ADMIN_BFF_DATABASE__URL=file:/data/admin-bff.db
+
+# Healthcheck
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=30s \
+    CMD ["/usr/local/bin/admin-bff", "--health"]
+
+ENTRYPOINT ["/usr/local/bin/admin-bff"]

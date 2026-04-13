@@ -5,11 +5,18 @@
 ps:
     @echo "=== 项目进程状态 ==="
     @echo ""
-    @echo "--- API Server (port 3001) ---"
+    @echo "--- Web BFF Server (port 3010) ---"
     @if [ "{{os_family()}}" = "windows" ]; then \
-        powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 3001 -ErrorAction SilentlyContinue | Select-Object OwningProcess | Where-Object OwningProcess -gt 0 | ForEach-Object { Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,StartTime }" 2>/dev/null || echo "  [STOPPED]"; \
+        powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 3010 -ErrorAction SilentlyContinue | Select-Object OwningProcess | Where-Object OwningProcess -gt 0 | ForEach-Object { Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,StartTime }" 2>/dev/null || echo "  [STOPPED]"; \
     else \
-        lsof -i :3001 2>/dev/null | grep LISTEN || echo "  [STOPPED]"; \
+        lsof -i :3010 2>/dev/null | grep LISTEN || echo "  [STOPPED]"; \
+    fi
+    @echo ""
+    @echo "--- Admin BFF Server (port 3020) ---"
+    @if [ "{{os_family()}}" = "windows" ]; then \
+        powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 3020 -ErrorAction SilentlyContinue | Select-Object OwningProcess | Where-Object OwningProcess -gt 0 | ForEach-Object { Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,StartTime }" 2>/dev/null || echo "  [STOPPED]"; \
+    else \
+        lsof -i :3020 2>/dev/null | grep LISTEN || echo "  [STOPPED]"; \
     fi
     @echo ""
     @echo "--- Vite Dev Server (port 5173) ---"
@@ -37,14 +44,16 @@ ps:
 stop:
     @echo "正在停止所有开发进程..."
     @if [ "{{os_family()}}" = "windows" ]; then \
-        powershell -NoProfile -Command "Get-Process | Where-Object { $_.CommandLine -match 'cargo run' -or $_.ProcessName -match 'runtime_server' } | Stop-Process -Force -ErrorAction SilentlyContinue" 2>/dev/null; echo "  [API server stopped]"; \
+        powershell -NoProfile -Command "Get-Process | Where-Object { $_.CommandLine -match 'cargo run' -or $_.ProcessName -match 'web-bff' -or $_.ProcessName -match 'admin-bff' } | Stop-Process -Force -ErrorAction SilentlyContinue" 2>/dev/null; echo "  [BFF servers stopped]"; \
         powershell -NoProfile -Command "Get-Process | Where-Object { $_.CommandLine -match 'cargo tauri dev' } | Stop-Process -Force -ErrorAction SilentlyContinue" 2>/dev/null; echo "  [Tauri dev stopped]"; \
         powershell -NoProfile -Command "Get-Process -Name 'native-tauri' -ErrorAction SilentlyContinue | Stop-Process -Force" 2>/dev/null; echo "  [native-tauri stopped]"; \
         powershell -NoProfile -Command "Get-Process | Where-Object { $_.CommandLine -match 'vite dev' -or $_.CommandLine -match 'bun run dev' } | Stop-Process -Force -ErrorAction SilentlyContinue" 2>/dev/null; echo "  [Vite dev stopped]"; \
         powershell -NoProfile -Command "Get-Process | Where-Object { $_.CommandLine -match 'moon run repo:dev' } | Stop-Process -Force -ErrorAction SilentlyContinue" 2>/dev/null; echo "  [moon tasks stopped]"; \
     else \
-        pkill -f "cargo run -p runtime_server" 2>/dev/null && echo "  ✓ API server stopped" || echo "  - API server not running"; \
-        pkill -f "runtime_server" 2>/dev/null && echo "  ✓ runtime_server stopped" || true; \
+        pkill -f "cargo run -p web-bff" 2>/dev/null && echo "  ✓ Web BFF stopped" || echo "  - Web BFF not running"; \
+        pkill -f "cargo run -p admin-bff" 2>/dev/null && echo "  ✓ Admin BFF stopped" || echo "  - Admin BFF not running"; \
+        pkill -f "web-bff" 2>/dev/null && echo "  ✓ web-bff stopped" || true; \
+        pkill -f "admin-bff" 2>/dev/null && echo "  ✓ admin-bff stopped" || true; \
         pkill -f "cargo tauri dev" 2>/dev/null && echo "  ✓ Tauri dev stopped" || echo "  - Tauri dev not running"; \
         pkill -f "native-tauri" 2>/dev/null && echo "  ✓ native-tauri stopped" || echo "  - native-tauri not running"; \
         pkill -f "cd ../web/app && bun run dev" 2>/dev/null && echo "  ✓ Vite (Tauri child) stopped" || true; \
@@ -56,7 +65,7 @@ stop:
 
 # 停止指定端口的进程
 stop-port PORT='':
-    @test -n "{{PORT}}" || (echo "Usage: just stop-port PORT=3001" && exit 1)
+    @test -n "{{PORT}}" || (echo "Usage: just stop-port PORT=3010" && exit 1)
     @if [ "{{os_family()}}" = "windows" ]; then \
         powershell -NoProfile -Command "$conn = Get-NetTCPConnection -LocalPort {{PORT}} -ErrorAction SilentlyContinue; if ($conn) { Stop-Process -Id $conn.OwningProcess -Force; echo '  ✓ Port {{PORT}} freed' } else { echo '  - Nothing on port {{PORT}}' }"; \
     else \
@@ -77,11 +86,18 @@ clean-orphans:
 ports:
     @echo "=== 项目端口占用 ==="
     @echo ""
-    @echo "Port 3001 (API):"
+    @echo "Port 3010 (Web BFF):"
     @if [ "{{os_family()}}" = "windows" ]; then \
-        powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 3001 -ErrorAction SilentlyContinue | ForEach-Object { Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue | Select-Object Id,ProcessName }" 2>/dev/null || echo "  [FREE]"; \
+        powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 3010 -ErrorAction SilentlyContinue | ForEach-Object { Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue | Select-Object Id,ProcessName }" 2>/dev/null || echo "  [FREE]"; \
     else \
-        lsof -i :3001 2>/dev/null | grep -v COMMAND || echo "  [FREE]"; \
+        lsof -i :3010 2>/dev/null | grep -v COMMAND || echo "  [FREE]"; \
+    fi
+    @echo ""
+    @echo "Port 3020 (Admin BFF):"
+    @if [ "{{os_family()}}" = "windows" ]; then \
+        powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 3020 -ErrorAction SilentlyContinue | ForEach-Object { Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue | Select-Object Id,ProcessName }" 2>/dev/null || echo "  [FREE]"; \
+    else \
+        lsof -i :3020 2>/dev/null | grep -v COMMAND || echo "  [FREE]"; \
     fi
     @echo ""
     @echo "Port 5173 (Vite):"

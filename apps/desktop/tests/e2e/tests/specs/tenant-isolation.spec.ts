@@ -121,8 +121,8 @@ async function waitForApiReady(timeoutMs = 120_000): Promise<boolean> {
 	return false;
 }
 
-function runtimeServerBinaryPath(): string {
-	const binary = process.platform === 'win32' ? 'runtime_server.exe' : 'runtime_server';
+function webBffBinaryPath(): string {
+	const binary = process.platform === 'win32' ? 'web-bff.exe' : 'web-bff';
 	return path.join(workspaceRoot, 'target', 'debug', binary);
 }
 
@@ -131,15 +131,15 @@ async function ensureApiReady(): Promise<void> {
 		return;
 	}
 
-	const runtimeBinary = runtimeServerBinaryPath();
-	if (existsSync(runtimeBinary)) {
-		ownedApiProcess = spawn(runtimeBinary, [], {
+	const webBffBinary = webBffBinaryPath();
+	if (existsSync(webBffBinary)) {
+		ownedApiProcess = spawn(webBffBinary, [], {
 			cwd: workspaceRoot,
 			stdio: 'ignore',
 			shell: false
 		});
 	} else {
-		ownedApiProcess = spawn('cargo', ['run', '-p', 'runtime_server'], {
+		ownedApiProcess = spawn('cargo', ['run', '-p', 'web-bff'], {
 			cwd: workspaceRoot,
 			stdio: 'ignore',
 			shell: process.platform === 'win32'
@@ -149,7 +149,7 @@ async function ensureApiReady(): Promise<void> {
 	const ready = await waitForApiReady(120_000);
 	if (!ready) {
 		stopOwnedApiProcess();
-		throw new Error('runtime_server did not become ready at /readyz within timeout');
+		throw new Error('web-bff did not become ready at /readyz within timeout');
 	}
 }
 

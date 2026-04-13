@@ -1,17 +1,17 @@
-# HPA — API Server (autoscale based on CPU)
+# HPA — Web BFF Server (autoscale based on CPU)
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: api-server-hpa
+  name: web-bff-hpa
   namespace: app
   labels:
-    app.kubernetes.io/name: api-server
+    app.kubernetes.io/name: web-bff
     app.kubernetes.io/env: prod
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: api-server
+    name: web-bff
   minReplicas: 2
   maxReplicas: 10
   metrics:

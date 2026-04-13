@@ -17,7 +17,24 @@ patches:
   # ── Production replicas ────────────────────────────────────
   - target:
       kind: Deployment
-      name: api-server
+      name: web-bff
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 2
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+          limits:
+            cpu: "2"
+            memory: 2Gi
+
+  - target:
+      kind: Deployment
+      name: admin-bff
     patch: |
       - op: replace
         path: /spec/replicas
@@ -59,7 +76,10 @@ patches:
         value: api.example.com
       - op: replace
         path: /spec/rules/1/host
-        value: app.example.com
+        value: admin.example.com
       - op: replace
         path: /spec/rules/2/host
+        value: app.example.com
+      - op: replace
+        path: /spec/rules/3/host
         value: example.com

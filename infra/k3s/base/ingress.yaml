@@ -1,6 +1,7 @@
 # Ingress — Traefik routing rules
 # Routes:
-#   api.example.com/*  → api-server:3001
+#   api.example.com/*  → web-bff:3010
+#   admin.example.com/* → admin-bff:3020
 #   app.example.com/*  → web-server:80
 #   example.com/*      → web-server:80 (redirect from www)
 apiVersion: networking.k8s.io/v1
@@ -16,7 +17,7 @@ metadata:
     traefik.ingress.kubernetes.io/router.middlewares: app-redirect-https@kubernetescrd
 spec:
   rules:
-    # ── API routes ─────────────────────────────────────────────
+    # ── API routes (Web BFF) ──────────────────────────────────
     - host: api.example.com
       http:
         paths:
@@ -24,7 +25,18 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: api-server
+                name: web-bff
+                port:
+                  name: http
+    # ── Admin routes (Admin BFF) ──────────────────────────────
+    - host: admin.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: admin-bff
                 port:
                   name: http
     # ── Web app routes ─────────────────────────────────────────

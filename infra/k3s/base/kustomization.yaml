@@ -7,7 +7,8 @@ resources:
   - rbac.yaml
   - network-policy.yaml
   - configmap.yaml
-  - deployment-api.yaml
+  - deployment-web-bff.yaml
+  - deployment-admin-bff.yaml
   - deployment-web.yaml
   - service.yaml
   - ingress.yaml

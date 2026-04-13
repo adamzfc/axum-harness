@@ -18,7 +18,7 @@ migrate-down:
 # Show migration status
 migrate-status:
     @echo "=== Migration Status ==="
-    @echo "Database: servers/api/.data/runtime_server.db"
+    @echo "Database: servers/bff/web-bff/.data/web-bff.db"
     @echo ""
     @echo "Migrations are embedded in storage adapters:"
     @echo "  - storage_turso:    COUNTER_MIGRATION, CONVERSATION_MIGRATION, etc."
@@ -26,7 +26,7 @@ migrate-status:
     @echo ""
     @echo "Tables in embedded Turso:"
     @if command -v sqlite3 &>/dev/null; then \
-        sqlite3 servers/api/.data/runtime_server.db ".tables" 2>/dev/null || echo "  (database not yet created)"; \
+        sqlite3 servers/bff/web-bff/.data/web-bff.db ".tables" 2>/dev/null || echo "  (database not yet created)"; \
     else \
         echo "  sqlite3 not installed. Run: brew install sqlite"; \
     fi
@@ -47,5 +47,5 @@ migrate-create NAME='':
 migrate-reset:
     @echo "⚠️  WARNING: This will delete all data in the embedded database!"
     @echo "This is for development use only."
-    @rm -f servers/api/.data/runtime_server.db
+    @rm -f servers/bff/web-bff/.data/web-bff.db
     @echo "Database reset. Tables will be recreated on next server start."

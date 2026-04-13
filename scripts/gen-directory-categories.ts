@@ -137,7 +137,7 @@ const output = {
   version: "2.0",
   generated_at: new Date().toISOString(),
   categories: {} as Record<string, string[]>,
-  phase: "0 — 模块化单体（业务逻辑在 packages/core/usecases/ + servers/api/）",
+  phase: "1 — BFF 架构（业务逻辑在 packages/core/usecases/ + servers/bff/）",
   priority_rules: [
     "始终阅读 'shared' 和 'contracts' 分类，无论任务类型。它们是系统的抽象基石。",
     "前端任务 → 优先搜索 'frontend' + 'shared' + 'contracts'。",

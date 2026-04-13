@@ -24,7 +24,7 @@ const tauriDir = path.join(
   "src-tauri",
 );
 
-const API_PORT = 3001;
+const API_PORT = 3010;
 const API_WAIT_SECONDS = 180;
 
 function printOptimizationTips(): void {
@@ -99,7 +99,7 @@ async function main(): Promise<void> {
   );
 
   const { spawn } = await import("node:child_process");
-  apiProcess = spawn("cargo", ["run", "-p", "runtime_server"], {
+  apiProcess = spawn("cargo", ["run", "-p", "web-bff"], {
     cwd: workspaceRoot,
     stdio: ["ignore", "inherit", "inherit"],
     shell: process.platform === "win32",
@@ -148,7 +148,7 @@ async function main(): Promise<void> {
   });
 
   console.log("[dev-desktop] === Services Started ===");
-  console.log("[dev-desktop] API server:  http://localhost:3001");
+  console.log("[dev-desktop] Web BFF:     http://localhost:3010");
   console.log(
     "[dev-desktop] Frontend:    http://localhost:5173 (managed by Tauri)",
   );

@@ -1,20 +1,38 @@
-# Service — API and Web services (ClusterIP)
+# Service — Web BFF, Admin BFF, and Web services (ClusterIP)
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: api-server
+  name: web-bff
   namespace: app
   labels:
-    app.kubernetes.io/name: api-server
+    app.kubernetes.io/name: web-bff
     app.kubernetes.io/component: backend
 spec:
   type: ClusterIP
   selector:
-    app.kubernetes.io/name: api-server
+    app.kubernetes.io/name: web-bff
   ports:
     - name: http
-      port: 3001
+      port: 3010
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-bff
+  namespace: app
+  labels:
+    app.kubernetes.io/name: admin-bff
+    app.kubernetes.io/component: backend
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: admin-bff
+  ports:
+    - name: http
+      port: 3020
       targetPort: http
       protocol: TCP
 ---

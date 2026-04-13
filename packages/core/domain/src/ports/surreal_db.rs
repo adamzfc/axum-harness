@@ -1,6 +1,6 @@
 //! SurrealDB server-side Port trait.
 //!
-//! Used by runtime_server (Axum) to communicate with SurrealDB instance.
+//! Used by BFF servers to communicate with SurrealDB instance (if configured).
 
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
@@ -11,7 +11,7 @@ pub type SurrealError = Box<dyn std::error::Error + Send + Sync>;
 
 /// SurrealDB port — abstracts server-side SurrealDB access.
 ///
-/// Implementations live in runtime_server crate.
+/// Implementations live in BFF server crates.
 /// SurrealDB uses SurrealQL (NOT standard SQL), hence a separate trait from LibSqlPort.
 #[async_trait]
 pub trait SurrealDbPort: Send + Sync {

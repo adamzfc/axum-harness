@@ -58,8 +58,8 @@ jobs:
         working-directory: apps/web
         run: bun run check
 
-      - name: Verify runtime_server Turso-only default build
-        run: cargo check -p runtime_server
+      - name: Verify web-bff build
+        run: cargo check -p web-bff
 
       - name: Run Web E2E Tests
         working-directory: apps/web
@@ -120,8 +120,8 @@ jobs:
   #       run: bun run test:ci
   #       timeout-minutes: 30
   #
-  #     - name: Verify runtime_server Turso-only default build
-  #       run: cargo check -p runtime_server
+  #     - name: Verify web-bff build
+  #       run: cargo check -p web-bff
   #
   #     - name: Upload Tauri Playwright Evidence
   #       uses: actions/upload-artifact@v4

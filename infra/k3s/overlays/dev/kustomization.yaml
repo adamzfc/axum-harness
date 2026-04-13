@@ -15,7 +15,7 @@ patches:
   # ── Relax resource limits for dev ──────────────────────────
   - target:
       kind: Deployment
-      name: api-server
+      name: web-bff
     patch: |
       - op: replace
         path: /spec/template/spec/containers/0/resources/limits
@@ -26,9 +26,26 @@ patches:
         path: /spec/template/spec/containers/0/env
         value:
           - name: RUST_LOG
-            value: "debug,runtime_server=trace"
-          - name: APP_DATABASE__URL
-            value: "/data/runtime.db"
+            value: "debug,web-bff=trace"
+          - name: WEB_BFF_DATABASE__URL
+            value: "file:/data/web-bff.db"
+
+  - target:
+      kind: Deployment
+      name: admin-bff
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits
+        value:
+          cpu: "1"
+          memory: 1Gi
+      - op: replace
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: RUST_LOG
+            value: "debug,admin-bff=trace"
+          - name: ADMIN_BFF_DATABASE__URL
+            value: "file:/data/admin-bff.db"
 
   - target:
       kind: Deployment
@@ -50,7 +67,10 @@ patches:
         value: api.dev.local
       - op: replace
         path: /spec/rules/1/host
-        value: app.dev.local
+        value: admin.dev.local
       - op: replace
         path: /spec/rules/2/host
+        value: app.dev.local
+      - op: replace
+        path: /spec/rules/3/host
         value: dev.local

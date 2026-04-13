@@ -91,7 +91,7 @@ tasks:
     script: 'bun run scripts/dev-desktop.ts'
     inputs:
       - 'apps/desktop/**/*'
-      - 'servers/api/**/*'
+      - 'servers/bff/web-bff/**/*'
       - 'scripts/dev-desktop.ts'
       - 'scripts/lib/spawn.ts'
 

@@ -13,7 +13,7 @@ telemetry/
 ## Status
 
 ⚠️ **Stub** — These crates provide the adapter layer for telemetry.
-Actual initialization happens in the composition layers (`servers/api/`, `apps/desktop/src-tauri/`).
+Actual initialization happens in the composition layers (`servers/bff/web-bff/`, `servers/bff/admin-bff/`, `apps/desktop/src-tauri/`).
 
 ## Design
 

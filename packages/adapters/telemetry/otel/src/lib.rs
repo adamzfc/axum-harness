@@ -1,7 +1,7 @@
 //! adapter-telemetry-otel — OpenTelemetry integration for distributed tracing.
 //!
 //! Provides initialization helpers for OpenTelemetry SDK with OTLP exporter.
-//! No-op until initialized by the composition layer (servers/api or apps/client/native).
+//! No-op until initialized by the composition layer (servers/bff or apps/client/native).
 
 /// Initialize OpenTelemetry tracing with OTLP exporter.
 /// Returns a tracer provider that should be kept alive.
