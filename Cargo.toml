@@ -23,6 +23,7 @@ members = [
     "packages/adapters/storage/surrealdb",
     "packages/adapters/storage/turso",
     "packages/adapters/auth/google",
+    "packages/adapters/auth/google-backend",
     # Features (only traits with real code)
     "packages/features/auth",
     "packages/features/counter",
@@ -100,6 +101,7 @@ storage_surrealdb = { path = "packages/adapters/storage/surrealdb" }
 storage_turso = { path = "packages/adapters/storage/turso" }
 runtime_tauri = { path = "packages/adapters/hosts/tauri" }
 adapter-google = { path = "packages/adapters/auth/google" }
+adapter-google-backend = { path = "packages/adapters/auth/google-backend" }
 feature-auth = { path = "packages/features/auth" }
 feature-counter = { path = "packages/features/counter" }
 feature-admin = { path = "packages/features/admin" }

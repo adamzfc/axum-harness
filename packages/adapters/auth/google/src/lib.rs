@@ -1,130 +1,32 @@
-//! adapter-google — Google OAuth PKCE adapter.
+//! adapter-google — Tauri-specific Google OAuth adapter.
 //!
-//! Migrated from runtime_tauri/commands/auth.rs (422 lines).
-//! Provides GoogleAuthAdapter struct wrapping all OAuth operations.
+//! Wraps adapter-google-backend (pure OAuth logic) with Tauri-specific capabilities:
+//! - Browser opener (via tauri-plugin-opener)
+//! - Tauri store integration (via tauri-plugin-store)
+//! - Tauri event emission
+//! - TCP listener for OAuth callback
 
-use base64::Engine;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use rand::Rng;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use tauri::{AppHandle, Emitter};
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_store::StoreExt;
 
-const GOOGLE_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
-const GOOGLE_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
 const REDIRECT_URI: &str = "http://127.0.0.1:1420/oauth/callback";
-const SCOPES: &str = "openid email profile";
 
-// ── Error type ──────────────────────────────────────────────────
+// ── Re-export backend types for compatibility ────────────────
 
-/// Authentication error variants.
-#[derive(Debug, thiserror::Error)]
-pub enum AuthError {
-    #[error("Network error: {0}")]
-    Network(String),
-    #[error("Configuration error: {0}")]
-    Config(String),
-    #[error("Invalid callback: {0}")]
-    InvalidCallback(String),
-    #[error("Token exchange failed: {0}")]
-    TokenExchange(String),
-    #[error("Token expired: {0}")]
-    TokenExpired(String),
-}
+pub use adapter_google_backend::{AuthError, AuthSession, UserProfile};
 
-impl From<AuthError> for String {
-    fn from(e: AuthError) -> String {
-        e.to_string()
-    }
-}
+// ── Tauri-specific wrapper functions ─────────────────────────
 
-// ── Public types (Tauri store types — per D-03) ────────────────
+// ── GoogleAuthAdapter (Tauri-specific wrapper) ──────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UserProfile {
-    pub email: String,
-    pub name: String,
-    pub picture: String,
-    pub sub: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuthSession {
-    pub access_token: String,
-    pub refresh_token: String,
-    pub id_token: String,
-    pub expires_at: u64,
-    pub user: UserProfile,
-}
-
-// ── Internal types ─────────────────────────────────────────────
-
-#[derive(Deserialize)]
-struct TokenResponse {
-    access_token: String,
-    refresh_token: Option<String>,
-    id_token: String,
-    expires_in: u64,
-}
-
-#[derive(Deserialize)]
-struct RefreshResponse {
-    access_token: String,
-    expires_in: u64,
-    refresh_token: Option<String>,
-}
-
-// ── Config helpers ─────────────────────────────────────────────
-
-fn client_id() -> String {
-    oauth_env("GOOGLE_CLIENT_ID", "YOUR_GOOGLE_CLIENT_ID").unwrap_or_else(|error| {
-        tracing::warn!(%error, "invalid GOOGLE_CLIENT_ID configuration");
-        "YOUR_GOOGLE_CLIENT_ID".to_string()
-    })
-}
-
-fn client_secret() -> String {
-    oauth_env("GOOGLE_CLIENT_SECRET", "YOUR_GOOGLE_CLIENT_SECRET").unwrap_or_else(|error| {
-        tracing::warn!(%error, "invalid GOOGLE_CLIENT_SECRET configuration");
-        "YOUR_GOOGLE_CLIENT_SECRET".to_string()
-    })
-}
-
-fn oauth_env(key: &'static str, placeholder: &'static str) -> Result<String, String> {
-    let raw = std::env::var(key).unwrap_or_default();
-    let mut normalized = raw.trim().to_string();
-
-    if normalized.ends_with(';') {
-        normalized.pop();
-        normalized = normalized.trim_end().to_string();
-        tracing::warn!(%key, "trimmed trailing semicolon from OAuth env var");
-    }
-
-    let has_double_quotes = normalized.starts_with('"') && normalized.ends_with('"');
-    let has_single_quotes = normalized.starts_with('\'') && normalized.ends_with('\'');
-
-    if has_double_quotes || has_single_quotes {
-        normalized = normalized[1..normalized.len().saturating_sub(1)].to_string();
-        tracing::warn!(%key, "trimmed wrapping quotes from OAuth env var");
-    }
-
-    if normalized.is_empty() || normalized == placeholder {
-        return Err(format!("{key} is missing or still using placeholder value"));
-    }
-
-    Ok(normalized)
-}
-
-// ── GoogleAuthAdapter ──────────────────────────────────────────
-
-/// Google OAuth PKCE adapter.
+/// Google OAuth PKCE adapter for Tauri.
 ///
-/// Wraps all OAuth operations into a cohesive adapter struct,
-/// extracted from the monolithic Tauri command handlers.
+/// Delegates pure OAuth logic to adapter-google-backend,
+/// handles Tauri-specific concerns: browser opener, store, events.
 pub struct GoogleAuthAdapter;
 
 impl GoogleAuthAdapter {
@@ -135,26 +37,20 @@ impl GoogleAuthAdapter {
 
     /// Start the Google OAuth PKCE login flow.
     ///
-    /// 1. Generates PKCE code_verifier + code_challenge
-    /// 2. Generates CSRF state parameter
+    /// 1. Generates PKCE code_verifier + code_challenge (via backend)
+    /// 2. Generates CSRF state parameter (via backend)
     /// 3. Stores verifier/state in Tauri store
     /// 4. Starts TCP listener for redirect callback
-    /// 5. Opens system browser with authorization URL
-    pub async fn start_login(&self, app: &AppHandle) -> Result<(), AuthError> {
-        start_oauth(app.clone()).await.map_err(AuthError::Network)
+    /// 5. Opens system browser with authorization URL (via backend + Tauri opener)
+    pub async fn start_login(&self, app: &AppHandle) -> Result<(), String> {
+        start_oauth(app.clone()).await
     }
 
     /// Handle the OAuth callback URL.
     ///
-    /// Validates state, exchanges code for tokens, decodes user profile.
-    pub async fn handle_callback(
-        &self,
-        app: &AppHandle,
-        url: &str,
-    ) -> Result<AuthSession, AuthError> {
-        handle_oauth_callback(app.clone(), url.to_string())
-            .await
-            .map_err(AuthError::TokenExchange)
+    /// Validates state, exchanges code for tokens (via backend), decodes user profile.
+    pub async fn handle_callback(&self, app: &AppHandle, url: &str) -> Result<AuthSession, String> {
+        handle_oauth_callback(app.clone(), url.to_string()).await
     }
 
     /// Get the current auth session from the Tauri store.
@@ -162,7 +58,7 @@ impl GoogleAuthAdapter {
         get_session(app.clone())
     }
 
-    /// Refresh the access token using the stored refresh token.
+    /// Refresh the access token using the stored refresh token (via backend).
     pub async fn refresh_token(
         &self,
         app: &AppHandle,
@@ -188,34 +84,21 @@ impl Default for GoogleAuthAdapter {
     }
 }
 
-// ── Core OAuth logic (migrated from runtime_tauri/commands/auth.rs) ─
+// ── Core OAuth logic (delegates to backend) ─────────────────
 
 /// Start the Google OAuth PKCE login flow.
 pub async fn start_oauth(app: AppHandle) -> Result<(), String> {
-    // 1. Generate PKCE code_verifier (64 random alphanumeric chars)
-    let code_verifier: String = rand::thread_rng()
-        .sample_iter(&rand::distributions::Alphanumeric)
-        .take(64)
-        .map(char::from)
-        .collect();
+    // 1. Generate PKCE parameters (via backend)
+    let code_verifier = adapter_google_backend::generate_code_verifier();
+    let code_challenge = adapter_google_backend::compute_code_challenge(&code_verifier);
+    let state = adapter_google_backend::generate_state();
 
-    // 2. Compute code_challenge = base64url(SHA256(code_verifier))
-    let hash = Sha256::digest(code_verifier.as_bytes());
-    let code_challenge = URL_SAFE_NO_PAD.encode(hash);
-
-    // 3. Generate state parameter for CSRF protection
-    let state: String = rand::thread_rng()
-        .sample_iter(&rand::distributions::Alphanumeric)
-        .take(32)
-        .map(char::from)
-        .collect();
-
-    // 4. Store code_verifier and state in app store for callback validation
+    // 2. Store code_verifier and state in app store for callback validation
     let store = app.store("auth.json").map_err(|e| e.to_string())?;
     store.set("pkce_verifier", serde_json::json!(code_verifier));
     store.set("oauth_state", serde_json::json!(state));
 
-    // 5. Start one-shot HTTP listener on 127.0.0.1:1420 to catch Google's redirect
+    // 3. Start one-shot HTTP listener on 127.0.0.1:1420 to catch Google's redirect
     let listener = TcpListener::bind("127.0.0.1:1420")
         .map_err(|e| format!("Cannot bind 127.0.0.1:1420 — is another instance running? {e}"))?;
     let app_for_callback = app.clone();
@@ -260,13 +143,11 @@ pub async fn start_oauth(app: AppHandle) -> Result<(), String> {
         tracing::debug!("TCP listener exiting");
     });
 
-    // 6. Build authorization URL
-    let url = format!(
-        "{GOOGLE_AUTH_URL}?client_id={}&redirect_uri={REDIRECT_URI}&response_type=code&scope={SCOPES}&code_challenge={code_challenge}&code_challenge_method=S256&state={state}&access_type=offline&prompt=consent",
-        client_id()
-    );
+    // 4. Build authorization URL (via backend)
+    let url =
+        adapter_google_backend::build_authorization_url(&code_challenge, &state, REDIRECT_URI);
 
-    // 7. Open system browser
+    // 5. Open system browser (Tauri-specific)
     app.opener()
         .open_url(&url, None::<&str>)
         .map_err(|e| e.to_string())?;
@@ -309,70 +190,22 @@ pub async fn handle_oauth_callback(app: AppHandle, url: String) -> Result<AuthSe
         .and_then(|v| v.as_str().map(String::from))
         .ok_or("No stored PKCE verifier")?;
 
-    // 4. Exchange authorization code for tokens
+    // 4. Exchange authorization code for tokens (via backend)
     tracing::debug!("exchanging authorization code for tokens");
-    let client = reqwest::Client::new();
-    let cid = client_id();
-    let csec = client_secret();
-    let params = [
-        ("code", code.as_str()),
-        ("client_id", cid.as_str()),
-        ("client_secret", csec.as_str()),
-        ("redirect_uri", REDIRECT_URI),
-        ("grant_type", "authorization_code"),
-        ("code_verifier", code_verifier.as_str()),
-    ];
+    let session =
+        adapter_google_backend::exchange_code_for_tokens(&code, &code_verifier, REDIRECT_URI)
+            .await
+            .map_err(|e| e.to_string())?;
 
-    let resp = client
-        .post(GOOGLE_TOKEN_URL)
-        .form(&params)
-        .send()
-        .await
-        .map_err(|e| format!("Token exchange request failed: {e}"))?;
-
-    if !resp.status().is_success() {
-        let body = resp.text().await.unwrap_or_default();
-        tracing::error!(%body, "token exchange failed");
-        return Err(format!("Token exchange failed: {body}"));
-    }
-
-    let token_resp: TokenResponse = resp.json().await.map_err(|e| e.to_string())?;
-    tracing::debug!("token exchange successful, decoding id_token");
-
-    // 5. Decode id_token to extract user profile (JWT payload only, signature verification deferred to v2)
-    let id_token_parts: Vec<&str> = token_resp.id_token.split('.').collect();
-    if id_token_parts.len() < 2 {
-        return Err("Invalid id_token format".into());
-    }
-    let payload_bytes = URL_SAFE_NO_PAD
-        .decode(id_token_parts[1])
-        .map_err(|e| format!("Failed to decode id_token payload: {e}"))?;
-    let user: UserProfile = serde_json::from_slice(&payload_bytes)
-        .map_err(|e| format!("Failed to parse user profile: {e}"))?;
-
-    // 6. Calculate expiry timestamp
-    let expires_at = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
-        + token_resp.expires_in;
-
-    // 7. Build session and store it
-    let session = AuthSession {
-        access_token: token_resp.access_token,
-        refresh_token: token_resp.refresh_token.unwrap_or_default(),
-        id_token: token_resp.id_token,
-        expires_at,
-        user,
-    };
-
+    // 5. Store session in Tauri store
+    let store = app.store("auth.json").map_err(|e| e.to_string())?;
     store.set("access_token", serde_json::json!(session.access_token));
     store.set("refresh_token", serde_json::json!(session.refresh_token));
     store.set("id_token", serde_json::json!(session.id_token));
     store.set("expires_at", serde_json::json!(session.expires_at));
     store.set("user", serde_json::json!(session.user));
 
-    // 8. Clean up temporary PKCE and state
+    // 6. Clean up temporary PKCE and state
     store.delete("pkce_verifier");
     store.delete("oauth_state");
 
@@ -419,51 +252,27 @@ pub fn get_session(app: AppHandle) -> Result<Option<AuthSession>, String> {
     }
 }
 
-/// Exchange refresh_token for new access_token.
+/// Exchange refresh_token for new access_token (via backend).
 pub async fn refresh_access_token(
     app: &AppHandle,
     refresh_token: &str,
 ) -> Result<(String, u64), String> {
-    let client = reqwest::Client::new();
-    let client_id = client_id();
-    let client_secret = client_secret();
-    let params = [
-        ("client_id", client_id.as_str()),
-        ("client_secret", client_secret.as_str()),
-        ("refresh_token", refresh_token),
-        ("grant_type", "refresh_token"),
-    ];
+    let (new_access_token, new_expires_at, new_refresh_token) =
+        adapter_google_backend::refresh_access_token(refresh_token)
+            .await
+            .map_err(|e| e.to_string())?;
 
-    let resp = client
-        .post(GOOGLE_TOKEN_URL)
-        .form(&params)
-        .send()
-        .await
-        .map_err(|e| format!("Refresh request failed: {e}"))?;
-
-    if !resp.status().is_success() {
-        let body = resp.text().await.unwrap_or_default();
-        return Err(format!("Refresh token rejected: {body}"));
-    }
-
-    let refresh: RefreshResponse = resp.json().await.map_err(|e| e.to_string())?;
-    let expires_at = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
-        + refresh.expires_in;
-
-    // Update store with new access_token and expiry
+    // Update store with new tokens
     let store = app.store("auth.json").map_err(|e| e.to_string())?;
-    store.set("access_token", serde_json::json!(refresh.access_token));
-    store.set("expires_at", serde_json::json!(expires_at));
+    store.set("access_token", serde_json::json!(new_access_token));
+    store.set("expires_at", serde_json::json!(new_expires_at));
 
     // If Google rotated the refresh_token, update it too
-    if let Some(new_refresh) = refresh.refresh_token {
+    if let Some(new_refresh) = new_refresh_token {
         store.set("refresh_token", serde_json::json!(new_refresh));
     }
 
-    Ok((refresh.access_token, expires_at))
+    Ok((new_access_token, new_expires_at))
 }
 
 /// Clear all auth tokens from store and emit expiry event to frontend.
