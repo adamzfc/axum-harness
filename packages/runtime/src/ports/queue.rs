@@ -10,7 +10,7 @@
 //! - Dead letter queues handle messages that fail repeatedly
 
 use async_trait::async_trait;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use std::time::Duration;
 
 /// Error types for queue operations.
@@ -71,16 +71,12 @@ impl<Body> QueueMessage<Body> {
     }
 
     pub fn with_delay(mut self, delay: Duration) -> Self {
-        self.visible_after = Some(
-            (chrono::Utc::now() + delay).to_rfc3339(),
-        );
+        self.visible_after = Some((chrono::Utc::now() + delay).to_rfc3339());
         self
     }
 
     pub fn with_ttl(mut self, ttl: Duration) -> Self {
-        self.expires_at = Some(
-            (chrono::Utc::now() + ttl).to_rfc3339(),
-        );
+        self.expires_at = Some((chrono::Utc::now() + ttl).to_rfc3339());
         self
     }
 }

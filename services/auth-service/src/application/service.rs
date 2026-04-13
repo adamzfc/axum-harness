@@ -152,7 +152,10 @@ where
 
     async fn refresh_session(&self, refresh_token: &str) -> Result<AuthResult, AuthError> {
         // Validate refresh token
-        let claims = self.token_repo.validate_refresh_token(refresh_token).await?;
+        let claims = self
+            .token_repo
+            .validate_refresh_token(refresh_token)
+            .await?;
 
         // Generate new tokens
         let now = Utc::now();

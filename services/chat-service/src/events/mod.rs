@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 
-use crate::domain::{Conversation, Message};
 use crate::domain::error::ChatError;
+use crate::domain::{Conversation, Message};
 use crate::ports::ChatEventPublisher;
 
 /// In-memory event publisher for chat events
@@ -16,7 +16,10 @@ impl ChatEventPublisher for InMemoryChatEventPublisher {
         Ok(())
     }
 
-    async fn publish_conversation_created(&self, _conversation: &Conversation) -> Result<(), ChatError> {
+    async fn publish_conversation_created(
+        &self,
+        _conversation: &Conversation,
+    ) -> Result<(), ChatError> {
         // In production: publish to event bus
         Ok(())
     }

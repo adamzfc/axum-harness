@@ -9,7 +9,7 @@
 
 use axum::{extract::Request, http::StatusCode, middleware::Next, response::Response};
 use domain::ports::TenantId;
-use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, dangerous::insecure_decode};
+use jsonwebtoken::{Algorithm, DecodingKey, Validation, dangerous::insecure_decode, decode};
 use serde::Deserialize;
 
 /// JWT claims we need — only `sub` matters for user identification.
@@ -64,8 +64,7 @@ pub async fn tenant_middleware(mut req: Request, next: Next) -> Result<Response,
     };
 
     // 4. Inject user_sub (JWT sub) as TenantId into request extensions
-    req.extensions_mut()
-        .insert(TenantId(token_data.claims.sub));
+    req.extensions_mut().insert(TenantId(token_data.claims.sub));
 
     Ok(next.run(req).await)
 }

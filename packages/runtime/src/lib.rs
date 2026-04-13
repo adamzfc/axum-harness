@@ -41,5 +41,5 @@
 //! let invocation: Box<dyn Invocation> = Box::new(MemoryInvocation::new());
 //! ```
 
-pub mod ports;
 pub mod adapters;
+pub mod ports;

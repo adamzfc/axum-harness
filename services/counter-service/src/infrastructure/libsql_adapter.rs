@@ -45,8 +45,7 @@ impl<P: LibSqlPort> LibSqlCounterRepository<P> {
     ///
     /// This should be called at application startup by the composition root.
     pub async fn migrate(&self) -> Result<(), RepositoryError> {
-        const COUNTER_MIGRATION: &str =
-            "CREATE TABLE IF NOT EXISTS counter (\
+        const COUNTER_MIGRATION: &str = "CREATE TABLE IF NOT EXISTS counter (\
                 tenant_id TEXT PRIMARY KEY,\
                 value INTEGER NOT NULL DEFAULT 0,\
                 updated_at TEXT NOT NULL DEFAULT (datetime('now'))\
@@ -84,11 +83,7 @@ impl<P: LibSqlPort> CounterRepository for LibSqlCounterRepository<P> {
         }))
     }
 
-    async fn increment(
-        &self,
-        id: &CounterId,
-        _now: DateTime<Utc>,
-    ) -> Result<i64, RepositoryError> {
+    async fn increment(&self, id: &CounterId, _now: DateTime<Utc>) -> Result<i64, RepositoryError> {
         // Upsert: create row if missing, increment if exists
         self.port
             .execute(
@@ -113,11 +108,7 @@ impl<P: LibSqlPort> CounterRepository for LibSqlCounterRepository<P> {
         Ok(rows.first().map(|r| r.value).unwrap_or(0))
     }
 
-    async fn decrement(
-        &self,
-        id: &CounterId,
-        _now: DateTime<Utc>,
-    ) -> Result<i64, RepositoryError> {
+    async fn decrement(&self, id: &CounterId, _now: DateTime<Utc>) -> Result<i64, RepositoryError> {
         self.port
             .execute(
                 "UPDATE counter SET value = value - 1, updated_at = datetime('now') \

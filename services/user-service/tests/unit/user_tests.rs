@@ -4,20 +4,21 @@
 mod user_tests {
     use chrono::Utc;
 
-    use crate::application::{InitTenantInput, UserService};
-    use crate::domain::User;
-    use crate::domain::error::UserError;
-    use crate::ports::{TenantRepository, UserRepository, UserTenantRepository};
+    use user_service::application::{InitTenantInput, UserService};
+    use user_service::domain::User;
+    use user_service::domain::error::UserError;
+    use user_service::ports::{TenantRepository, UserRepository, UserTenantRepository};
 
     /// Mock user repository for testing.
+    #[derive(Clone)]
     struct MockUserRepository {
-        users: std::sync::Mutex<Vec<User>>,
+        users: std::sync::Arc<std::sync::Mutex<Vec<User>>>,
     }
 
     impl MockUserRepository {
         fn new() -> Self {
             Self {
-                users: std::sync::Mutex::new(Vec::new()),
+                users: std::sync::Arc::new(std::sync::Mutex::new(Vec::new())),
             }
         }
     }
@@ -41,14 +42,15 @@ mod user_tests {
     }
 
     /// Mock tenant repository for testing.
+    #[derive(Clone)]
     struct MockTenantRepository {
-        tenants: std::sync::Mutex<Vec<crate::domain::Tenant>>,
+        tenants: std::sync::Arc<std::sync::Mutex<Vec<user_service::domain::Tenant>>>,
     }
 
     impl MockTenantRepository {
         fn new() -> Self {
             Self {
-                tenants: std::sync::Mutex::new(Vec::new()),
+                tenants: std::sync::Arc::new(std::sync::Mutex::new(Vec::new())),
             }
         }
     }
@@ -57,7 +59,7 @@ mod user_tests {
     impl TenantRepository for MockTenantRepository {
         async fn create_tenant(&self, name: &str) -> Result<String, UserError> {
             let id = format!("tenant-{}", uuid::Uuid::new_v4());
-            let tenant = crate::domain::Tenant {
+            let tenant = user_service::domain::Tenant {
                 id: id.clone(),
                 name: name.to_string(),
                 created_at: Utc::now(),
@@ -67,21 +69,25 @@ mod user_tests {
             Ok(id)
         }
 
-        async fn find_by_id(&self, tenant_id: &str) -> Result<Option<crate::domain::Tenant>, UserError> {
+        async fn find_by_id(
+            &self,
+            tenant_id: &str,
+        ) -> Result<Option<user_service::domain::Tenant>, UserError> {
             let tenants = self.tenants.lock().unwrap();
             Ok(tenants.iter().find(|t| t.id == tenant_id).cloned())
         }
     }
 
     /// Mock user-tenant repository for testing.
+    #[derive(Clone)]
     struct MockUserTenantRepository {
-        bindings: std::sync::Mutex<Vec<crate::domain::UserTenantBinding>>,
+        bindings: std::sync::Arc<std::sync::Mutex<Vec<user_service::domain::UserTenantBinding>>>,
     }
 
     impl MockUserTenantRepository {
         fn new() -> Self {
             Self {
-                bindings: std::sync::Mutex::new(Vec::new()),
+                bindings: std::sync::Arc::new(std::sync::Mutex::new(Vec::new())),
             }
         }
     }
@@ -91,7 +97,7 @@ mod user_tests {
         async fn find_user_tenant(
             &self,
             user_sub: &str,
-        ) -> Result<Option<crate::domain::UserTenantBinding>, UserError> {
+        ) -> Result<Option<user_service::domain::UserTenantBinding>, UserError> {
             let bindings = self.bindings.lock().unwrap();
             Ok(bindings.iter().find(|b| b.user_sub == user_sub).cloned())
         }
@@ -101,8 +107,8 @@ mod user_tests {
             user_sub: &str,
             tenant_id: &str,
             role: &str,
-        ) -> Result<crate::domain::UserTenantBinding, UserError> {
-            let binding = crate::domain::UserTenantBinding {
+        ) -> Result<user_service::domain::UserTenantBinding, UserError> {
+            let binding = user_service::domain::UserTenantBinding {
                 id: format!("binding-{}", uuid::Uuid::new_v4()),
                 user_sub: user_sub.to_string(),
                 tenant_id: tenant_id.to_string(),
@@ -143,11 +149,8 @@ mod user_tests {
         let binding_repo = MockUserTenantRepository::new();
 
         // First login - creates tenant
-        let service = UserService::new(
-            user_repo.clone(),
-            tenant_repo.clone(),
-            binding_repo.clone(),
-        );
+        let service =
+            UserService::new(user_repo.clone(), tenant_repo.clone(), binding_repo.clone());
 
         let input = InitTenantInput {
             user_sub: "test-user-456".to_string(),

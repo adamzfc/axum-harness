@@ -31,7 +31,10 @@ impl<P: LibSqlPort> LibSqlSettingsRepository<P> {
     /// Run the settings table migration (idempotent).
     pub async fn migrate(&self) -> Result<(), RepositoryError> {
         self.port
-            .execute(super::super::application::service::SETTINGS_MIGRATION, vec![])
+            .execute(
+                super::super::application::service::SETTINGS_MIGRATION,
+                vec![],
+            )
             .await?;
         Ok(())
     }

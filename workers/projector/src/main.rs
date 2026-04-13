@@ -6,7 +6,7 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use axum::{routing::get, Router};
+use axum::{Router, routing::get};
 use event_bus::adapters::memory_bus::InMemoryEventBus;
 use event_bus::ports::{EventBus, EventEnvelope};
 use runtime::adapters::memory::{MemoryPubSub, MemoryState};
@@ -98,10 +98,7 @@ impl Projector {
     }
 
     /// Process a single event through the projection pipeline.
-    pub async fn process_event(
-        &self,
-        envelope: &EventEnvelope,
-    ) -> Result<usize, ProjectorError> {
+    pub async fn process_event(&self, envelope: &EventEnvelope) -> Result<usize, ProjectorError> {
         let mut projected = 0;
 
         for consumer in &self.consumers {

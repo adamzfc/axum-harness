@@ -49,7 +49,11 @@ pub struct MessageEnvelope {
 }
 
 impl MessageEnvelope {
-    pub fn new(event: AppEvent, topic: impl Into<String>, source_service: impl Into<String>) -> Self {
+    pub fn new(
+        event: AppEvent,
+        topic: impl Into<String>,
+        source_service: impl Into<String>,
+    ) -> Self {
         Self {
             message_id: uuid::Uuid::now_v7().to_string(),
             event,

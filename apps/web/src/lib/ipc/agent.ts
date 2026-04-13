@@ -1,5 +1,5 @@
 import type { ChatMessage } from '$lib/generated/api/ChatMessage';
-import { safeInvoke, isTauri, safeChannel } from '$lib/ipc/bridge';
+import { isTauri, safeChannel, safeInvoke } from '$lib/ipc/bridge';
 
 const API_BASE = 'http://localhost:3001';
 

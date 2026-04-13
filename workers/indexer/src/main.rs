@@ -6,10 +6,10 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use axum::{routing::get, Router};
-use runtime::ports::{PubSub, MessageEnvelope, State};
-use runtime::ports::state::StateEntry;
+use axum::{Router, routing::get};
 use runtime::adapters::memory::{MemoryPubSub, MemoryState};
+use runtime::ports::state::StateEntry;
+use runtime::ports::{MessageEnvelope, PubSub, State};
 use tokio::sync::RwLock;
 use tracing::{info, warn};
 
@@ -152,7 +152,9 @@ impl Indexer {
                     if let Some(app_event) = transformer.transform(&raw).await? {
                         let event_type = match &app_event {
                             contracts_events::AppEvent::TenantCreated(_) => "tenant.created",
-                            contracts_events::AppEvent::TenantMemberAdded(_) => "tenant.member_added",
+                            contracts_events::AppEvent::TenantMemberAdded(_) => {
+                                "tenant.member_added"
+                            }
                             contracts_events::AppEvent::CounterChanged(_) => "counter.changed",
                             contracts_events::AppEvent::ChatMessageSent(_) => "chat.message_sent",
                         };
@@ -186,14 +188,20 @@ impl Indexer {
 
         // 4. Publish indexed event to pubsub for downstream consumers
         for event in &indexed_events {
-            if let Ok(app_event) = serde_json::from_str::<contracts_events::AppEvent>(&event.payload) {
+            if let Ok(app_event) =
+                serde_json::from_str::<contracts_events::AppEvent>(&event.payload)
+            {
                 let envelope = MessageEnvelope::new(
                     app_event,
                     format!("indexer.{}", event.event_type),
                     "indexer-worker",
                 );
-                
-                if let Err(e) = self.pubsub.publish(&format!("indexer.{}", event.event_type), envelope).await {
+
+                if let Err(e) = self
+                    .pubsub
+                    .publish(&format!("indexer.{}", event.event_type), envelope)
+                    .await
+                {
                     warn!(error = %e, "failed to publish indexed event");
                 }
             }
@@ -210,7 +218,7 @@ impl Indexer {
         let checkpoint_data = self.checkpoint.list();
         let checkpoint_json = serde_json::to_string(&checkpoint_data)
             .map_err(|e| IndexerError::RuntimeError(format!("checkpoint serialize: {e}")))?;
-        
+
         let checkpoint_entry = StateEntry::new("indexer:checkpoints", checkpoint_json, None);
         if let Err(e) = self.state.set(checkpoint_entry).await {
             warn!(error = %e, "failed to persist checkpoint");
@@ -224,10 +232,7 @@ impl Indexer {
 impl Default for Indexer {
     fn default() -> Self {
         // Default uses memory adapters
-        Self::new(
-            MemoryState::new(),
-            MemoryPubSub::new(),
-        )
+        Self::new(MemoryState::new(), MemoryPubSub::new())
     }
 }
 

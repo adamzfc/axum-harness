@@ -4,17 +4,12 @@
 //! In production, this should integrate with the observability stack
 //! (OpenObserve, Prometheus, or similar metrics backend).
 
-use axum::{
-    routing::get,
-    Json,
-    Router,
-    extract::State,
-};
+use axum::{extract::State, routing::get, Json, Router};
 use serde::Serialize;
 use utoipa::OpenApi;
 
-use crate::state::AdminBffState;
 use crate::error::AdminBffResult;
+use crate::state::AdminBffState;
 
 #[derive(Serialize, utoipa::ToSchema)]
 pub struct MetricsView {
@@ -25,10 +20,7 @@ pub struct MetricsView {
 }
 
 #[derive(OpenApi)]
-#[openapi(
-    paths(get_system_metrics),
-    components(schemas(MetricsView))
-)]
+#[openapi(paths(get_system_metrics), components(schemas(MetricsView)))]
 pub struct MetricsOpenApi;
 
 /// GET /api/admin/metrics — System metrics for admin monitoring.
@@ -58,6 +50,5 @@ pub async fn get_system_metrics(
 }
 
 pub fn router() -> Router<AdminBffState> {
-    Router::new()
-        .route("/api/admin/metrics", get(get_system_metrics))
+    Router::new().route("/api/admin/metrics", get(get_system_metrics))
 }

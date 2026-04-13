@@ -15,8 +15,7 @@ use crate::ports::CounterRepository;
 ///
 /// This is exported so the composition root (server binary) can
 /// run migrations at startup without depending on a specific adapter.
-pub const COUNTER_MIGRATION: &str =
-    "CREATE TABLE IF NOT EXISTS counter (\
+pub const COUNTER_MIGRATION: &str = "CREATE TABLE IF NOT EXISTS counter (\
         tenant_id TEXT PRIMARY KEY,\
         value INTEGER NOT NULL DEFAULT 0,\
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))\

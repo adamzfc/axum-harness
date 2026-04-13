@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::domain::{Conversation, Message, Participant};
 use crate::domain::error::ChatError;
+use crate::domain::{Conversation, Message, Participant};
 
 /// Repository for conversation CRUD
 #[async_trait]
@@ -31,7 +31,10 @@ pub trait MessageRepository: Send + Sync {
 #[async_trait]
 pub trait ParticipantRepository: Send + Sync {
     async fn add(&self, participant: &Participant) -> Result<(), ChatError>;
-    async fn list_by_conversation(&self, conversation_id: &Uuid) -> Result<Vec<Participant>, ChatError>;
+    async fn list_by_conversation(
+        &self,
+        conversation_id: &Uuid,
+    ) -> Result<Vec<Participant>, ChatError>;
     async fn remove(&self, conversation_id: &Uuid, user_sub: &str) -> Result<(), ChatError>;
 }
 
@@ -39,5 +42,8 @@ pub trait ParticipantRepository: Send + Sync {
 #[async_trait]
 pub trait ChatEventPublisher: Send + Sync {
     async fn publish_message_sent(&self, message: &Message) -> Result<(), ChatError>;
-    async fn publish_conversation_created(&self, conversation: &Conversation) -> Result<(), ChatError>;
+    async fn publish_conversation_created(
+        &self,
+        conversation: &Conversation,
+    ) -> Result<(), ChatError>;
 }

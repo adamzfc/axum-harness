@@ -95,7 +95,11 @@ pub trait EventBus: Send + Sync {
     /// The handler is invoked synchronously for each published event.
     /// If the handler panics, the error is logged but does not block
     /// other handlers or future events.
-    async fn subscribe(&self, subscriber_id: &str, handler: EventHandler) -> Result<(), EventBusError>;
+    async fn subscribe(
+        &self,
+        subscriber_id: &str,
+        handler: EventHandler,
+    ) -> Result<(), EventBusError>;
 
     /// Unsubscribe a previously registered handler.
     async fn unsubscribe(&self, subscriber_id: &str) -> Result<(), EventBusError>;

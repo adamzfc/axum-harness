@@ -1,8 +1,10 @@
 use uuid::Uuid;
 
-use crate::domain::{Conversation, Message, MessageSender, Participant};
 use crate::domain::error::ChatError;
-use crate::ports::{ConversationRepository, MessageRepository, ParticipantRepository, ChatEventPublisher};
+use crate::domain::{Conversation, Message, MessageSender, Participant};
+use crate::ports::{
+    ChatEventPublisher, ConversationRepository, MessageRepository, ParticipantRepository,
+};
 
 /// Chat service — orchestrates conversation, message, and participant operations
 pub struct ChatService<C, M, P, E> {
@@ -54,7 +56,10 @@ where
     }
 
     /// List conversations for a tenant
-    pub async fn list_conversations(&self, tenant_id: &str) -> Result<Vec<Conversation>, ChatError> {
+    pub async fn list_conversations(
+        &self,
+        tenant_id: &str,
+    ) -> Result<Vec<Conversation>, ChatError> {
         self.conversation_repo.list_by_tenant(tenant_id).await
     }
 
@@ -74,7 +79,9 @@ where
         content: String,
     ) -> Result<Message, ChatError> {
         if content.trim().is_empty() {
-            return Err(ChatError::InvalidInput("Message content cannot be empty".into()));
+            return Err(ChatError::InvalidInput(
+                "Message content cannot be empty".into(),
+            ));
         }
 
         // Verify conversation exists
@@ -100,8 +107,13 @@ where
     }
 
     /// Get participants for a conversation
-    pub async fn get_participants(&self, conversation_id: &Uuid) -> Result<Vec<Participant>, ChatError> {
-        self.participant_repo.list_by_conversation(conversation_id).await
+    pub async fn get_participants(
+        &self,
+        conversation_id: &Uuid,
+    ) -> Result<Vec<Participant>, ChatError> {
+        self.participant_repo
+            .list_by_conversation(conversation_id)
+            .await
     }
 
     /// Update conversation title
@@ -109,6 +121,8 @@ where
         if title.trim().is_empty() {
             return Err(ChatError::InvalidInput("Title cannot be empty".into()));
         }
-        self.conversation_repo.update_title(conversation_id, title).await
+        self.conversation_repo
+            .update_title(conversation_id, title)
+            .await
     }
 }

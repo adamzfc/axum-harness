@@ -3,7 +3,7 @@
 use async_trait::async_trait;
 use contracts_events::AppEvent;
 use event_bus::ports::{EventBus, EventEnvelope};
-use runtime::ports::{PubSub, MessageEnvelope as RuntimeMessageEnvelope};
+use runtime::ports::{MessageEnvelope as RuntimeMessageEnvelope, PubSub};
 use tracing::{debug, warn};
 
 use crate::polling::PendingOutboxEntry;
@@ -33,10 +33,7 @@ impl<E: EventBus, P: PubSub> OutboxPublisher<E, P> {
     }
 
     /// Publish a single outbox entry to both event bus and pubsub.
-    pub async fn publish(
-        &self,
-        entry: &PendingOutboxEntry,
-    ) -> Result<(), PublishError> {
+    pub async fn publish(&self, entry: &PendingOutboxEntry) -> Result<(), PublishError> {
         let event: AppEvent = serde_json::from_str(&entry.payload)
             .map_err(|e| PublishError::DeserializeError(e.to_string()))?;
 
@@ -54,7 +51,7 @@ impl<E: EventBus, P: PubSub> OutboxPublisher<E, P> {
             format!("outbox.{}", entry.event_type),
             &entry.source_service,
         );
-        
+
         self.pubsub
             .publish(&format!("outbox.{}", entry.event_type), runtime_envelope)
             .await
@@ -90,6 +87,7 @@ impl<E: EventBus, P: PubSub> OutboxPublisher<E, P> {
 mod tests {
     use super::*;
     use event_bus::adapters::memory_bus::InMemoryEventBus;
+    use runtime::adapters::memory::MemoryPubSub;
 
     fn test_entry(id: &str, payload: &str) -> PendingOutboxEntry {
         PendingOutboxEntry {
@@ -105,7 +103,8 @@ mod tests {
     #[tokio::test]
     async fn publishes_valid_event() {
         let bus = InMemoryEventBus::new();
-        let publisher = OutboxPublisher::new(bus);
+        let pubsub = MemoryPubSub::new();
+        let publisher = OutboxPublisher::new(bus, pubsub);
 
         // CounterChanged event with valid JSON (AppEvent uses internally tagged format)
         let event = contracts_events::AppEvent::CounterChanged(contracts_events::CounterChanged {
@@ -123,7 +122,8 @@ mod tests {
     #[tokio::test]
     async fn returns_error_for_invalid_json() {
         let bus = InMemoryEventBus::new();
-        let publisher = OutboxPublisher::new(bus);
+        let pubsub = MemoryPubSub::new();
+        let publisher = OutboxPublisher::new(bus, pubsub);
 
         let entry = test_entry("entry-1", "not valid json");
         let result = publisher.publish(&entry).await;

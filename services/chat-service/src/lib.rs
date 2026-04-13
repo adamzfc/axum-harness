@@ -1,6 +1,6 @@
-pub mod domain;
 pub mod application;
-pub mod ports;
-pub mod infrastructure;
-pub mod events;
 pub mod contracts;
+pub mod domain;
+pub mod events;
+pub mod infrastructure;
+pub mod ports;

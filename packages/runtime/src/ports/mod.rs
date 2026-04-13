@@ -3,18 +3,20 @@
 //! These traits define the interfaces that services depend on.
 //! Concrete implementations are provided by adapters.
 
+pub mod binding;
 pub mod invocation;
+pub mod lock;
 pub mod pubsub;
+pub mod queue;
+pub mod secret;
 pub mod state;
 pub mod workflow;
-pub mod lock;
-pub mod binding;
-pub mod secret;
-pub mod queue;
 
 // Re-export all port traits for convenient importing.
 pub use binding::{Binding, BindingError, CapabilityBinding, RuntimeMode};
-pub use invocation::{Invocation, InvocationContext, InvocationError, InvocationRequest, InvocationResponse};
+pub use invocation::{
+    Invocation, InvocationContext, InvocationError, InvocationRequest, InvocationResponse,
+};
 pub use lock::{Lock, LockError, LockGuard, LockManager};
 pub use pubsub::{MessageEnvelope, MessageHandler, PubSub, PubSubError, SubscriptionId};
 pub use queue::{Queue, QueueError, QueueMessage};

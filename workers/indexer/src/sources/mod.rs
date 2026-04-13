@@ -9,8 +9,8 @@ use crate::IndexerError;
 /// Raw event from a protocol source.
 #[derive(Debug, Clone)]
 pub struct RawEvent {
-    pub source: String,       // e.g., "nostr", "farcaster", "evm"
-    pub raw_payload: String,   // JSON or protocol-specific format
+    pub source: String,      // e.g., "nostr", "farcaster", "evm"
+    pub raw_payload: String, // JSON or protocol-specific format
     pub timestamp: String,
     pub metadata: std::collections::HashMap<String, String>,
 }

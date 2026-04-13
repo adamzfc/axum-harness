@@ -9,7 +9,7 @@
 //! - All calls carry correlation IDs for distributed tracing
 
 use async_trait::async_trait;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 /// Error types for invocation.
 #[derive(Debug, thiserror::Error)]

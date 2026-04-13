@@ -1,5 +1,5 @@
-use admin_bff::create_router;
 use admin_bff::config::Config;
+use admin_bff::create_router;
 use admin_bff::state::AdminBffState;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -27,13 +27,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = create_router(state);
 
     // Start server
-    let listener = tokio::net::TcpListener::bind(format!(
-        "{}:{}",
-        config.server_host, config.server_port
-    ))
-    .await?;
+    let listener =
+        tokio::net::TcpListener::bind(format!("{}:{}", config.server_host, config.server_port))
+            .await?;
 
-    tracing::info!("Admin BFF listening on {}:{}", config.server_host, config.server_port);
+    tracing::info!(
+        "Admin BFF listening on {}:{}",
+        config.server_host,
+        config.server_port
+    );
 
     axum::serve(listener, app).await?;
 

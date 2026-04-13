@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use sha2::{Digest, Sha256};
 
 use crate::domain::error::AuthError;
@@ -19,19 +19,15 @@ pub struct JwtTokenRepository {
 
 impl JwtTokenRepository {
     /// Create a new JWT token repository.
-    /// 
+    ///
     /// # Arguments
     /// * `secret` - Secret key for signing JWTs (should be at least 32 bytes)
     /// * `access_token_ttl` - Access token time-to-live
     /// * `refresh_token_ttl` - Refresh token time-to-live
-    pub fn new(
-        secret: &str,
-        access_token_ttl: Duration,
-        refresh_token_ttl: Duration,
-    ) -> Self {
+    pub fn new(secret: &str, access_token_ttl: Duration, refresh_token_ttl: Duration) -> Self {
         let encoding_key = EncodingKey::from_secret(secret.as_bytes());
         let decoding_key = DecodingKey::from_secret(secret.as_bytes());
-        
+
         Self {
             encoding_key,
             decoding_key,
@@ -42,11 +38,7 @@ impl JwtTokenRepository {
 
     /// Create with default TTLs (15min access, 7d refresh).
     pub fn with_default_ttl(secret: &str) -> Self {
-        Self::new(
-            secret,
-            Duration::minutes(15),
-            Duration::days(7),
-        )
+        Self::new(secret, Duration::minutes(15), Duration::days(7))
     }
 
     /// Hash a refresh token for storage/comparison.
@@ -74,12 +66,10 @@ impl TokenRepository for JwtTokenRepository {
             "type": "access",
         });
 
-        let access_token = encode(
-            &Header::default(),
-            &access_claims,
-            &self.encoding_key,
-        )
-        .map_err(|e| AuthError::TokenGenerationFailed(format!("Failed to encode access token: {e}")))?;
+        let access_token =
+            encode(&Header::default(), &access_claims, &self.encoding_key).map_err(|e| {
+                AuthError::TokenGenerationFailed(format!("Failed to encode access token: {e}"))
+            })?;
 
         // Generate refresh token (includes hash for validation)
         let refresh_exp = (now + self.refresh_token_ttl).timestamp() as usize;
@@ -93,12 +83,10 @@ impl TokenRepository for JwtTokenRepository {
             "type": "refresh",
         });
 
-        let refresh_token = encode(
-            &Header::default(),
-            &refresh_claims,
-            &self.encoding_key,
-        )
-        .map_err(|e| AuthError::TokenGenerationFailed(format!("Failed to encode refresh token: {e}")))?;
+        let refresh_token = encode(&Header::default(), &refresh_claims, &self.encoding_key)
+            .map_err(|e| {
+                AuthError::TokenGenerationFailed(format!("Failed to encode refresh token: {e}"))
+            })?;
 
         let expires_at = now + self.access_token_ttl;
 
@@ -112,12 +100,9 @@ impl TokenRepository for JwtTokenRepository {
     }
 
     async fn validate_access_token(&self, token: &str) -> Result<TokenClaims, AuthError> {
-        let token_data = decode::<serde_json::Value>(
-            token,
-            &self.decoding_key,
-            &Validation::default(),
-        )
-        .map_err(|e| AuthError::InvalidToken(format!("Invalid access token: {e}")))?;
+        let token_data =
+            decode::<serde_json::Value>(token, &self.decoding_key, &Validation::default())
+                .map_err(|e| AuthError::InvalidToken(format!("Invalid access token: {e}")))?;
 
         // Verify it's an access token
         let token_type = token_data
@@ -149,12 +134,9 @@ impl TokenRepository for JwtTokenRepository {
     }
 
     async fn validate_refresh_token(&self, token: &str) -> Result<TokenClaims, AuthError> {
-        let token_data = decode::<serde_json::Value>(
-            token,
-            &self.decoding_key,
-            &Validation::default(),
-        )
-        .map_err(|e| AuthError::InvalidToken(format!("Invalid refresh token: {e}")))?;
+        let token_data =
+            decode::<serde_json::Value>(token, &self.decoding_key, &Validation::default())
+                .map_err(|e| AuthError::InvalidToken(format!("Invalid refresh token: {e}")))?;
 
         // Verify it's a refresh token
         let token_type = token_data

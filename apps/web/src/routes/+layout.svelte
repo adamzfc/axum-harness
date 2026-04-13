@@ -3,8 +3,8 @@ import { onMount } from 'svelte';
 import '../app.css';
 import Toast from '$lib/components/ui/Toast.svelte';
 import { handleOAuthCallback } from '$lib/ipc/auth';
-import { auth, initAuthListeners, setSession } from '$lib/stores/auth.svelte';
 import { isTauri, safeInvoke, safeListen } from '$lib/ipc/bridge';
+import { auth, initAuthListeners, setSession } from '$lib/stores/auth.svelte';
 
 const { children } = $props();
 
@@ -46,7 +46,9 @@ onMount(() => {
           auth.authError = String(e);
         }
       }
-    }).then((cleanup) => { unlistenOAuthCleanup = cleanup; });
+    }).then((cleanup) => {
+      unlistenOAuthCleanup = cleanup;
+    });
   }
 
   // Listen for Rust panic events (Tauri only)
@@ -54,7 +56,9 @@ onMount(() => {
   if (isTauri()) {
     safeListen<string>('app:panic', (payload) => {
       showError(payload);
-    }).then((cleanup) => { unlistenPanicCleanup = cleanup; });
+    }).then((cleanup) => {
+      unlistenPanicCleanup = cleanup;
+    });
   }
 
   // Ctrl+Q → quit (Tauri only)
@@ -71,14 +75,16 @@ onMount(() => {
   // MCP plugin listeners (Tauri only)
   let mcpCleanup: (() => void) | undefined;
   if (isTauri()) {
-    import('tauri-plugin-mcp').then(({ setupPluginListeners, cleanupPluginListeners }) => {
-      setupPluginListeners().catch((e) => {
-        console.error('[mcp] setupPluginListeners() failed:', e);
+    import('tauri-plugin-mcp')
+      .then(({ setupPluginListeners, cleanupPluginListeners }) => {
+        setupPluginListeners().catch((e) => {
+          console.error('[mcp] setupPluginListeners() failed:', e);
+        });
+        mcpCleanup = cleanupPluginListeners;
+      })
+      .catch((e) => {
+        console.warn('[mcp] failed to initialize plugin listeners:', e);
       });
-      mcpCleanup = cleanupPluginListeners;
-    }).catch((e) => {
-      console.warn('[mcp] failed to initialize plugin listeners:', e);
-    });
   }
 
   return () => {

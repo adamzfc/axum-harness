@@ -18,9 +18,7 @@ pub struct LibSqlSessionRepository {
 impl LibSqlSessionRepository {
     /// Create a new session repository from an existing Turso Database.
     pub fn new(db: Database) -> Self {
-        Self {
-            db: Arc::new(db),
-        }
+        Self { db: Arc::new(db) }
     }
 
     /// Create a new session repository from a local database path.
@@ -72,55 +70,64 @@ impl LibSqlSessionRepository {
 
     /// Extract a session from a result row.
     fn extract_session(row: &turso::Row) -> Result<Session, AuthError> {
-        let id = Self::value_to_string(&row.get_value(0).map_err(|e| {
-            AuthError::Database(format!("Failed to get id: {e}"))
-        })?)?;
-        let user_id = Self::value_to_string(&row.get_value(1).map_err(|e| {
-            AuthError::Database(format!("Failed to get user_id: {e}"))
-        })?)?;
-        let user_sub = Self::value_to_string(&row.get_value(2).map_err(|e| {
-            AuthError::Database(format!("Failed to get user_sub: {e}"))
-        })?)?;
-        let tenant_id = match row.get_value(3).map_err(|e| {
-            AuthError::Database(format!("Failed to get tenant_id: {e}"))
-        })? {
+        let id = Self::value_to_string(
+            &row.get_value(0)
+                .map_err(|e| AuthError::Database(format!("Failed to get id: {e}")))?,
+        )?;
+        let user_id = Self::value_to_string(
+            &row.get_value(1)
+                .map_err(|e| AuthError::Database(format!("Failed to get user_id: {e}")))?,
+        )?;
+        let user_sub = Self::value_to_string(
+            &row.get_value(2)
+                .map_err(|e| AuthError::Database(format!("Failed to get user_sub: {e}")))?,
+        )?;
+        let tenant_id = match row
+            .get_value(3)
+            .map_err(|e| AuthError::Database(format!("Failed to get tenant_id: {e}")))?
+        {
             Value::Text(s) => Some(s),
             Value::Null => None,
             other => {
                 return Err(AuthError::Database(format!(
                     "Invalid tenant_id value: {other:?}"
-                )))
+                )));
             }
         };
-        let expires_at_str = Self::value_to_string(&row.get_value(4).map_err(|e| {
-            AuthError::Database(format!("Failed to get expires_at: {e}"))
-        })?)?;
-        let created_at_str = Self::value_to_string(&row.get_value(5).map_err(|e| {
-            AuthError::Database(format!("Failed to get created_at: {e}"))
-        })?)?;
-        let last_accessed_at_str = Self::value_to_string(&row.get_value(6).map_err(|e| {
-            AuthError::Database(format!("Failed to get last_accessed_at: {e}"))
-        })?)?;
-        let ip_address = match row.get_value(7).map_err(|e| {
-            AuthError::Database(format!("Failed to get ip_address: {e}"))
-        })? {
+        let expires_at_str = Self::value_to_string(
+            &row.get_value(4)
+                .map_err(|e| AuthError::Database(format!("Failed to get expires_at: {e}")))?,
+        )?;
+        let created_at_str = Self::value_to_string(
+            &row.get_value(5)
+                .map_err(|e| AuthError::Database(format!("Failed to get created_at: {e}")))?,
+        )?;
+        let last_accessed_at_str =
+            Self::value_to_string(&row.get_value(6).map_err(|e| {
+                AuthError::Database(format!("Failed to get last_accessed_at: {e}"))
+            })?)?;
+        let ip_address = match row
+            .get_value(7)
+            .map_err(|e| AuthError::Database(format!("Failed to get ip_address: {e}")))?
+        {
             Value::Text(s) => Some(s),
             Value::Null => None,
             other => {
                 return Err(AuthError::Database(format!(
                     "Invalid ip_address value: {other:?}"
-                )))
+                )));
             }
         };
-        let user_agent = match row.get_value(8).map_err(|e| {
-            AuthError::Database(format!("Failed to get user_agent: {e}"))
-        })? {
+        let user_agent = match row
+            .get_value(8)
+            .map_err(|e| AuthError::Database(format!("Failed to get user_agent: {e}")))?
+        {
             Value::Text(s) => Some(s),
             Value::Null => None,
             other => {
                 return Err(AuthError::Database(format!(
                     "Invalid user_agent value: {other:?}"
-                )))
+                )));
             }
         };
 

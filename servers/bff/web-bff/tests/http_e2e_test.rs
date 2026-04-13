@@ -15,8 +15,7 @@ use web_bff::{create_router, state::BffState};
 /// Helper: build test AppState with embedded Turso
 async fn build_test_state() -> BffState {
     // Use unique temp directory for each test to avoid database locking
-    let temp_dir =
-        std::env::temp_dir().join(format!("web_bff_test_{}", uuid::Uuid::new_v4()));
+    let temp_dir = std::env::temp_dir().join(format!("web_bff_test_{}", uuid::Uuid::new_v4()));
     std::fs::create_dir_all(&temp_dir).expect("Failed to create temp dir");
     let db_path = temp_dir.join("test.db");
 
@@ -49,9 +48,7 @@ async fn build_test_state() -> BffState {
 }
 
 /// Extract JSON body from an axum Response
-async fn body_to_json<T: serde::de::DeserializeOwned>(
-    response: axum::response::Response,
-) -> T {
+async fn body_to_json<T: serde::de::DeserializeOwned>(response: axum::response::Response) -> T {
     let bytes = response.into_body().collect().await.unwrap().to_bytes();
     assert!(
         !bytes.is_empty(),
@@ -62,7 +59,7 @@ async fn body_to_json<T: serde::de::DeserializeOwned>(
 
 /// Create a test JWT token for the given sub
 fn make_test_token(sub: &str) -> String {
-    use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
+    use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
 
     #[derive(serde::Serialize)]
     struct Claims {
@@ -543,7 +540,7 @@ async fn tenant_init_with_malformed_json_body() {
 
 #[tokio::test]
 async fn tenant_init_with_jwt_missing_sub_claim() {
-    use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
+    use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
 
     #[derive(serde::Serialize)]
     struct NoSubClaims {

@@ -96,7 +96,11 @@ impl<R: OutboxReader> OutboxPoller<R> {
     pub async fn poll_cycle(&mut self) -> Vec<PendingOutboxEntry> {
         let since = self.checkpoint.get();
 
-        match self.reader.fetch_pending(since, self.config.batch_size).await {
+        match self
+            .reader
+            .fetch_pending(since, self.config.batch_size)
+            .await
+        {
             Ok(entries) => {
                 let mut result = Vec::new();
                 for entry in entries {
@@ -151,16 +155,14 @@ mod tests {
 
     #[tokio::test]
     async fn poll_cycle_returns_pending_entries() {
-        let entries = vec![
-            PendingOutboxEntry {
-                id: "entry-1".to_string(),
-                sequence: 1,
-                event_type: "counter.changed".to_string(),
-                payload: "{}".to_string(),
-                source_service: "counter-service".to_string(),
-                retry_count: 0,
-            },
-        ];
+        let entries = vec![PendingOutboxEntry {
+            id: "entry-1".to_string(),
+            sequence: 1,
+            event_type: "counter.changed".to_string(),
+            payload: "{}".to_string(),
+            source_service: "counter-service".to_string(),
+            retry_count: 0,
+        }];
         let reader = MemoryOutboxReader::new(entries);
         let mut poller = OutboxPoller::new(reader, PollerConfig::default());
 
@@ -171,16 +173,14 @@ mod tests {
 
     #[tokio::test]
     async fn poll_cycle_skips_duplicates() {
-        let entries = vec![
-            PendingOutboxEntry {
-                id: "entry-1".to_string(),
-                sequence: 1,
-                event_type: "counter.changed".to_string(),
-                payload: "{}".to_string(),
-                source_service: "counter-service".to_string(),
-                retry_count: 0,
-            },
-        ];
+        let entries = vec![PendingOutboxEntry {
+            id: "entry-1".to_string(),
+            sequence: 1,
+            event_type: "counter.changed".to_string(),
+            payload: "{}".to_string(),
+            source_service: "counter-service".to_string(),
+            retry_count: 0,
+        }];
         let reader = MemoryOutboxReader::new(entries.clone());
         let mut poller = OutboxPoller::new(reader, PollerConfig::default());
 

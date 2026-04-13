@@ -27,13 +27,17 @@ impl Default for OAuthConfig {
             auth_url: "https://accounts.google.com/o/oauth2/v2/auth".to_string(),
             token_url: "https://oauth2.googleapis.com/token".to_string(),
             redirect_uri: "http://localhost:3000/auth/callback".to_string(),
-            scopes: vec!["openid".to_string(), "profile".to_string(), "email".to_string()],
+            scopes: vec![
+                "openid".to_string(),
+                "profile".to_string(),
+                "email".to_string(),
+            ],
         }
     }
 }
 
 /// Mock OAuth provider for development.
-/// 
+///
 /// In production, replace with actual OAuth provider implementations
 /// (Google, GitHub, Microsoft, etc.).
 pub struct MockOAuthProvider {

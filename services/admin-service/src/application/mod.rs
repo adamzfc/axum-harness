@@ -69,7 +69,9 @@ mod tests {
 
     #[async_trait]
     impl TenantRepository for MockTenantRepo {
-        async fn list_tenants(&self) -> Result<Vec<TenantSummary>, Box<dyn std::error::Error + Send + Sync>> {
+        async fn list_tenants(
+            &self,
+        ) -> Result<Vec<TenantSummary>, Box<dyn std::error::Error + Send + Sync>> {
             Ok(vec![
                 TenantSummary {
                     id: "tenant-1".to_string(),
@@ -90,7 +92,10 @@ mod tests {
 
     #[async_trait]
     impl CounterRepository for MockCounterRepo {
-        async fn get_value(&self, _tenant_id: &TenantId) -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
+        async fn get_value(
+            &self,
+            _tenant_id: &TenantId,
+        ) -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
             Ok(42)
         }
 
@@ -116,7 +121,9 @@ mod tests {
 
         #[async_trait]
         impl TenantRepository for EmptyTenantRepo {
-            async fn list_tenants(&self) -> Result<Vec<TenantSummary>, Box<dyn std::error::Error + Send + Sync>> {
+            async fn list_tenants(
+                &self,
+            ) -> Result<Vec<TenantSummary>, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(vec![])
             }
         }

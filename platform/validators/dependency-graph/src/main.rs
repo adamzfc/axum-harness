@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use clap::Parser;
-use petgraph::stable_graph::{StableGraph, NodeIndex};
 use petgraph::Direction;
+use petgraph::stable_graph::{NodeIndex, StableGraph};
 use petgraph::visit::EdgeRef;
 use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet};
@@ -51,8 +51,12 @@ fn main() -> Result<()> {
         .init();
 
     let args = Args::parse();
-    let platform_dir = fs::canonicalize(&args.platform_dir)
-        .with_context(|| format!("Platform directory not found: {}", args.platform_dir.display()))?;
+    let platform_dir = fs::canonicalize(&args.platform_dir).with_context(|| {
+        format!(
+            "Platform directory not found: {}",
+            args.platform_dir.display()
+        )
+    })?;
 
     info!("Validating dependency graph in {}", platform_dir.display());
 
@@ -116,11 +120,16 @@ fn main() -> Result<()> {
         info!("Dependency graph valid!");
         Ok(())
     } else {
-        anyhow::bail!("Dependency graph validation failed: {} errors", errors.len());
+        anyhow::bail!(
+            "Dependency graph validation failed: {} errors",
+            errors.len()
+        );
     }
 }
 
-fn build_service_dependency_graph(platform_dir: &Path) -> Result<(StableGraph<(), ()>, BTreeMap<String, NodeIndex>)> {
+fn build_service_dependency_graph(
+    platform_dir: &Path,
+) -> Result<(StableGraph<(), ()>, BTreeMap<String, NodeIndex>)> {
     info!("Building service dependency graph...");
 
     let services_dir = platform_dir.join("model/services");
@@ -163,11 +172,18 @@ fn build_service_dependency_graph(platform_dir: &Path) -> Result<(StableGraph<()
         }
     }
 
-    info!("  Graph: {} nodes, {} edges", graph.node_count(), graph.edge_count());
+    info!(
+        "  Graph: {} nodes, {} edges",
+        graph.node_count(),
+        graph.edge_count()
+    );
     Ok((graph, node_map))
 }
 
-fn detect_cycles(graph: &StableGraph<(), ()>, node_map: &BTreeMap<String, NodeIndex>) -> Vec<Vec<String>> {
+fn detect_cycles(
+    graph: &StableGraph<(), ()>,
+    node_map: &BTreeMap<String, NodeIndex>,
+) -> Vec<Vec<String>> {
     let mut cycles = Vec::new();
 
     // Use Tarjan's SCC algorithm - any SCC with >1 node indicates a cycle
@@ -176,11 +192,13 @@ fn detect_cycles(graph: &StableGraph<(), ()>, node_map: &BTreeMap<String, NodeIn
     for scc in &sccs {
         if scc.len() > 1 {
             // Map NodeIndex back to service names
-            let reverse_map: BTreeMap<NodeIndex, String> = node_map.iter()
+            let reverse_map: BTreeMap<NodeIndex, String> = node_map
+                .iter()
                 .map(|(name, idx)| (*idx, name.clone()))
                 .collect();
 
-            let cycle_names: Vec<String> = scc.iter()
+            let cycle_names: Vec<String> = scc
+                .iter()
                 .filter_map(|idx| reverse_map.get(idx).cloned())
                 .collect();
 

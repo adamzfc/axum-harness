@@ -7,10 +7,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use tokio::sync::{broadcast, RwLock};
+use tokio::sync::{RwLock, broadcast};
 use tracing::{debug, warn};
 
-use crate::ports::{EventBus, EventBusError, EventHandler, EventEnvelope};
+use crate::ports::{EventBus, EventBusError, EventEnvelope, EventHandler};
 
 /// Default channel capacity — max buffered events before slow subscribers lag.
 const DEFAULT_CAPACITY: usize = 1024;
@@ -78,7 +78,11 @@ impl EventBus for InMemoryEventBus {
         Ok(())
     }
 
-    async fn subscribe(&self, subscriber_id: &str, handler: EventHandler) -> Result<(), EventBusError> {
+    async fn subscribe(
+        &self,
+        subscriber_id: &str,
+        handler: EventHandler,
+    ) -> Result<(), EventBusError> {
         let mut subscribers = self.subscribers.write().await;
         subscribers.insert(subscriber_id.to_string(), handler);
         debug!(subscriber_id = %subscriber_id, "subscriber registered");

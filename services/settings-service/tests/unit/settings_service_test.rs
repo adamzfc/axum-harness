@@ -4,7 +4,9 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use feature_settings::SettingsService;
+use feature_settings::{
+    AgentConnectionSettings as FeatureAgentConnectionSettings, SettingsService,
+};
 use settings_service::application::ApplicationSettingsService;
 use settings_service::domain::{AgentConnectionSettings, UserSettings};
 use settings_service::ports::{RepositoryError, SettingsRepository};
@@ -43,7 +45,7 @@ impl SettingsRepository for MockSettingsRepository {
     ) -> Result<UserSettings, RepositoryError> {
         let mut store = self.store.lock().await;
         if let Some(existing) = store.iter_mut().find(|s| s.user_sub == user_sub) {
-            existing.agent_connection = settings.clone();
+            existing.agent_connection = settings;
             existing.updated_at = chrono::Utc::now().to_rfc3339();
             return Ok(existing.clone());
         }
@@ -77,7 +79,7 @@ async fn update_and_retrieve_settings() {
     let updated = service
         .update_agent_connection(
             "user-1",
-            AgentConnectionSettings {
+            FeatureAgentConnectionSettings {
                 api_key: "sk-test-key".to_string(),
                 base_url: "https://api.example.com/v1".to_string(),
                 model: "claude-3-opus".to_string(),
@@ -103,7 +105,7 @@ async fn user_isolation_settings_dont_leak() {
     service
         .update_agent_connection(
             "user-a",
-            AgentConnectionSettings {
+            FeatureAgentConnectionSettings {
                 api_key: "sk-a".to_string(),
                 base_url: "https://a.example.com".to_string(),
                 model: "model-a".to_string(),

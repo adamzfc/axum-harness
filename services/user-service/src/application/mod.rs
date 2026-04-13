@@ -56,10 +56,14 @@ where
     /// - Subsequent login: returns existing tenant_id, updates last_login
     pub async fn init_tenant(&self, input: InitTenantInput) -> Result<InitTenantResult, UserError> {
         if input.user_sub.is_empty() {
-            return Err(UserError::InvalidInput("user_sub cannot be empty".to_string()));
+            return Err(UserError::InvalidInput(
+                "user_sub cannot be empty".to_string(),
+            ));
         }
         if input.user_name.is_empty() {
-            return Err(UserError::InvalidInput("user_name cannot be empty".to_string()));
+            return Err(UserError::InvalidInput(
+                "user_name cannot be empty".to_string(),
+            ));
         }
 
         // 1. Check existing binding

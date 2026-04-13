@@ -11,8 +11,8 @@ use tenant_service::application::{TenantService, TenantServiceTrait};
 use tenant_service::infrastructure::libsql_adapter::LibSqlTenantRepository;
 use validator::Validate;
 
-use crate::state::BffState;
 use crate::error::{BffError, BffResult};
+use crate::state::BffState;
 
 pub fn router() -> Router<BffState> {
     Router::<BffState>::new().route("/api/tenant/init", post(init_tenant))

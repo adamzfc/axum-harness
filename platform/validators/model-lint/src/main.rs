@@ -50,8 +50,12 @@ fn main() -> Result<()> {
         .init();
 
     let args = Args::parse();
-    let platform_dir = fs::canonicalize(&args.platform_dir)
-        .with_context(|| format!("Platform directory not found: {}", args.platform_dir.display()))?;
+    let platform_dir = fs::canonicalize(&args.platform_dir).with_context(|| {
+        format!(
+            "Platform directory not found: {}",
+            args.platform_dir.display()
+        )
+    })?;
 
     info!("Validating platform models in {}", platform_dir.display());
 
@@ -81,7 +85,11 @@ fn main() -> Result<()> {
     for (model_type, schema_file) in &model_schema_map {
         let schema_path = schema_dir.join(schema_file);
         if !schema_path.exists() {
-            warn!("Schema not found: {} — skipping {}", schema_path.display(), model_type);
+            warn!(
+                "Schema not found: {} — skipping {}",
+                schema_path.display(),
+                model_type
+            );
             warnings += 1;
             continue;
         }
@@ -97,7 +105,10 @@ fn main() -> Result<()> {
 
         let model_type_dir = model_dir.join(model_type);
         if !model_type_dir.exists() {
-            warn!("Model directory not found: {} — skipping", model_type_dir.display());
+            warn!(
+                "Model directory not found: {} — skipping",
+                model_type_dir.display()
+            );
             warnings += 1;
             continue;
         }
@@ -117,7 +128,7 @@ fn main() -> Result<()> {
                 .with_context(|| format!("Invalid YAML in: {}", yaml_file.display()))?;
 
             let mut errors = Vec::new();
-            
+
             // Validate using the Validator API - is_valid returns bool
             if !compiled_schema.is_valid(&yaml_value) {
                 // Collect errors manually if needed
@@ -220,10 +231,7 @@ fn check_service_deployable_refs(
     warnings
 }
 
-fn check_resource_refs(
-    platform_dir: &Path,
-    results: &mut Vec<ValidationResult>,
-) -> usize {
+fn check_resource_refs(platform_dir: &Path, results: &mut Vec<ValidationResult>) -> usize {
     let mut warnings = 0;
 
     // Load all resource names

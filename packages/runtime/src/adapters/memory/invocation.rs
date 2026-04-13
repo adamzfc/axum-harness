@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use tokio::sync::RwLock;
 
 use crate::ports::{
@@ -15,9 +15,8 @@ use crate::ports::{
 };
 
 /// Type alias for service handler functions.
-type ServiceHandler = Arc<
-    dyn Fn(serde_json::Value) -> Result<serde_json::Value, InvocationError> + Send + Sync,
->;
+type ServiceHandler =
+    Arc<dyn Fn(serde_json::Value) -> Result<serde_json::Value, InvocationError> + Send + Sync>;
 
 /// In-memory invocation adapter for testing.
 ///
@@ -34,12 +33,8 @@ impl MemoryInvocation {
     }
 
     /// Register a handler for a specific service and method.
-    pub async fn register_handler<Req, Resp, F>(
-        &self,
-        service_id: &str,
-        method: &str,
-        handler: F,
-    ) where
+    pub async fn register_handler<Req, Resp, F>(&self, service_id: &str, method: &str, handler: F)
+    where
         Req: DeserializeOwned,
         Resp: Serialize,
         F: Fn(Req) -> Result<Resp, InvocationError> + Send + Sync + 'static,

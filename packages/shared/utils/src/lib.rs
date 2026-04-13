@@ -4,6 +4,6 @@
 //! to any specific domain: ID generation, time formatting,
 //! crypto utilities, encoding helpers.
 
+pub mod crypto;
 pub mod id;
 pub mod time;
-pub mod crypto;

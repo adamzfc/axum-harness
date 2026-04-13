@@ -42,10 +42,10 @@
 //! ```
 
 // ── Core layers ──
-pub mod domain;
-pub mod ports;
 pub mod application;
 pub mod contracts;
+pub mod domain;
+pub mod ports;
 pub mod sync;
 
 // ── Outer layers ──

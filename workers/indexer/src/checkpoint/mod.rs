@@ -25,7 +25,10 @@ impl SourceCheckpoint {
 
     /// Update the cursor for a source.
     pub fn update(&self, source: &str, cursor: String) {
-        self.cursors.write().unwrap().insert(source.to_string(), cursor);
+        self.cursors
+            .write()
+            .unwrap()
+            .insert(source.to_string(), cursor);
     }
 
     /// List all checkpoints.

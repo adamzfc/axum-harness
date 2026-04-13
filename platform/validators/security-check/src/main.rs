@@ -81,8 +81,12 @@ fn main() -> Result<()> {
         .init();
 
     let args = Args::parse();
-    let platform_dir = fs::canonicalize(&args.platform_dir)
-        .with_context(|| format!("Platform directory not found: {}", args.platform_dir.display()))?;
+    let platform_dir = fs::canonicalize(&args.platform_dir).with_context(|| {
+        format!(
+            "Platform directory not found: {}",
+            args.platform_dir.display()
+        )
+    })?;
 
     info!("Running security validation in {}", platform_dir.display());
 
@@ -154,7 +158,11 @@ fn check_service_security(
             .with_context(|| format!("Failed to parse service: {}", path.display()))?;
 
         // Check if authentication is configured
-        if service.authentication.as_ref().map_or(true, |a| a.required.unwrap_or(false)) {
+        if service
+            .authentication
+            .as_ref()
+            .map_or(true, |a| a.required.unwrap_or(false))
+        {
             // Auth required but check if methods are specified
             if service
                 .authentication
@@ -266,7 +274,13 @@ fn check_deployable_security(
 
     // Patterns that suggest sensitive data
     let sensitive_patterns = [
-        "password", "secret", "key", "token", "credential", "api_key", "private",
+        "password",
+        "secret",
+        "key",
+        "token",
+        "credential",
+        "api_key",
+        "private",
     ];
 
     for entry in fs::read_dir(&deployables_dir)? {
@@ -317,9 +331,11 @@ fn check_security_antipatterns(
         });
 
     // Patterns that might indicate hardcoded secrets
-    let secret_patterns = [
-        regex::Regex::new(r#"(?i)(password|secret|key|token)\s*:\s*['"]?[a-zA-Z0-9]{16,}"#).unwrap(),
-    ];
+    let secret_patterns =
+        [
+            regex::Regex::new(r#"(?i)(password|secret|key|token)\s*:\s*['"]?[a-zA-Z0-9]{16,}"#)
+                .unwrap(),
+        ];
 
     for yaml_file in yaml_files {
         let content = fs::read_to_string(yaml_file.path())?;

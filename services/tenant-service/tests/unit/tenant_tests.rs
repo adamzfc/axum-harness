@@ -2,10 +2,10 @@
 
 #[cfg(test)]
 mod tenant_tests {
-    use crate::application::{TenantService, TenantServiceTrait};
-    use crate::domain::{CreateTenantInput, Tenant};
-    use crate::application::TenantServiceError;
-    use crate::ports::{TenantRepository, RepositoryError};
+    use tenant_service::application::{TenantService, TenantServiceTrait};
+    use tenant_service::domain::{CreateTenantInput, Tenant};
+    use tenant_service::application::TenantServiceError;
+    use tenant_service::ports::{TenantRepository, RepositoryError};
 
     /// Mock tenant repository for testing.
     struct MockTenantRepository {

@@ -65,7 +65,11 @@ async fn handler_is_called_on_publish() {
         .await
         .unwrap();
 
-    assert_eq!(count.load(Ordering::SeqCst), 1, "handler should be called once");
+    assert_eq!(
+        count.load(Ordering::SeqCst),
+        1,
+        "handler should be called once"
+    );
 }
 
 #[tokio::test]
@@ -76,20 +80,38 @@ async fn multiple_handlers_all_receive_event() {
     let count_a_clone = count_a.clone();
     let count_b_clone = count_b.clone();
 
-    bus.subscribe("handler-a", Box::new(move |_e| {
-        count_a_clone.fetch_add(1, Ordering::SeqCst);
-    })).await.unwrap();
+    bus.subscribe(
+        "handler-a",
+        Box::new(move |_e| {
+            count_a_clone.fetch_add(1, Ordering::SeqCst);
+        }),
+    )
+    .await
+    .unwrap();
 
-    bus.subscribe("handler-b", Box::new(move |_e| {
-        count_b_clone.fetch_add(1, Ordering::SeqCst);
-    })).await.unwrap();
+    bus.subscribe(
+        "handler-b",
+        Box::new(move |_e| {
+            count_b_clone.fetch_add(1, Ordering::SeqCst);
+        }),
+    )
+    .await
+    .unwrap();
 
     bus.publish(EventEnvelope::new(make_counter_event(), "counter-service"))
         .await
         .unwrap();
 
-    assert_eq!(count_a.load(Ordering::SeqCst), 1, "handler-a should be called");
-    assert_eq!(count_b.load(Ordering::SeqCst), 1, "handler-b should be called");
+    assert_eq!(
+        count_a.load(Ordering::SeqCst),
+        1,
+        "handler-a should be called"
+    );
+    assert_eq!(
+        count_b.load(Ordering::SeqCst),
+        1,
+        "handler-b should be called"
+    );
 }
 
 #[tokio::test]
@@ -98,9 +120,14 @@ async fn unsubscribe_stops_handler_calls() {
     let count = Arc::new(AtomicUsize::new(0));
     let count_clone = count.clone();
 
-    bus.subscribe("temp-handler", Box::new(move |_e| {
-        count_clone.fetch_add(1, Ordering::SeqCst);
-    })).await.unwrap();
+    bus.subscribe(
+        "temp-handler",
+        Box::new(move |_e| {
+            count_clone.fetch_add(1, Ordering::SeqCst);
+        }),
+    )
+    .await
+    .unwrap();
 
     // Unsubscribe before publishing
     bus.unsubscribe("temp-handler").await.unwrap();
@@ -109,7 +136,11 @@ async fn unsubscribe_stops_handler_calls() {
         .await
         .unwrap();
 
-    assert_eq!(count.load(Ordering::SeqCst), 0, "unsubscribed handler should not be called");
+    assert_eq!(
+        count.load(Ordering::SeqCst),
+        0,
+        "unsubscribed handler should not be called"
+    );
 }
 
 #[tokio::test]
@@ -122,8 +153,7 @@ async fn event_id_is_unique() {
 
 #[tokio::test]
 async fn correlation_id_can_be_set() {
-    let envelope = EventEnvelope::new(make_counter_event(), "test")
-        .with_correlation_id("corr-123");
+    let envelope = EventEnvelope::new(make_counter_event(), "test").with_correlation_id("corr-123");
 
     assert_eq!(envelope.correlation_id, Some("corr-123".to_string()));
 }

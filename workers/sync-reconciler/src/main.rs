@@ -6,7 +6,7 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use axum::{routing::get, Router};
+use axum::{Router, routing::get};
 use runtime::adapters::memory::MemoryLock;
 use runtime::ports::Lock;
 use tokio::sync::RwLock;
@@ -16,7 +16,7 @@ mod conflict;
 mod executors;
 mod plans;
 
-use executors::{ReconcileResult, ReconcileExecutor, StubReconcileExecutor};
+use executors::{ReconcileExecutor, ReconcileResult, StubReconcileExecutor};
 use plans::{ReconciliationPlan, SyncStrategy};
 
 /// Reconciler error types.
@@ -108,17 +108,18 @@ async fn main() -> anyhow::Result<()> {
     // Initialize runtime lock for conflict resolution
     let lock = MemoryLock::new();
 
-    let plans = vec![
-        ReconciliationPlan::new(
-            "plan-settings-sync",
-            "Sync settings across nodes",
-            "primary-settings",
-            "replica-settings",
-            SyncStrategy::SourceWins,
-        ),
-    ];
+    let plans = vec![ReconciliationPlan::new(
+        "plan-settings-sync",
+        "Sync settings across nodes",
+        "primary-settings",
+        "replica-settings",
+        SyncStrategy::SourceWins,
+    )];
 
-    info!("Sync-reconciler running with runtime lock ({} plans)", plans.len());
+    info!(
+        "Sync-reconciler running with runtime lock ({} plans)",
+        plans.len()
+    );
 
     // Main reconciliation loop
     let mut interval = tokio::time::interval(std::time::Duration::from_secs(120));

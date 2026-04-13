@@ -102,27 +102,25 @@ async fn get_user_tenants(
     let tenant_repo = user_service::infrastructure::LibSqlTenantRepository::new(db);
 
     match binding_repo.find_user_tenant(&user_sub).await {
-        Ok(Some(binding)) => {
-            match tenant_repo.find_by_id(&binding.tenant_id).await {
-                Ok(Some(tenant_info)) => (
-                    StatusCode::OK,
-                    Json(serde_json::json!([{
-                        "tenant_id": tenant_info.id,
-                        "tenant_name": tenant_info.name,
-                        "role": binding.role,
-                        "joined_at": binding.joined_at.to_rfc3339(),
-                    }])),
-                ),
-                Ok(None) | Err(_) => (
-                    StatusCode::OK,
-                    Json(serde_json::json!([{
-                        "tenant_id": binding.tenant_id,
-                        "role": binding.role,
-                        "joined_at": binding.joined_at.to_rfc3339(),
-                    }])),
-                ),
-            }
-        }
+        Ok(Some(binding)) => match tenant_repo.find_by_id(&binding.tenant_id).await {
+            Ok(Some(tenant_info)) => (
+                StatusCode::OK,
+                Json(serde_json::json!([{
+                    "tenant_id": tenant_info.id,
+                    "tenant_name": tenant_info.name,
+                    "role": binding.role,
+                    "joined_at": binding.joined_at.to_rfc3339(),
+                }])),
+            ),
+            Ok(None) | Err(_) => (
+                StatusCode::OK,
+                Json(serde_json::json!([{
+                    "tenant_id": binding.tenant_id,
+                    "role": binding.role,
+                    "joined_at": binding.joined_at.to_rfc3339(),
+                }])),
+            ),
+        },
         Ok(None) => (StatusCode::OK, Json(serde_json::json!([]))),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -143,12 +141,10 @@ fn db_not_ready() -> (StatusCode, Json<serde_json::Value>) {
 fn extract_user_sub(
     tenant: Option<Extension<TenantId>>,
 ) -> Result<String, (StatusCode, Json<serde_json::Value>)> {
-    tenant
-        .map(|Extension(id)| id.0)
-        .ok_or_else(|| {
-            (
-                StatusCode::UNAUTHORIZED,
-                Json(serde_json::json!({ "error": "Missing JWT — not authenticated" })),
-            )
-        })
+    tenant.map(|Extension(id)| id.0).ok_or_else(|| {
+        (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({ "error": "Missing JWT — not authenticated" })),
+        )
+    })
 }

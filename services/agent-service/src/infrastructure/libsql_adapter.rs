@@ -6,7 +6,7 @@
 use async_trait::async_trait;
 use contracts_api::ChatMessage;
 use domain::ports::lib_sql::LibSqlPort;
-use feature_agent::{AgentError, AgentService, Conversation, AVAILABLE_TOOLS};
+use feature_agent::{AVAILABLE_TOOLS, AgentError, AgentService, Conversation};
 use futures_util::{Stream, StreamExt, future};
 use serde::Deserialize;
 use std::pin::Pin;
@@ -95,7 +95,7 @@ fn generate_id() -> String {
     uuid::Uuid::new_v4().to_string()
 }
 
-async fn persist_tool_result<P: LibSqlPort>(
+pub async fn persist_tool_result<P: LibSqlPort>(
     port: &P,
     conversation_id: &str,
     tool_name: &str,
@@ -129,7 +129,7 @@ async fn persist_tool_result<P: LibSqlPort>(
     Ok(())
 }
 
-async fn execute_tool_by_name<P: LibSqlPort>(
+pub async fn execute_tool_by_name<P: LibSqlPort>(
     port: &P,
     conversation_id: &str,
     name: &str,
@@ -324,8 +324,7 @@ impl<P: LibSqlPort + Clone + Send + Sync + 'static> AgentService for LibSqlAgent
                                 if data == "[DONE]" {
                                     continue;
                                 }
-                                if let Ok(parsed) =
-                                    serde_json::from_str::<serde_json::Value>(data)
+                                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(data)
                                 {
                                     if let Some(content) =
                                         parsed["choices"][0]["delta"]["content"].as_str()

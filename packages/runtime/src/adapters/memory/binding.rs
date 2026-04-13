@@ -26,18 +26,13 @@ impl MemoryBinding {
     }
 
     /// Register a capability with its configuration.
-    pub fn register_capability(
-        &mut self,
-        capability: &str,
-        config: HashMap<String, String>,
-    ) {
+    pub fn register_capability(&mut self, capability: &str, config: HashMap<String, String>) {
         self.capabilities.insert(capability.to_string(), config);
     }
 
     /// Register a capability binding.
     pub fn register_binding(&mut self, binding: CapabilityBinding) {
-        self.capabilities
-            .insert(binding.capability, binding.config);
+        self.capabilities.insert(binding.capability, binding.config);
     }
 }
 
@@ -55,14 +50,20 @@ impl Binding for MemoryBinding {
         Ok(self.capabilities.keys().cloned().collect())
     }
 
-    fn get_capability_config(&self, capability: &str) -> Result<HashMap<String, String>, BindingError> {
+    fn get_capability_config(
+        &self,
+        capability: &str,
+    ) -> Result<HashMap<String, String>, BindingError> {
         self.capabilities
             .get(capability)
             .cloned()
             .ok_or_else(|| BindingError::CapabilityNotAvailable(capability.to_string()))
     }
 
-    async fn validate_dependencies(&self, required_capabilities: &[&str]) -> Result<(), BindingError> {
+    async fn validate_dependencies(
+        &self,
+        required_capabilities: &[&str],
+    ) -> Result<(), BindingError> {
         let mut unavailable = Vec::new();
         for &capability in required_capabilities {
             if !self.capabilities.contains_key(capability) {

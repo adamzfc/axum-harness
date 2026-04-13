@@ -34,11 +34,7 @@ impl CounterRepository for MockCounterRepository {
         Ok(map.get(id.as_str()).cloned())
     }
 
-    async fn increment(
-        &self,
-        id: &CounterId,
-        now: DateTime<Utc>,
-    ) -> Result<i64, RepositoryError> {
+    async fn increment(&self, id: &CounterId, now: DateTime<Utc>) -> Result<i64, RepositoryError> {
         let mut map = self.counters.lock().await;
         let counter = map
             .entry(id.as_str().to_string())
@@ -48,11 +44,7 @@ impl CounterRepository for MockCounterRepository {
         Ok(updated.value)
     }
 
-    async fn decrement(
-        &self,
-        id: &CounterId,
-        now: DateTime<Utc>,
-    ) -> Result<i64, RepositoryError> {
+    async fn decrement(&self, id: &CounterId, now: DateTime<Utc>) -> Result<i64, RepositoryError> {
         let mut map = self.counters.lock().await;
         let counter = map
             .entry(id.as_str().to_string())

@@ -28,7 +28,9 @@ pub struct TenantSummary {
 #[async_trait]
 pub trait TenantRepository: Send + Sync {
     /// List all tenants.
-    async fn list_tenants(&self) -> Result<Vec<TenantSummary>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn list_tenants(
+        &self,
+    ) -> Result<Vec<TenantSummary>, Box<dyn std::error::Error + Send + Sync>>;
 }
 
 /// Port for accessing counter data.
@@ -38,7 +40,10 @@ pub trait TenantRepository: Send + Sync {
 #[async_trait]
 pub trait CounterRepository: Send + Sync {
     /// Get counter value for a specific tenant.
-    async fn get_value(&self, tenant_id: &TenantId) -> Result<i64, Box<dyn std::error::Error + Send + Sync>>;
+    async fn get_value(
+        &self,
+        tenant_id: &TenantId,
+    ) -> Result<i64, Box<dyn std::error::Error + Send + Sync>>;
 
     /// Get global/default counter value.
     async fn get_global_value(&self) -> Result<i64, Box<dyn std::error::Error + Send + Sync>>;

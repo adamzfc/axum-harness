@@ -153,7 +153,11 @@ export function initAuthListeners(): () => void {
     auth.currentUser = null;
     auth.tokenExpiresAt = 0;
     // Don't auto-redirect — let auth guard handle it on next navigation
-  }).then((fn) => { cleanup = fn; });
+  }).then((fn) => {
+    cleanup = fn;
+  });
 
-  return () => { cleanup?.(); };
+  return () => {
+    cleanup?.();
+  };
 }

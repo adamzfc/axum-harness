@@ -70,10 +70,7 @@ impl UserTenantRepository for MockUserTenantRepository {
         user_sub: &str,
     ) -> Result<Option<domain::UserTenantBinding>, UserError> {
         let bindings = self.bindings.lock().unwrap();
-        Ok(bindings
-            .iter()
-            .find(|b| b.user_sub == user_sub)
-            .cloned())
+        Ok(bindings.iter().find(|b| b.user_sub == user_sub).cloned())
     }
 
     async fn create_binding(

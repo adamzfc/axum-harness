@@ -41,8 +41,12 @@ fn main() -> Result<()> {
         .init();
 
     let args = Args::parse();
-    let platform_dir = fs::canonicalize(&args.platform_dir)
-        .with_context(|| format!("Platform directory not found: {}", args.platform_dir.display()))?;
+    let platform_dir = fs::canonicalize(&args.platform_dir).with_context(|| {
+        format!(
+            "Platform directory not found: {}",
+            args.platform_dir.display()
+        )
+    })?;
 
     let root_dir = fs::canonicalize(&args.root_dir)
         .with_context(|| format!("Root directory not found: {}", args.root_dir.display()))?;
@@ -144,13 +148,13 @@ fn check_event_drift(platform_dir: &Path, root_dir: &Path) -> Result<Vec<String>
                     let base_name = name
                         .strip_prefix(&format!("{}_", service.name))
                         .unwrap_or(name);
-                    let base_name = name
-                        .strip_prefix(&service.name)
-                        .unwrap_or(base_name);
+                    let base_name = name.strip_prefix(&service.name).unwrap_or(base_name);
 
                     // Check if a similar name exists in contracts
                     let found = contract_event_names.iter().any(|cn| {
-                        cn.contains(base_name) || base_name.contains(cn) || cn.to_lowercase() == name.to_lowercase()
+                        cn.contains(base_name)
+                            || base_name.contains(cn)
+                            || cn.to_lowercase() == name.to_lowercase()
                     });
 
                     if !found && !contract_event_names.is_empty() {
@@ -225,12 +229,18 @@ fn check_port_contract_drift(platform_dir: &Path, root_dir: &Path) -> Result<Vec
                 if let Some(port_name) = port.get("name").and_then(|v| v.as_str()) {
                     // Port names like "counter_repository" should map to contract types
                     // like "CounterResponse" — just verify contracts exist for this service
-                    let service_upper = service.name.chars().next().unwrap_or(' ').to_uppercase().to_string()
+                    let service_upper = service
+                        .name
+                        .chars()
+                        .next()
+                        .unwrap_or(' ')
+                        .to_uppercase()
+                        .to_string()
                         + &service.name[1..];
 
-                    let has_service_contracts = contract_type_names.iter().any(|tn| {
-                        tn.starts_with(&service_upper) || tn.starts_with(&service.name)
-                    });
+                    let has_service_contracts = contract_type_names
+                        .iter()
+                        .any(|tn| tn.starts_with(&service_upper) || tn.starts_with(&service.name));
 
                     if !has_service_contracts && !contract_type_names.is_empty() {
                         drifts.push(format!(
@@ -320,7 +330,10 @@ fn check_service_crate_drift(platform_dir: &Path, root_dir: &Path) -> Result<Vec
     }
 
     if drifts.is_empty() {
-        info!("  Service crates in sync ({} services)", model_service_names.len());
+        info!(
+            "  Service crates in sync ({} services)",
+            model_service_names.len()
+        );
     }
 
     Ok(drifts)

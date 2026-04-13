@@ -137,15 +137,15 @@ const output = {
   version: "2.0",
   generated_at: new Date().toISOString(),
   categories: {} as Record<string, string[]>,
-  phase: "1 — BFF 架构（业务逻辑在 packages/core/usecases/ + servers/bff/）",
+  phase: "2 — DDD Clean Architecture（业务逻辑在 services/*/ 中）",
   priority_rules: [
     "始终阅读 'shared' 和 'contracts' 分类，无论任务类型。它们是系统的抽象基石。",
     "前端任务 → 优先搜索 'frontend' + 'shared' + 'contracts'。",
-    "后端任务 → 优先搜索 'backend' + 'shared' + 'contracts'。注意：Phase 0 业务逻辑在 packages/core/usecases/，不在 services/。",
+    "后端任务 → 优先搜索 'backend' + 'shared' + 'contracts'。业务逻辑在 services/<domain>/ 中，遵循 DDD Clean Architecture。",
     "全栈任务 → 平等对待 'frontend' + 'backend' + 'shared' + 'contracts'。",
     "基础设施任务 → 阅读 'infra' + 'agent'（约束定义）。",
     "测试文件在 'tests' 分类中 — 修改业务代码时不要忽略相关测试。",
-    "新增业务模块时，应按目标架构在 services/<domain>/ 下创建（即使当前是 stub）。",
+    "新增业务模块时，应按目标架构在 services/<domain>/ 下创建 domain/application/ports/events/contracts/。",
   ],
 };
 

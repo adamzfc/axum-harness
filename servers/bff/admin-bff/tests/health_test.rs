@@ -3,11 +3,11 @@
 //! Uses axum::Router + tower::ServiceExt::oneshot to simulate real HTTP requests
 //! without needing a running server.
 
+use admin_bff::{config::Config, create_router, state::AdminBffState};
 use axum::{
     body::Body,
     http::{self, Request, StatusCode},
 };
-use admin_bff::{create_router, state::AdminBffState, config::Config};
 use tower::ServiceExt;
 
 /// Helper: collect body bytes and deserialize to JSON Value

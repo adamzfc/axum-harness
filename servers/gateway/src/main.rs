@@ -19,8 +19,10 @@ use bytes::Bytes;
 use pingora::prelude::*;
 use pingora_core::upstreams::peer::HttpPeer;
 use pingora_http::ResponseHeader;
-use pingora_load_balancing::{selection::RoundRobin, LoadBalancer, Backend, health_check::TcpHealthCheck};
-use pingora_proxy::{http_proxy_service, ProxyHttp, Session};
+use pingora_load_balancing::{
+    Backend, LoadBalancer, health_check::TcpHealthCheck, selection::RoundRobin,
+};
+use pingora_proxy::{ProxyHttp, Session, http_proxy_service};
 
 // ── Configuration ────────────────────────────────────────────
 
@@ -100,11 +102,7 @@ impl ProxyHttp for Gateway {
     fn new_ctx(&self) -> Self::CTX {}
 
     /// Handle health check directly (short-circuit, no upstream).
-    async fn request_filter(
-        &self,
-        session: &mut Session,
-        _ctx: &mut Self::CTX,
-    ) -> Result<bool> {
+    async fn request_filter(&self, session: &mut Session, _ctx: &mut Self::CTX) -> Result<bool> {
         let path = session.req_header().uri.path();
 
         if path == "/healthz" || path == "/health" {
@@ -117,7 +115,8 @@ impl ProxyHttp for Gateway {
                     "admin": "configured",
                     "web": "configured"
                 }
-            }).to_string();
+            })
+            .to_string();
 
             let body = Bytes::from(body_str);
             let len = body.len();

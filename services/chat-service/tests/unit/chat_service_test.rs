@@ -4,10 +4,12 @@ use tokio::sync::Mutex;
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use chat_service::domain::{Conversation, Message, MessageSender, Participant};
-use chat_service::domain::error::ChatError;
-use chat_service::ports::{ConversationRepository, MessageRepository, ParticipantRepository, ChatEventPublisher};
 use chat_service::application::ChatService;
+use chat_service::domain::error::ChatError;
+use chat_service::domain::{Conversation, Message, MessageSender, Participant};
+use chat_service::ports::{
+    ChatEventPublisher, ConversationRepository, MessageRepository, ParticipantRepository,
+};
 
 // ── Mock Repositories ─────────────────────────────────────────
 
@@ -114,7 +116,10 @@ impl ParticipantRepository for MockParticipantRepository {
         Ok(())
     }
 
-    async fn list_by_conversation(&self, conversation_id: &Uuid) -> Result<Vec<Participant>, ChatError> {
+    async fn list_by_conversation(
+        &self,
+        conversation_id: &Uuid,
+    ) -> Result<Vec<Participant>, ChatError> {
         let participants = self.participants.lock().await;
         Ok(participants
             .iter()
@@ -143,7 +148,10 @@ impl ChatEventPublisher for MockEventPublisher {
         Ok(())
     }
 
-    async fn publish_conversation_created(&self, _conversation: &Conversation) -> Result<(), ChatError> {
+    async fn publish_conversation_created(
+        &self,
+        _conversation: &Conversation,
+    ) -> Result<(), ChatError> {
         Ok(())
     }
 }
@@ -171,7 +179,10 @@ async fn test_create_conversation_adds_creator_as_participant() {
     assert_eq!(conversation.tenant_id, "tenant-1");
     assert_eq!(conversation.title, Some("Test Chat".to_string()));
 
-    let participants = part_repo.list_by_conversation(&conversation.id).await.unwrap();
+    let participants = part_repo
+        .list_by_conversation(&conversation.id)
+        .await
+        .unwrap();
     assert_eq!(participants.len(), 1);
     assert_eq!(participants[0].user_sub, "user-abc");
 }
@@ -193,7 +204,13 @@ async fn test_send_message_rejects_empty_content() {
 
     // Empty content should fail
     let result = service
-        .send_message(conv.id, MessageSender::User { user_sub: "u1".to_string() }, "".to_string())
+        .send_message(
+            conv.id,
+            MessageSender::User {
+                user_sub: "u1".to_string(),
+            },
+            "".to_string(),
+        )
         .await;
 
     assert!(result.is_err());
@@ -214,12 +231,20 @@ async fn test_list_conversations_filters_by_tenant() {
 
     // Create conversations in different tenants
     service
-        .create_conversation("tenant-a".to_string(), Some("A Chat".to_string()), "u1".to_string())
+        .create_conversation(
+            "tenant-a".to_string(),
+            Some("A Chat".to_string()),
+            "u1".to_string(),
+        )
         .await
         .unwrap();
 
     service
-        .create_conversation("tenant-b".to_string(), Some("B Chat".to_string()), "u2".to_string())
+        .create_conversation(
+            "tenant-b".to_string(),
+            Some("B Chat".to_string()),
+            "u2".to_string(),
+        )
         .await
         .unwrap();
 

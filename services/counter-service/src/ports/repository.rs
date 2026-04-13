@@ -27,18 +27,10 @@ pub trait CounterRepository: Send + Sync {
 
     /// Atomically increment a counter. Creates it if it doesn't exist.
     /// Returns the new value after increment.
-    async fn increment(
-        &self,
-        id: &CounterId,
-        now: DateTime<Utc>,
-    ) -> Result<i64, RepositoryError>;
+    async fn increment(&self, id: &CounterId, now: DateTime<Utc>) -> Result<i64, RepositoryError>;
 
     /// Atomically decrement a counter.
-    async fn decrement(
-        &self,
-        id: &CounterId,
-        now: DateTime<Utc>,
-    ) -> Result<i64, RepositoryError>;
+    async fn decrement(&self, id: &CounterId, now: DateTime<Utc>) -> Result<i64, RepositoryError>;
 
     /// Reset a counter to zero.
     async fn reset(&self, id: &CounterId, now: DateTime<Utc>) -> Result<(), RepositoryError>;

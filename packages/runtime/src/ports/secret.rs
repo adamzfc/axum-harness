@@ -105,7 +105,11 @@ pub trait Secret: Send + Sync {
     /// Get a specific version of a secret.
     ///
     /// If version is None, returns the latest version.
-    async fn get_versioned(&self, name: &str, version: Option<&str>) -> Result<SecretEntry, SecretError>;
+    async fn get_versioned(
+        &self,
+        name: &str,
+        version: Option<&str>,
+    ) -> Result<SecretEntry, SecretError>;
 
     /// List all available secret names (without values).
     async fn list_names(&self) -> Result<Vec<String>, SecretError>;

@@ -54,15 +54,16 @@ impl<R: TenantRepository> TenantService<R> {
 
 #[async_trait]
 impl<R: TenantRepository> TenantServiceTrait for TenantService<R> {
-    async fn create_tenant(
-        &self,
-        input: CreateTenantInput,
-    ) -> Result<Tenant, TenantServiceError> {
+    async fn create_tenant(&self, input: CreateTenantInput) -> Result<Tenant, TenantServiceError> {
         if input.id.is_empty() {
-            return Err(TenantServiceError::InvalidInput("tenant id cannot be empty".into()));
+            return Err(TenantServiceError::InvalidInput(
+                "tenant id cannot be empty".into(),
+            ));
         }
         if input.name.is_empty() {
-            return Err(TenantServiceError::InvalidInput("tenant name cannot be empty".into()));
+            return Err(TenantServiceError::InvalidInput(
+                "tenant name cannot be empty".into(),
+            ));
         }
 
         self.repo

@@ -23,7 +23,7 @@ async function invokeCommand(cmd: string) {
   const token = localStorage.getItem('auth_id_token');
   const headers: Record<string, string> = {};
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers.Authorization = `Bearer ${token}`;
   }
   const resp = await fetch(url, { method, headers });
   const data = await resp.json();

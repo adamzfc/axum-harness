@@ -69,10 +69,7 @@ impl Counter {
 
     /// Return a new Counter with value reset to zero.
     pub fn reset(self) -> Self {
-        Self {
-            value: 0,
-            ..self
-        }
+        Self { value: 0, ..self }
     }
 }
 
@@ -106,7 +103,10 @@ mod tests {
     #[test]
     fn reset_returns_zero() {
         let now = Utc::now();
-        let c = Counter::new(CounterId::new("t1"), now).increment().increment().reset();
+        let c = Counter::new(CounterId::new("t1"), now)
+            .increment()
+            .increment()
+            .reset();
         assert_eq!(c.value, 0);
     }
 }

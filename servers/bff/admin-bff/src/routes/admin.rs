@@ -1,19 +1,11 @@
-use axum::{
-    routing::get,
-    Json,
-    Router,
-    extract::State,
-};
-use utoipa::OpenApi;
-use crate::state::AdminBffState;
 use crate::error::AdminBffResult;
-use crate::handlers::dashboard::{DashboardView, fetch_dashboard};
+use crate::handlers::dashboard::{fetch_dashboard, DashboardView};
+use crate::state::AdminBffState;
+use axum::{extract::State, routing::get, Json, Router};
+use utoipa::OpenApi;
 
 #[derive(OpenApi)]
-#[openapi(
-    paths(get_dashboard_stats),
-    components(schemas(DashboardView))
-)]
+#[openapi(paths(get_dashboard_stats), components(schemas(DashboardView)))]
 pub struct AdminOpenApi;
 
 /// GET /api/admin/dashboard — Aggregated admin dashboard view
@@ -30,14 +22,14 @@ pub struct AdminOpenApi;
 pub async fn get_dashboard_stats(
     State(state): State<AdminBffState>,
 ) -> AdminBffResult<Json<DashboardView>> {
-    let db = state.embedded_db.clone()
-        .ok_or_else(|| crate::error::AdminBffError::Internal("Embedded database not initialized".to_string()))?;
+    let db = state.embedded_db.clone().ok_or_else(|| {
+        crate::error::AdminBffError::Internal("Embedded database not initialized".to_string())
+    })?;
 
     let dashboard = fetch_dashboard(db).await?;
     Ok(Json(dashboard))
 }
 
 pub fn router() -> Router<AdminBffState> {
-    Router::new()
-        .route("/api/admin/dashboard", get(get_dashboard_stats))
+    Router::new().route("/api/admin/dashboard", get(get_dashboard_stats))
 }

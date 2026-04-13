@@ -7,12 +7,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use tokio::sync::{broadcast, RwLock};
+use tokio::sync::{RwLock, broadcast};
 use tracing::debug;
 
-use crate::ports::{
-    MessageEnvelope, MessageHandler, PubSub, PubSubError, SubscriptionId,
-};
+use crate::ports::{MessageEnvelope, MessageHandler, PubSub, PubSubError, SubscriptionId};
 
 /// In-memory pub/sub adapter for testing.
 ///

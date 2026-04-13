@@ -32,10 +32,7 @@ impl<P: SurrealDbPort> SurrealDbTenantRepository<P> {
 
 #[async_trait]
 impl<P: SurrealDbPort> TenantRepository for SurrealDbTenantRepository<P> {
-    async fn create_tenant(
-        &self,
-        input: CreateTenantInput,
-    ) -> Result<Tenant, RepositoryError> {
+    async fn create_tenant(&self, input: CreateTenantInput) -> Result<Tenant, RepositoryError> {
         let mut vars = BTreeMap::new();
         vars.insert("id".into(), serde_json::json!(input.id));
         vars.insert("name".into(), serde_json::json!(input.name));
@@ -89,7 +86,10 @@ impl<P: SurrealDbPort> TenantRepository for SurrealDbTenantRepository<P> {
         Ok(())
     }
 
-    async fn find_user_tenant(&self, user_sub: &str) -> Result<Option<UserTenantBinding>, RepositoryError> {
+    async fn find_user_tenant(
+        &self,
+        user_sub: &str,
+    ) -> Result<Option<UserTenantBinding>, RepositoryError> {
         #[derive(Debug, Deserialize)]
         struct BindingRow {
             tenant_id: String,

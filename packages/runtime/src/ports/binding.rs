@@ -104,10 +104,16 @@ pub trait Binding: Send + Sync {
     fn list_capabilities(&self) -> Result<Vec<String>, BindingError>;
 
     /// Get configuration for a specific capability.
-    fn get_capability_config(&self, capability: &str) -> Result<HashMap<String, String>, BindingError>;
+    fn get_capability_config(
+        &self,
+        capability: &str,
+    ) -> Result<HashMap<String, String>, BindingError>;
 
     /// Validate that all required dependencies are resolvable.
     ///
     /// Returns a list of unresolved dependencies if validation fails.
-    async fn validate_dependencies(&self, required_capabilities: &[&str]) -> Result<(), BindingError>;
+    async fn validate_dependencies(
+        &self,
+        required_capabilities: &[&str],
+    ) -> Result<(), BindingError>;
 }

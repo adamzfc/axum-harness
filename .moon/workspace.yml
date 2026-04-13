@@ -5,10 +5,8 @@ projects:
   desktop-tauri: 'apps/desktop/src-tauri'
   web: 'apps/web'
   core-domain: 'packages/core/domain'
-  core-usecases: 'packages/core/usecases'
   contracts-api: 'packages/contracts/api'
   adapters-tauri: 'packages/adapters/hosts/tauri'
-  api: 'servers/api'
 
 vcs:
   client: 'git'

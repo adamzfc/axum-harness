@@ -34,7 +34,7 @@ pub async fn admin_tenant_middleware(
 
 /// Decode tenant ID from JWT — dev mode only
 fn decode_tenant_id_insecure(token: &str) -> Result<TenantId, StatusCode> {
-    use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+    use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 
     let parts: Vec<&str> = token.split('.').collect();
     if parts.len() != 3 {

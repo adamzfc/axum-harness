@@ -31,7 +31,10 @@ pub trait TenantRepository: Send + Sync {
     async fn delete_tenant(&self, id: &str) -> Result<(), RepositoryError>;
 
     /// Check if a user already has a tenant binding.
-    async fn find_user_tenant(&self, user_sub: &str) -> Result<Option<UserTenantBinding>, RepositoryError>;
+    async fn find_user_tenant(
+        &self,
+        user_sub: &str,
+    ) -> Result<Option<UserTenantBinding>, RepositoryError>;
 
     /// Create a user-tenant binding.
     async fn create_user_tenant_binding(

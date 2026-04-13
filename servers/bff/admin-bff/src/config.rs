@@ -1,4 +1,4 @@
-use figment::{Figment, providers::Env};
+use figment::{providers::Env, Figment};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -12,9 +12,7 @@ pub struct Config {
 
 impl Config {
     pub fn from_env() -> Result<Self, figment::Error> {
-        Figment::new()
-            .merge(Env::prefixed("ADMIN_BFF_"))
-            .extract()
+        Figment::new().merge(Env::prefixed("ADMIN_BFF_")).extract()
     }
 }
 

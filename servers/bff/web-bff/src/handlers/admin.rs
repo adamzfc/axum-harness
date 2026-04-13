@@ -2,19 +2,19 @@
 //!
 //! GET /api/admin/stats — dashboard statistics.
 
-use axum::{Json, Router, extract::State, routing::get};
 use async_trait::async_trait;
+use axum::{Json, Router, extract::State, routing::get};
 use contracts_api::AdminDashboardStats;
 use feature_admin::AdminService;
+use feature_counter::CounterService;
 use kernel::TenantId;
 use serde_json::json;
-use utoipa::OpenApi;
 use storage_turso::EmbeddedTurso;
 use tenant_service::application::TenantServiceTrait;
-use feature_counter::CounterService;
+use utoipa::OpenApi;
 
-use crate::state::BffState;
 use crate::error::{BffError, BffResult};
+use crate::state::BffState;
 
 /// Adapter: TenantService → admin_service::ports::TenantRepository
 pub struct TenantServiceAdapter {
@@ -24,19 +24,29 @@ pub struct TenantServiceAdapter {
 }
 
 impl TenantServiceAdapter {
-    pub fn new(tenant_svc: tenant_service::application::TenantService<
-        tenant_service::infrastructure::LibSqlTenantRepository<storage_turso::EmbeddedTurso>,
-    >) -> Self {
+    pub fn new(
+        tenant_svc: tenant_service::application::TenantService<
+            tenant_service::infrastructure::LibSqlTenantRepository<storage_turso::EmbeddedTurso>,
+        >,
+    ) -> Self {
         Self { tenant_svc }
     }
 }
 
 #[async_trait]
 impl admin_service::ports::TenantRepository for TenantServiceAdapter {
-    async fn list_tenants(&self) -> Result<Vec<admin_service::ports::TenantSummary>, Box<dyn std::error::Error + Send + Sync>> {
-        let tenants = TenantServiceTrait::list_tenants(&self.tenant_svc).await.map_err(|e| {
-            Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) as Box<dyn std::error::Error + Send + Sync>
-        })?;
+    async fn list_tenants(
+        &self,
+    ) -> Result<Vec<admin_service::ports::TenantSummary>, Box<dyn std::error::Error + Send + Sync>>
+    {
+        let tenants = TenantServiceTrait::list_tenants(&self.tenant_svc)
+            .await
+            .map_err(|e| {
+                Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                )) as Box<dyn std::error::Error + Send + Sync>
+            })?;
         Ok(tenants
             .into_iter()
             .map(|t| admin_service::ports::TenantSummary {
@@ -56,25 +66,40 @@ pub struct CounterServiceAdapter {
 }
 
 impl CounterServiceAdapter {
-    pub fn new(counter_svc: counter_service::application::RepositoryBackedCounterService<
-        counter_service::infrastructure::LibSqlCounterRepository<storage_turso::EmbeddedTurso>,
-    >) -> Self {
+    pub fn new(
+        counter_svc: counter_service::application::RepositoryBackedCounterService<
+            counter_service::infrastructure::LibSqlCounterRepository<storage_turso::EmbeddedTurso>,
+        >,
+    ) -> Self {
         Self { counter_svc }
     }
 }
 
 #[async_trait]
 impl admin_service::ports::CounterRepository for CounterServiceAdapter {
-    async fn get_value(&self, _tenant_id: &TenantId) -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
-        CounterService::get_value(&self.counter_svc).await.map_err(|e| {
-            Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) as Box<dyn std::error::Error + Send + Sync>
-        })
+    async fn get_value(
+        &self,
+        _tenant_id: &TenantId,
+    ) -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
+        CounterService::get_value(&self.counter_svc)
+            .await
+            .map_err(|e| {
+                Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                )) as Box<dyn std::error::Error + Send + Sync>
+            })
     }
 
     async fn get_global_value(&self) -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
-        CounterService::get_value(&self.counter_svc).await.map_err(|e| {
-            Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) as Box<dyn std::error::Error + Send + Sync>
-        })
+        CounterService::get_value(&self.counter_svc)
+            .await
+            .map_err(|e| {
+                Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                )) as Box<dyn std::error::Error + Send + Sync>
+            })
     }
 }
 
@@ -108,11 +133,13 @@ async fn get_dashboard_stats(State(state): State<BffState>) -> Json<serde_json::
 
     // Build counter service
     let counter_repo = counter_service::infrastructure::LibSqlCounterRepository::new(db.clone());
-    let counter_svc = counter_service::application::RepositoryBackedCounterService::new(counter_repo);
+    let counter_svc =
+        counter_service::application::RepositoryBackedCounterService::new(counter_repo);
     let counter_adapter = CounterServiceAdapter::new(counter_svc);
 
     // Build admin service with adapted ports
-    let admin_svc = admin_service::application::AdminDashboardService::new(tenant_adapter, counter_adapter);
+    let admin_svc =
+        admin_service::application::AdminDashboardService::new(tenant_adapter, counter_adapter);
 
     match admin_svc.get_dashboard_stats().await {
         Ok(stats) => Json(json!(stats)),

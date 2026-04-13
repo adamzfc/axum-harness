@@ -9,6 +9,7 @@ pub mod middleware;
 pub mod state;
 
 use axum::Router;
+use state::BffState;
 use std::time::Duration;
 use tower_http::{
     cors::{AllowOrigin, CorsLayer},
@@ -16,7 +17,6 @@ use tower_http::{
     timeout::TimeoutLayer,
     trace::TraceLayer,
 };
-use state::BffState;
 
 /// 生成 UUID v7 请求 ID。
 #[derive(Clone)]
@@ -44,7 +44,9 @@ pub fn create_router(state: BffState) -> Router {
         .merge(handlers::agent::router())
         .merge(handlers::settings::router())
         .merge(handlers::user::router())
-        .route_layer(axum::middleware::from_fn(middleware::tenant::tenant_middleware))
+        .route_layer(axum::middleware::from_fn(
+            middleware::tenant::tenant_middleware,
+        ))
         .layer(axum::Extension(state.config.jwt_secret.clone()));
 
     Router::new()

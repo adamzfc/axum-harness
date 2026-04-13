@@ -12,7 +12,10 @@ pub async fn healthz() -> Json<serde_json::Value> {
 
 /// GET /readyz — 就绪探针。
 pub async fn readyz() -> (axum::http::StatusCode, Json<serde_json::Value>) {
-    (axum::http::StatusCode::OK, Json(json!({ "status": "ready" })))
+    (
+        axum::http::StatusCode::OK,
+        Json(json!({ "status": "ready" })),
+    )
 }
 
 /// 健康检查路由 — 无状态路由。

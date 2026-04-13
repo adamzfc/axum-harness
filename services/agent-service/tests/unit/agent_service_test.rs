@@ -2,6 +2,7 @@
 
 use agent_service::infrastructure::libsql_adapter::{execute_tool_by_name, persist_tool_result};
 use async_trait::async_trait;
+use feature_agent::AgentError;
 use serde::de::DeserializeOwned;
 use serde_json::json;
 use std::sync::Arc;
@@ -62,7 +63,7 @@ async fn executes_get_counter_value_tool_and_persists_result_message() {
     let port = MockLibSqlPort::default();
     *port.counter.lock().await = 7;
 
-    let result = execute_tool_by_name(&port, "conv-1", "get_counter_value", json!({}))
+    let result: String = execute_tool_by_name(&port, "conv-1", "get_counter_value", json!({}))
         .await
         .expect("tool call should succeed");
 
@@ -75,7 +76,7 @@ async fn executes_get_counter_value_tool_and_persists_result_message() {
 async fn executes_list_tenants_tool_and_returns_summary() {
     let port = MockLibSqlPort::default();
 
-    let result = execute_tool_by_name(&port, "conv-2", "list_tenants", json!({}))
+    let result: String = execute_tool_by_name(&port, "conv-2", "list_tenants", json!({}))
         .await
         .expect("tool call should succeed");
 
@@ -87,11 +88,12 @@ async fn executes_list_tenants_tool_and_returns_summary() {
 async fn executes_system_status_and_handles_unknown_tool_safely() {
     let port = MockLibSqlPort::default();
 
-    let status = execute_tool_by_name(&port, "conv-3", "get_system_status", json!({}))
+    let status: String = execute_tool_by_name(&port, "conv-3", "get_system_status", json!({}))
         .await
         .expect("status tool call should succeed");
     assert!(status.contains("ok"));
 
-    let unknown = execute_tool_by_name(&port, "conv-3", "not_allowed_tool", json!({})).await;
+    let unknown: Result<String, AgentError> =
+        execute_tool_by_name(&port, "conv-3", "not_allowed_tool", json!({})).await;
     assert!(unknown.is_err());
 }

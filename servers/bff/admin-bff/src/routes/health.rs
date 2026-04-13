@@ -1,10 +1,6 @@
-use axum::{
-    routing::get,
-    Json,
-    Router,
-};
-use serde::Serialize;
 use crate::state::AdminBffState;
+use axum::{routing::get, Json, Router};
+use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct HealthResponse {

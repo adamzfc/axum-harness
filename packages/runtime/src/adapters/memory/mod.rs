@@ -19,14 +19,14 @@
 //! let queue = MemoryQueue::new();
 //! ```
 
+pub mod binding;
 pub mod invocation;
+pub mod lock;
 pub mod pubsub;
+pub mod queue;
+pub mod secret;
 pub mod state;
 pub mod workflow;
-pub mod lock;
-pub mod binding;
-pub mod secret;
-pub mod queue;
 
 // Re-export all memory adapters for convenient importing.
 pub use binding::MemoryBinding;

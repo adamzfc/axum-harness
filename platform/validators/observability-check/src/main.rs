@@ -8,9 +8,7 @@ use tracing::{info, warn};
 
 #[derive(Parser, Debug)]
 #[command(name = "observability-validator")]
-#[command(
-    about = "Validate observability/telemetry configuration completeness"
-)]
+#[command(about = "Validate observability/telemetry configuration completeness")]
 struct Args {
     /// Path to platform directory
     #[arg(short, long, default_value = "platform")]
@@ -75,8 +73,12 @@ fn main() -> Result<()> {
         .init();
 
     let args = Args::parse();
-    let platform_dir = fs::canonicalize(&args.platform_dir)
-        .with_context(|| format!("Platform directory not found: {}", args.platform_dir.display()))?;
+    let platform_dir = fs::canonicalize(&args.platform_dir).with_context(|| {
+        format!(
+            "Platform directory not found: {}",
+            args.platform_dir.display()
+        )
+    })?;
 
     info!(
         "Validating observability configuration in {}",
@@ -120,10 +122,7 @@ fn main() -> Result<()> {
         info!("Observability validation passed!");
         Ok(())
     } else {
-        anyhow::bail!(
-            "Observability validation failed: {} errors",
-            errors.len()
-        );
+        anyhow::bail!("Observability validation failed: {} errors", errors.len());
     }
 }
 
@@ -239,13 +238,7 @@ fn check_deployable_observability(
                 "Deployable '{}' has no health check endpoint",
                 deployable.name
             ));
-        } else if obs
-            .health_check
-            .as_ref()
-            .unwrap()
-            .endpoint
-            .is_none()
-        {
+        } else if obs.health_check.as_ref().unwrap().endpoint.is_none() {
             errors.push(format!(
                 "Deployable '{}' health check has no endpoint",
                 deployable.name

@@ -1,11 +1,11 @@
 use axum::Router;
+use std::time::Duration;
 use tower_http::{
     cors::CorsLayer,
-    trace::TraceLayer,
-    request_id::{MakeRequestId, PropagateRequestIdLayer, SetRequestIdLayer, RequestId},
+    request_id::{MakeRequestId, PropagateRequestIdLayer, RequestId, SetRequestIdLayer},
     timeout::TimeoutLayer,
+    trace::TraceLayer,
 };
-use std::time::Duration;
 
 pub mod config;
 pub mod error;
@@ -39,7 +39,9 @@ pub fn create_router(state: AdminBffState) -> Router {
         .merge(routes::admin::router())
         .merge(routes::tenant::router())
         .merge(routes::metrics::router())
-        .route_layer(axum::middleware::from_fn(middleware::tenant::admin_tenant_middleware));
+        .route_layer(axum::middleware::from_fn(
+            middleware::tenant::admin_tenant_middleware,
+        ));
 
     Router::new()
         .merge(public_routes)

@@ -29,9 +29,7 @@ impl MemorySecret {
     /// Pre-populate with test secrets.
     pub fn with_secrets(mut self, secrets: Vec<SecretEntry>) -> Self {
         for secret in secrets {
-            self.secrets
-                .get_mut()
-                .insert(secret.name.clone(), secret);
+            self.secrets.get_mut().insert(secret.name.clone(), secret);
         }
         self
     }
@@ -53,7 +51,11 @@ impl Secret for MemorySecret {
             .ok_or_else(|| SecretError::NotFound(name.to_string()))
     }
 
-    async fn get_versioned(&self, name: &str, version: Option<&str>) -> Result<SecretEntry, SecretError> {
+    async fn get_versioned(
+        &self,
+        name: &str,
+        version: Option<&str>,
+    ) -> Result<SecretEntry, SecretError> {
         let secrets = self.secrets.read().await;
         let entry = secrets
             .get(name)

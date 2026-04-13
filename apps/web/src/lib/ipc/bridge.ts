@@ -8,7 +8,9 @@
 
 /** Detect whether we are running inside a Tauri WebView. */
 export function isTauri(): boolean {
-  return typeof window !== 'undefined' && !!((globalThis || window) as { isTauri?: boolean }).isTauri;
+  return (
+    typeof window !== 'undefined' && !!((globalThis || window) as { isTauri?: boolean }).isTauri
+  );
 }
 
 /**
@@ -42,7 +44,9 @@ export async function safeListen<T = unknown>(
 /**
  * Create a Tauri streaming Channel.  Returns `null` in web mode.
  */
-export async function safeChannel<T = string>(): Promise<{ onmessage: (payload: T) => void } | null> {
+export async function safeChannel<T = string>(): Promise<{
+  onmessage: (payload: T) => void;
+} | null> {
   if (!isTauri()) {
     return null;
   }

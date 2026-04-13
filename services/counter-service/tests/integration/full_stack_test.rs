@@ -2,12 +2,10 @@
 //!
 //! These tests verify the full stack: application service → repository → libsql.
 
-use counter_service::application::{
-    RepositoryBackedCounterService, TenantScopedCounterService,
-};
+use chrono::{DateTime, Utc};
+use counter_service::application::{RepositoryBackedCounterService, TenantScopedCounterService};
 use counter_service::infrastructure::LibSqlCounterRepository;
 use counter_service::ports::{CounterRepository, RepositoryError};
-use chrono::{DateTime, Utc};
 use domain::ports::lib_sql::{LibSqlError, LibSqlPort};
 use feature_counter::CounterService;
 use kernel::TenantId;
@@ -40,8 +38,10 @@ impl LibSqlPort for InMemoryLibSqlPort {
 
     async fn execute(&self, sql: &str, params: Vec<String>) -> Result<u64, LibSqlError> {
         let conn = self.conn.lock().await;
-        let param_refs: Vec<&dyn rusqlite::types::ToSql> =
-            params.iter().map(|s| s as &dyn rusqlite::types::ToSql).collect();
+        let param_refs: Vec<&dyn rusqlite::types::ToSql> = params
+            .iter()
+            .map(|s| s as &dyn rusqlite::types::ToSql)
+            .collect();
         let affected = conn
             .execute(sql, rusqlite::params_from_iter(param_refs.into_iter()))
             .map_err(|e| Box::new(e) as LibSqlError)?;
@@ -54,12 +54,12 @@ impl LibSqlPort for InMemoryLibSqlPort {
         params: Vec<String>,
     ) -> Result<Vec<T>, LibSqlError> {
         let conn = self.conn.lock().await;
-        let param_refs: Vec<&dyn rusqlite::types::ToSql> =
-            params.iter().map(|s| s as &dyn rusqlite::types::ToSql).collect();
+        let param_refs: Vec<&dyn rusqlite::types::ToSql> = params
+            .iter()
+            .map(|s| s as &dyn rusqlite::types::ToSql)
+            .collect();
 
-        let mut stmt = conn
-            .prepare(sql)
-            .map_err(|e| Box::new(e) as LibSqlError)?;
+        let mut stmt = conn.prepare(sql).map_err(|e| Box::new(e) as LibSqlError)?;
 
         let columns = stmt
             .column_names()
@@ -80,14 +80,12 @@ impl LibSqlPort for InMemoryLibSqlPort {
                             let s = String::from_utf8_lossy(v).to_string();
                             serde_json::Value::String(s)
                         }
-                        rusqlite::types::ValueRef::Real(v) => {
-                            serde_json::Number::from_f64(v)
-                                .map(serde_json::Value::Number)
-                                .unwrap_or(serde_json::Value::Null)
-                        }
-                        rusqlite::types::ValueRef::Blob(v) => {
-                            serde_json::Value::Array(v.iter().map(|b| serde_json::json!(*b)).collect())
-                        }
+                        rusqlite::types::ValueRef::Real(v) => serde_json::Number::from_f64(v)
+                            .map(serde_json::Value::Number)
+                            .unwrap_or(serde_json::Value::Null),
+                        rusqlite::types::ValueRef::Blob(v) => serde_json::Value::Array(
+                            v.iter().map(|b| serde_json::json!(*b)).collect(),
+                        ),
                         rusqlite::types::ValueRef::Null => serde_json::Value::Null,
                     };
                     map.insert(col.clone(), value);
@@ -99,8 +97,7 @@ impl LibSqlPort for InMemoryLibSqlPort {
             .collect();
 
         let json = serde_json::to_value(&rows).map_err(|e| Box::new(e) as LibSqlError)?;
-        let items: Vec<T> =
-            serde_json::from_value(json).map_err(|e| Box::new(e) as LibSqlError)?;
+        let items: Vec<T> = serde_json::from_value(json).map_err(|e| Box::new(e) as LibSqlError)?;
         Ok(items)
     }
 }

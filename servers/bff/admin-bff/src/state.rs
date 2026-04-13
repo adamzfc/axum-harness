@@ -24,12 +24,14 @@ impl AdminBffState {
                 let db = EmbeddedTurso::new(url).await.ok();
                 if let Some(ref db) = db {
                     // Run migrations for tenant and counter tables
-                    storage_turso::embedded::run_tenant_migrations(db).await.ok();
+                    storage_turso::embedded::run_tenant_migrations(db)
+                        .await
+                        .ok();
                     // Run counter migration
-                    if let Err(e) = db.execute(
-                        counter_service::application::COUNTER_MIGRATION,
-                        vec![],
-                    ).await {
+                    if let Err(e) = db
+                        .execute(counter_service::application::COUNTER_MIGRATION, vec![])
+                        .await
+                    {
                         tracing::warn!("Failed to run counter migration: {}", e);
                     }
                 }

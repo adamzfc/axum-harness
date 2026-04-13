@@ -7,9 +7,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use tokio::sync::RwLock;
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 use tracing::debug;
 
 use crate::ports::{Workflow, WorkflowError, WorkflowInstance, WorkflowStatus};
@@ -54,8 +54,10 @@ impl Workflow for MemoryWorkflow {
         let generic_instance = WorkflowInstance {
             instance_id: instance.instance_id.clone(),
             workflow_type: instance.workflow_type.clone(),
-            input: Some(serde_json::to_value(&instance.input)
-                .map_err(|e| WorkflowError::SerializationError(e.to_string()))?),
+            input: Some(
+                serde_json::to_value(&instance.input)
+                    .map_err(|e| WorkflowError::SerializationError(e.to_string()))?,
+            ),
             output: None,
             status: instance.status.clone(),
             started_at: instance.started_at.clone(),
@@ -178,7 +180,9 @@ impl Workflow for MemoryWorkflow {
                                 serde_json::from_value(v.clone())
                                     .map_err(|e| WorkflowError::SerializationError(e.to_string()))
                             })
-                            .ok_or_else(|| WorkflowError::NotFound("output not found".to_string()))??;
+                            .ok_or_else(|| {
+                                WorkflowError::NotFound("output not found".to_string())
+                            })??;
                         return Ok(output);
                     }
                     WorkflowStatus::Failed => {

@@ -30,14 +30,12 @@ impl<P: LibSqlPort> LibSqlTenantRepository<P> {
 
     /// Run the tenant table migration (idempotent).
     pub async fn migrate(&self) -> Result<(), RepositoryError> {
-        const TENANT_MIGRATION: &str =
-            "CREATE TABLE IF NOT EXISTS tenant (\
+        const TENANT_MIGRATION: &str = "CREATE TABLE IF NOT EXISTS tenant (\
                 id TEXT PRIMARY KEY,\
                 name TEXT NOT NULL,\
                 created_at TEXT NOT NULL DEFAULT (datetime('now'))\
             )";
-        const USER_TENANT_MIGRATION: &str =
-            "CREATE TABLE IF NOT EXISTS user_tenant (\
+        const USER_TENANT_MIGRATION: &str = "CREATE TABLE IF NOT EXISTS user_tenant (\
                 id TEXT PRIMARY KEY,\
                 user_sub TEXT NOT NULL,\
                 tenant_id TEXT NOT NULL,\
@@ -52,10 +50,7 @@ impl<P: LibSqlPort> LibSqlTenantRepository<P> {
 
 #[async_trait]
 impl<P: LibSqlPort> TenantRepository for LibSqlTenantRepository<P> {
-    async fn create_tenant(
-        &self,
-        input: CreateTenantInput,
-    ) -> Result<Tenant, RepositoryError> {
+    async fn create_tenant(&self, input: CreateTenantInput) -> Result<Tenant, RepositoryError> {
         // SQLite/LibSQL doesn't support RETURNING with generated values reliably.
         // Generate the ID upfront so we know what it is.
         let id: String = uuid::Uuid::new_v4().to_string();
@@ -103,7 +98,10 @@ impl<P: LibSqlPort> TenantRepository for LibSqlTenantRepository<P> {
         Ok(())
     }
 
-    async fn find_user_tenant(&self, user_sub: &str) -> Result<Option<UserTenantBinding>, RepositoryError> {
+    async fn find_user_tenant(
+        &self,
+        user_sub: &str,
+    ) -> Result<Option<UserTenantBinding>, RepositoryError> {
         #[derive(Debug, Deserialize)]
         struct BindingRow {
             tenant_id: String,

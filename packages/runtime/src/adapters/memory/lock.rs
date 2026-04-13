@@ -52,7 +52,11 @@ impl Lock for MemoryLock {
                     let manager = MemoryLockManager {
                         locks: self.locks.clone(),
                     };
-                    return Ok(LockGuard::new(Box::new(manager), lock_name.to_string(), token));
+                    return Ok(LockGuard::new(
+                        Box::new(manager),
+                        lock_name.to_string(),
+                        token,
+                    ));
                 }
                 Err(LockError::AlreadyLocked) => {
                     sleep(Duration::from_millis(50)).await;
@@ -68,7 +72,11 @@ impl Lock for MemoryLock {
         let manager = MemoryLockManager {
             locks: self.locks.clone(),
         };
-        Ok(LockGuard::new(Box::new(manager), lock_name.to_string(), token))
+        Ok(LockGuard::new(
+            Box::new(manager),
+            lock_name.to_string(),
+            token,
+        ))
     }
 }
 
@@ -88,7 +96,10 @@ impl MemoryLock {
 
         // Acquire the lock
         let token = uuid::Uuid::now_v7().to_string();
-        locks.insert(lock_name.to_string(), (token.clone(), std::time::Instant::now()));
+        locks.insert(
+            lock_name.to_string(),
+            (token.clone(), std::time::Instant::now()),
+        );
 
         Ok(token)
     }

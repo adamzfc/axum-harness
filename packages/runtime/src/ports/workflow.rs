@@ -9,7 +9,7 @@
 //! - Workflows can be paused, resumed, and queried for current state
 
 use async_trait::async_trait;
-use serde::{Deserialize, de::DeserializeOwned, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 /// Error types for workflow operations.
 #[derive(Debug, thiserror::Error)]

@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use tokio::sync::RwLock;
 use tracing::debug;
 
@@ -44,7 +44,10 @@ impl Default for MemoryState {
 
 #[async_trait]
 impl State for MemoryState {
-    async fn get<Value: DeserializeOwned + Send>(&self, key: &str) -> Result<StateEntry<Value>, StateError> {
+    async fn get<Value: DeserializeOwned + Send>(
+        &self,
+        key: &str,
+    ) -> Result<StateEntry<Value>, StateError> {
         let store = self.store.read().await;
         let entry = store
             .get(key)
@@ -62,7 +65,10 @@ impl State for MemoryState {
         })
     }
 
-    async fn set<Value: Serialize + Send>(&self, entry: StateEntry<Value>) -> Result<(), StateError> {
+    async fn set<Value: Serialize + Send>(
+        &self,
+        entry: StateEntry<Value>,
+    ) -> Result<(), StateError> {
         let mut store = self.store.write().await;
 
         let serialized_value = serde_json::to_value(&entry.value)

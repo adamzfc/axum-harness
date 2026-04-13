@@ -1,13 +1,13 @@
 //! Infrastructure layer — LibSQL implementations of repository ports.
 
+use ::domain::ports::lib_sql::LibSqlPort;
 use async_trait::async_trait;
 use chrono::Utc;
-use ::domain::ports::lib_sql::LibSqlPort;
 use serde::Deserialize;
 
 use crate::domain;
-use crate::domain::error::UserError;
 use crate::domain::UserTenantBinding;
+use crate::domain::error::UserError;
 use crate::ports::{TenantRepository, UserRepository, UserTenantRepository};
 
 /// LibSQL implementation of UserRepository.
@@ -241,9 +241,10 @@ impl<P: LibSqlPort> UserTenantRepository for LibSqlUserTenantRepository<P> {
             .map_err(|e| UserError::Database(format!("insert failed: {}", e)))?;
 
         // Fetch the created binding
-        let binding = self.find_user_tenant(user_sub).await?.ok_or_else(|| {
-            UserError::Database("failed to fetch created binding".to_string())
-        })?;
+        let binding = self
+            .find_user_tenant(user_sub)
+            .await?
+            .ok_or_else(|| UserError::Database("failed to fetch created binding".to_string()))?;
 
         Ok(binding)
     }

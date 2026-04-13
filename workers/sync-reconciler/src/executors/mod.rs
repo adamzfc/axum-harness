@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 
-use crate::plans::{ReconciliationPlan, SyncStrategy};
 use crate::ReconcilerError;
+use crate::plans::{ReconciliationPlan, SyncStrategy};
 
 /// Abstract reconciliation executor.
 #[async_trait]
@@ -44,7 +44,11 @@ pub struct ConflictResolver;
 
 impl ConflictResolver {
     /// Resolve a conflict based on the strategy.
-    pub fn resolve_conflict(strategy: &SyncStrategy, source_data: &str, target_data: &str) -> String {
+    pub fn resolve_conflict(
+        strategy: &SyncStrategy,
+        source_data: &str,
+        target_data: &str,
+    ) -> String {
         match strategy {
             SyncStrategy::SourceWins => source_data.to_string(),
             SyncStrategy::TargetWins => target_data.to_string(),

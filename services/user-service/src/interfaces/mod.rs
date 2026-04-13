@@ -5,15 +5,14 @@
 
 use crate::application::{InitTenantInput, UserService};
 use crate::contracts::{InitTenantRequest, InitTenantResponse};
-use crate::infrastructure::{LibSqlTenantRepository, LibSqlUserRepository, LibSqlUserTenantRepository};
+use crate::infrastructure::{
+    LibSqlTenantRepository, LibSqlUserRepository, LibSqlUserTenantRepository,
+};
 use ::domain::ports::lib_sql::LibSqlPort;
 
 /// Type alias for the concrete user service used in the web-bff.
-pub type WebUserService<P> = UserService<
-    LibSqlUserRepository<P>,
-    LibSqlTenantRepository<P>,
-    LibSqlUserTenantRepository<P>,
->;
+pub type WebUserService<P> =
+    UserService<LibSqlUserRepository<P>, LibSqlTenantRepository<P>, LibSqlUserTenantRepository<P>>;
 
 /// Build a user service instance from a LibSQL port.
 pub fn build_user_service<P: LibSqlPort + Clone>(db: P) -> WebUserService<P> {

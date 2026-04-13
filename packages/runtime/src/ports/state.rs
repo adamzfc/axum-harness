@@ -9,7 +9,7 @@
 //! - Supports optimistic concurrency control via version numbers
 
 use async_trait::async_trait;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 /// Error types for state operations.
 #[derive(Debug, thiserror::Error)]
@@ -75,13 +75,19 @@ pub trait State: Send + Sync {
     /// Get a state entry by key.
     ///
     /// Returns `StateError::NotFound` if the key doesn't exist.
-    async fn get<Value: DeserializeOwned + Send>(&self, key: &str) -> Result<StateEntry<Value>, StateError>;
+    async fn get<Value: DeserializeOwned + Send>(
+        &self,
+        key: &str,
+    ) -> Result<StateEntry<Value>, StateError>;
 
     /// Set a state entry with optimistic concurrency control.
     ///
     /// If the entry's version doesn't match the stored version,
     /// returns `StateError::VersionConflict`.
-    async fn set<Value: Serialize + Send>(&self, entry: StateEntry<Value>) -> Result<(), StateError>;
+    async fn set<Value: Serialize + Send>(
+        &self,
+        entry: StateEntry<Value>,
+    ) -> Result<(), StateError>;
 
     /// Delete a state entry by key.
     ///

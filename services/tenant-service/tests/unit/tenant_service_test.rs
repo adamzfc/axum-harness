@@ -23,10 +23,7 @@ impl MockTenantRepository {
 
 #[async_trait]
 impl TenantRepository for MockTenantRepository {
-    async fn create_tenant(
-        &self,
-        input: CreateTenantInput,
-    ) -> Result<Tenant, RepositoryError> {
+    async fn create_tenant(&self, input: CreateTenantInput) -> Result<Tenant, RepositoryError> {
         let tenant = Tenant {
             id: input.id.clone(),
             name: input.name.clone(),
@@ -52,7 +49,10 @@ impl TenantRepository for MockTenantRepository {
         Ok(())
     }
 
-    async fn find_user_tenant(&self, _user_sub: &str) -> Result<Option<UserTenantBinding>, RepositoryError> {
+    async fn find_user_tenant(
+        &self,
+        _user_sub: &str,
+    ) -> Result<Option<UserTenantBinding>, RepositoryError> {
         // Mock returns None - no existing binding
         Ok(None)
     }

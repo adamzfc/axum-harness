@@ -7,12 +7,12 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use axum::{routing::get, Router};
+use axum::{Router, routing::get};
 use event_bus::adapters::memory_bus::InMemoryEventBus;
 use event_bus::ports::EventBus;
-use runtime::ports::{PubSub, MessageEnvelope, State};
-use runtime::ports::state::StateEntry;
 use runtime::adapters::memory::{MemoryPubSub, MemoryState};
+use runtime::ports::state::StateEntry;
+use runtime::ports::{MessageEnvelope, PubSub, State};
 use tokio::sync::RwLock;
 use tracing::{info, warn};
 
@@ -124,7 +124,10 @@ async fn main() -> anyhow::Result<()> {
     let config = PollerConfig::default();
     let mut poller = OutboxPoller::new(reader, config.clone());
 
-    info!("Outbox relay worker running (poll interval: {:?})", config.poll_interval);
+    info!(
+        "Outbox relay worker running (poll interval: {:?})",
+        config.poll_interval
+    );
 
     // Main processing loop
     loop {

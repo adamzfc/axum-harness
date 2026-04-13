@@ -3,8 +3,8 @@
 use async_trait::async_trait;
 use contracts_events::AppEvent;
 
-use crate::sources::RawEvent;
 use crate::IndexerError;
+use crate::sources::RawEvent;
 
 /// Event transformer trait.
 #[async_trait]
@@ -38,11 +38,13 @@ impl EventTransform for PassthroughTransform {
             Ok(event) => Ok(Some(event)),
             Err(_) => {
                 // Return a placeholder counter-changed event
-                Ok(Some(AppEvent::CounterChanged(contracts_events::CounterChanged {
-                    tenant_id: raw.metadata.get("tenant_id").cloned().unwrap_or_default(),
-                    new_value: 0,
-                    delta: 0,
-                })))
+                Ok(Some(AppEvent::CounterChanged(
+                    contracts_events::CounterChanged {
+                        tenant_id: raw.metadata.get("tenant_id").cloned().unwrap_or_default(),
+                        new_value: 0,
+                        delta: 0,
+                    },
+                )))
             }
         }
     }

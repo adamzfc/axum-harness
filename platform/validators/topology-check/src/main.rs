@@ -61,8 +61,12 @@ fn main() -> Result<()> {
         .init();
 
     let args = Args::parse();
-    let platform_dir = fs::canonicalize(&args.platform_dir)
-        .with_context(|| format!("Platform directory not found: {}", args.platform_dir.display()))?;
+    let platform_dir = fs::canonicalize(&args.platform_dir).with_context(|| {
+        format!(
+            "Platform directory not found: {}",
+            args.platform_dir.display()
+        )
+    })?;
 
     info!("Validating topologies in {}", platform_dir.display());
 
@@ -96,15 +100,13 @@ fn main() -> Result<()> {
                     // Check resource references in deployable override
                     if let Some(resource_overrides) = &deployable_ref.resources {
                         let deployable = &deployables[&deployable_ref.name];
-                        let base_resources: BTreeSet<_> = deployable
-                            .resources
-                            .iter()
-                            .flatten()
-                            .cloned()
-                            .collect();
+                        let base_resources: BTreeSet<_> =
+                            deployable.resources.iter().flatten().cloned().collect();
 
                         for resource in resource_overrides {
-                            if !base_resources.contains(resource) && !resources.contains_key(resource) {
+                            if !base_resources.contains(resource)
+                                && !resources.contains_key(resource)
+                            {
                                 warnings.push(format!(
                                     "Topology '{}' deployable '{}' references unknown resource: {}",
                                     topology_name, deployable_ref.name, resource
@@ -152,7 +154,10 @@ fn main() -> Result<()> {
     }
 
     // 4. Check that all topologies have corresponding verification tests
-    let verification_dir = platform_dir.parent().unwrap_or(&platform_dir).join("verification");
+    let verification_dir = platform_dir
+        .parent()
+        .unwrap_or(&platform_dir)
+        .join("verification");
     for topology_name in topologies.keys() {
         let test_dir = verification_dir.join("topology").join(topology_name);
         if !test_dir.exists() {

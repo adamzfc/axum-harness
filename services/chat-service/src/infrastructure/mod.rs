@@ -1,8 +1,8 @@
+use crate::domain::error::ChatError;
+use crate::domain::{Conversation, Message, Participant};
+use crate::ports::{ConversationRepository, MessageRepository, ParticipantRepository};
 use async_trait::async_trait;
 use uuid::Uuid;
-use crate::domain::{Conversation, Message, Participant};
-use crate::domain::error::ChatError;
-use crate::ports::{ConversationRepository, MessageRepository, ParticipantRepository};
 
 /// LibSQL-backed conversation repository
 pub struct LibSqlConversationRepository;
@@ -71,7 +71,10 @@ impl ParticipantRepository for LibSqlParticipantRepository {
         Ok(())
     }
 
-    async fn list_by_conversation(&self, _conversation_id: &Uuid) -> Result<Vec<Participant>, ChatError> {
+    async fn list_by_conversation(
+        &self,
+        _conversation_id: &Uuid,
+    ) -> Result<Vec<Participant>, ChatError> {
         // SQL: SELECT ... FROM participants WHERE conversation_id = ?
         Ok(vec![])
     }

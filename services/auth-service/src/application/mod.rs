@@ -2,4 +2,4 @@
 
 pub mod service;
 
-pub use service::{AuthService, AuthInput, AuthResult};
+pub use service::{AuthInput, AuthResult, AuthService};

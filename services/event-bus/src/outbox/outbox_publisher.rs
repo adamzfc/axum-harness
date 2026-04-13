@@ -21,7 +21,11 @@ use crate::ports::{EventBus, EventBusError, EventEnvelope};
 #[async_trait::async_trait]
 pub trait OutboxStore: Send + Sync {
     /// Execute a SQL statement with parameters.
-    async fn execute(&self, sql: &str, params: Vec<String>) -> Result<u64, Box<dyn std::error::Error + Send + Sync>>;
+    async fn execute(
+        &self,
+        sql: &str,
+        params: Vec<String>,
+    ) -> Result<u64, Box<dyn std::error::Error + Send + Sync>>;
 
     /// Execute a query returning deserialized rows.
     async fn query<T: serde::de::DeserializeOwned + Send + Sync>(
@@ -81,7 +85,10 @@ impl<S: OutboxStore, E: EventBus> OutboxPublisher<S, E> {
 
     /// Run the publisher loop. This never returns unless the task is cancelled.
     pub async fn run(self) {
-        info!("Outbox publisher starting (poll_interval: {:?})", self.config.poll_interval);
+        info!(
+            "Outbox publisher starting (poll_interval: {:?})",
+            self.config.poll_interval
+        );
 
         let mut interval = time::interval(self.config.poll_interval);
         loop {

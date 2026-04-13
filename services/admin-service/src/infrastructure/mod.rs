@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use kernel::TenantId;
 
-use crate::ports::{TenantRepository, CounterRepository, TenantSummary};
+use crate::ports::{CounterRepository, TenantRepository, TenantSummary};
 
 /// Infrastructure adapter that queries the tenant database directly
 ///
@@ -15,7 +15,9 @@ pub struct LibSqlTenantRepository;
 
 #[async_trait]
 impl TenantRepository for LibSqlTenantRepository {
-    async fn list_tenants(&self) -> Result<Vec<TenantSummary>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn list_tenants(
+        &self,
+    ) -> Result<Vec<TenantSummary>, Box<dyn std::error::Error + Send + Sync>> {
         // SQL: SELECT id, name, created_at FROM tenants ORDER BY created_at DESC
         // For now, return empty — production implementation would query the tenant table
         Ok(vec![])
@@ -29,7 +31,10 @@ pub struct LibSqlCounterRepository;
 
 #[async_trait]
 impl CounterRepository for LibSqlCounterRepository {
-    async fn get_value(&self, _tenant_id: &TenantId) -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_value(
+        &self,
+        _tenant_id: &TenantId,
+    ) -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
         // SQL: SELECT value FROM counters WHERE tenant_id = ?
         Ok(0)
     }
