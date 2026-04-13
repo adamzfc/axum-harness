@@ -1,10 +1,13 @@
 //! BFF 配置 — 环境变量 + figment 加载。
 
-use figment::{Figment, providers::Env};
-use serde::Deserialize;
+use figment::{
+    Figment,
+    providers::{Env, Serialized},
+};
+use serde::{Deserialize, Serialize};
 
 /// Web BFF 应用配置。
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Config {
     pub server_host: String,
     pub server_port: u16,
@@ -18,6 +21,7 @@ impl Config {
     /// 从环境变量加载配置（APP_ 前缀）。
     pub fn from_env() -> anyhow::Result<Self> {
         let config: Config = Figment::new()
+            .merge(Serialized::defaults(Self::default()))
             .merge(Env::prefixed("APP_").global())
             .extract()?;
         Ok(config)

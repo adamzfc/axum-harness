@@ -1,7 +1,10 @@
-use figment::{providers::Env, Figment};
-use serde::Deserialize;
+use figment::{
+    Figment,
+    providers::{Env, Serialized},
+};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Config {
     pub server_host: String,
     pub server_port: u16,
@@ -13,6 +16,7 @@ pub struct Config {
 impl Config {
     pub fn from_env() -> Result<Self, Box<figment::Error>> {
         Figment::new()
+            .merge(Serialized::defaults(Self::default()))
             .merge(Env::prefixed("ADMIN_BFF_"))
             .extract()
             .map_err(Box::new)
