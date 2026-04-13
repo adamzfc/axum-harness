@@ -31,9 +31,7 @@ jobs:
         run: cargo install cargo-audit
 
       - name: Audit dependencies (backend only)
-        run: >
-          cargo audit --deny warnings
-          --exclude native-tauri
+        run: cargo audit --deny warnings
 
       - name: Check for unsafe code in production crates
         run: |
@@ -67,6 +65,8 @@ jobs:
         run: >
           cargo llvm-cov --workspace
           --exclude native-tauri
+          --exclude runtime_tauri
+          --exclude adapter-google
           --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov

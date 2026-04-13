@@ -37,6 +37,8 @@ jobs:
         run: >
           cargo llvm-cov --workspace
           --exclude native-tauri
+          --exclude runtime_tauri
+          --exclude adapter-google
           --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov

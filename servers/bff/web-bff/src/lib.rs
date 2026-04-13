@@ -22,25 +22,23 @@ use utoipa_scalar::{Scalar, Servable};
 
 /// Unified OpenAPI documentation for web-bff.
 #[derive(OpenApi)]
-#[openapi(
-    paths(
-        handlers::counter::increment,
-        handlers::counter::decrement,
-        handlers::counter::reset,
-        handlers::counter::get_value,
-        handlers::user::get_user_profile,
-        handlers::user::get_user_tenants,
-        handlers::agent::list_conversations,
-        handlers::agent::create_conversation,
-        handlers::agent::get_messages,
-        handlers::agent::chat_handler,
-        handlers::settings::get_settings,
-        handlers::settings::update_settings,
-        handlers::tenant::init_tenant,
-        handlers::health::healthz,
-        handlers::health::readyz,
-    )
-)]
+#[openapi(paths(
+    handlers::counter::increment,
+    handlers::counter::decrement,
+    handlers::counter::reset,
+    handlers::counter::get_value,
+    handlers::user::get_user_profile,
+    handlers::user::get_user_tenants,
+    handlers::agent::list_conversations,
+    handlers::agent::create_conversation,
+    handlers::agent::get_messages,
+    handlers::agent::chat_handler,
+    handlers::settings::get_settings,
+    handlers::settings::update_settings,
+    handlers::tenant::init_tenant,
+    handlers::health::healthz,
+    handlers::health::readyz,
+))]
 pub struct ApiDoc;
 
 /// 生成 UUID v7 请求 ID。

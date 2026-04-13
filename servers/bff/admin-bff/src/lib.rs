@@ -7,7 +7,7 @@ use tower_http::{
     trace::TraceLayer,
 };
 use utoipa::OpenApi;
-use utoipa_scalar::{Scalar, Servable};
+use utoipa_scalar::Scalar;
 
 pub mod config;
 pub mod error;
@@ -27,14 +27,12 @@ use crate::state::AdminBffState;
         routes::metrics::get_system_metrics,
         routes::health::healthz,
     ),
-    components(
-        schemas(
-            routes::admin::DashboardView,
-            routes::tenant::TenantListView,
-            routes::tenant::TenantItemView,
-            routes::metrics::MetricsView,
-        )
-    )
+    components(schemas(
+        routes::admin::DashboardView,
+        routes::tenant::TenantListView,
+        routes::tenant::TenantItemView,
+        routes::metrics::MetricsView,
+    ))
 )]
 pub struct ApiDoc;
 

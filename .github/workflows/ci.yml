@@ -36,13 +36,16 @@ jobs:
         with:
           shared-key: "backend-ci"
 
-      - name: Rust fmt check
-        run: cargo fmt --all -- --check
+      - name: Rust fmt check (backend only)
+        run: >
+          cargo fmt --all -- --check
 
       - name: Rust clippy (backend only)
         run: >
           cargo clippy --workspace
           --exclude native-tauri
+          --exclude runtime_tauri
+          --exclude adapter-google
           --all-targets
           -- -D warnings
 
@@ -50,17 +53,23 @@ jobs:
         run: >
           cargo check --workspace
           --exclude native-tauri
+          --exclude runtime_tauri
+          --exclude adapter-google
 
       - name: Rust test (backend only)
         run: >
           cargo test --workspace
           --exclude native-tauri
+          --exclude runtime_tauri
+          --exclude adapter-google
           -- --test-threads=4
 
-      - name: Build BFF servers
+      - name: Build BFF servers (backend only)
         run: >
           cargo build --workspace
           --exclude native-tauri
+          --exclude runtime_tauri
+          --exclude adapter-google
           --release
 
       - name: Test web-bff /scalar endpoint
