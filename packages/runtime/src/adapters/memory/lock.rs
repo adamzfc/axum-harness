@@ -114,13 +114,12 @@ struct MemoryLockManager {
 impl LockManager for MemoryLockManager {
     async fn release_internal(&self, lock_name: &str, token: &str) -> Result<(), LockError> {
         let mut locks = self.locks.write().await;
-        if let Some((stored_token, _)) = locks.get(lock_name) {
-            if stored_token == token {
+        if let Some((stored_token, _)) = locks.get(lock_name)
+            && stored_token == token {
                 locks.remove(lock_name);
                 debug!(lock_name = %lock_name, "lock released");
                 return Ok(());
             }
-        }
         // Lock doesn't exist or token mismatch — may have expired
         Ok(())
     }

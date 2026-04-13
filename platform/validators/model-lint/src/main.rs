@@ -194,26 +194,23 @@ fn check_service_deployable_refs(
     let mut deployable_names = Vec::new();
     if let Ok(entries) = fs::read_dir(&deployables_dir) {
         for entry in entries.flatten() {
-            if entry.path().extension().and_then(|e| e.to_str()) == Some("yaml") {
-                if let Ok(content) = fs::read_to_string(&entry.path()) {
-                    if let Ok(yaml) = serde_yaml::from_str::<serde_json::Value>(&content) {
-                        if let Some(name) = yaml.get("name").and_then(|v| v.as_str()) {
+            if entry.path().extension().and_then(|e| e.to_str()) == Some("yaml")
+                && let Ok(content) = fs::read_to_string(entry.path())
+                    && let Ok(yaml) = serde_yaml::from_str::<serde_json::Value>(&content)
+                        && let Some(name) = yaml.get("name").and_then(|v| v.as_str()) {
                             deployable_names.push(name.to_string());
                         }
-                    }
-                }
-            }
         }
     }
 
     // Check service -> deployable references
     if let Ok(entries) = fs::read_dir(&services_dir) {
         for entry in entries.flatten() {
-            if entry.path().extension().and_then(|e| e.to_str()) == Some("yaml") {
-                if let Ok(content) = fs::read_to_string(&entry.path()) {
-                    if let Ok(yaml) = serde_yaml::from_str::<serde_json::Value>(&content) {
-                        if let Some(deployable) = yaml.get("deployable").and_then(|v| v.as_str()) {
-                            if !deployable_names.contains(&deployable.to_string()) {
+            if entry.path().extension().and_then(|e| e.to_str()) == Some("yaml")
+                && let Ok(content) = fs::read_to_string(entry.path())
+                    && let Ok(yaml) = serde_yaml::from_str::<serde_json::Value>(&content)
+                        && let Some(deployable) = yaml.get("deployable").and_then(|v| v.as_str())
+                            && !deployable_names.contains(&deployable.to_string()) {
                                 warnings += 1;
                                 warn!(
                                     "Service {} references non-existent deployable: {}",
@@ -221,10 +218,6 @@ fn check_service_deployable_refs(
                                     deployable
                                 );
                             }
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -243,15 +236,12 @@ fn check_resource_refs(platform_dir: &Path, results: &mut Vec<ValidationResult>)
     let mut resource_names = Vec::new();
     if let Ok(entries) = fs::read_dir(&resources_dir) {
         for entry in entries.flatten() {
-            if entry.path().extension().and_then(|e| e.to_str()) == Some("yaml") {
-                if let Ok(content) = fs::read_to_string(&entry.path()) {
-                    if let Ok(yaml) = serde_yaml::from_str::<serde_json::Value>(&content) {
-                        if let Some(name) = yaml.get("name").and_then(|v| v.as_str()) {
+            if entry.path().extension().and_then(|e| e.to_str()) == Some("yaml")
+                && let Ok(content) = fs::read_to_string(entry.path())
+                    && let Ok(yaml) = serde_yaml::from_str::<serde_json::Value>(&content)
+                        && let Some(name) = yaml.get("name").and_then(|v| v.as_str()) {
                             resource_names.push(name.to_string());
                         }
-                    }
-                }
-            }
         }
     }
 
@@ -263,13 +253,13 @@ fn check_resource_refs(platform_dir: &Path, results: &mut Vec<ValidationResult>)
 
     if let Ok(entries) = fs::read_dir(&deployables_dir) {
         for entry in entries.flatten() {
-            if entry.path().extension().and_then(|e| e.to_str()) == Some("yaml") {
-                if let Ok(content) = fs::read_to_string(&entry.path()) {
-                    if let Ok(yaml) = serde_yaml::from_str::<serde_json::Value>(&content) {
-                        if let Some(resources) = yaml.get("resources").and_then(|v| v.as_array()) {
+            if entry.path().extension().and_then(|e| e.to_str()) == Some("yaml")
+                && let Ok(content) = fs::read_to_string(entry.path())
+                    && let Ok(yaml) = serde_yaml::from_str::<serde_json::Value>(&content)
+                        && let Some(resources) = yaml.get("resources").and_then(|v| v.as_array()) {
                             for resource in resources {
-                                if let Some(res_name) = resource.as_str() {
-                                    if !resource_names.contains(&res_name.to_string()) {
+                                if let Some(res_name) = resource.as_str()
+                                    && !resource_names.contains(&res_name.to_string()) {
                                         warnings += 1;
                                         warn!(
                                             "Deployable {} references non-existent resource: {}",
@@ -277,12 +267,8 @@ fn check_resource_refs(platform_dir: &Path, results: &mut Vec<ValidationResult>)
                                             res_name
                                         );
                                     }
-                                }
                             }
                         }
-                    }
-                }
-            }
         }
     }
 

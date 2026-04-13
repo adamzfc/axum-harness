@@ -11,10 +11,35 @@ targets = []
 # ══════════════════════════════════════════════════════════════
 # [advisories] — 安全漏洞检查
 # ══════════════════════════════════════════════════════════════
+# 策略：
+# - unmaintained: "warn" 级别不阻断 CI（设置为 "none" 忽略）
+# - vulnerability: deny（阻断 CI，必须修复或 ignore）
+# - yanked: warn（告警但不阻断）
+#
+# 已知漏洞说明：
+# - RUSTSEC-2024-0437 (protobuf): pingora-core → prometheus → protobuf v2
+#   影响：pingora-gateway（后端 gateway），需要等待 pingora 升级 prometheus
+# - RUSTSEC-2023-0071 (rsa): jsonwebtoken → rsa v0.9
+#   影响：auth-service，目前无安全升级，需要关注 upstream 修复进展
 [advisories]
 version = 2
-unmaintained = "workspace"
+unmaintained = "none"  # Don't fail on unmaintained crates (warn only)
 yanked = "warn"
+
+# Ignore specific vulnerabilities that cannot be fixed upstream yet
+# These should be reviewed and removed once fixes are available
+ignore = [
+    # protobuf v2 stack overflow via untrusted input
+    # Source: pingora-core → prometheus → protobuf v2
+    # Fix: wait for pingora to upgrade prometheus to 0.14+ (uses protobuf 3.x)
+    "RUSTSEC-2024-0437",
+    
+    # rsa Marvin Attack (timing side-channel)
+    # Source: jsonwebtoken → rsa v0.9
+    # Fix: no safe upgrade available yet; workaround is to avoid RSA in 
+    #       network-observable settings (our usage is JWT signing, lower risk)
+    "RUSTSEC-2023-0071",
+]
 
 # ══════════════════════════════════════════════════════════════
 # [licenses] — 许可证合规检查

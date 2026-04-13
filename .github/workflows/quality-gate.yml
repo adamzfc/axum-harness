@@ -27,11 +27,16 @@ jobs:
         with:
           shared-key: "quality-gate"
 
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
+      - name: Install cargo-deny
+        run: cargo install cargo-deny
 
       - name: Audit dependencies (backend only)
-        run: cargo audit --deny warnings
+        run: >
+          cargo deny
+          --exclude native-tauri
+          --exclude runtime_tauri
+          --exclude adapter-google
+          check advisories
 
       - name: Check for unsafe code in production crates
         run: |

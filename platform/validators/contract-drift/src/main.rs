@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use serde::Deserialize;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
@@ -118,14 +118,13 @@ fn check_event_drift(platform_dir: &Path, root_dir: &Path) -> Result<Vec<String>
         // Pattern: lines like `    CounterIncremented(CounterIncrementedPayload),`
         for line in content.lines() {
             let line = line.trim();
-            if line.ends_with("Payload),") || line.ends_with("Payload),") {
-                if let Some(name) = line.split('(').next() {
+            if (line.ends_with("Payload),") || line.ends_with("Payload),"))
+                && let Some(name) = line.split('(').next() {
                     let name = name.trim();
                     if !name.is_empty() && !name.starts_with("//") {
                         contract_event_names.insert(name.to_string());
                     }
                 }
-            }
         }
     }
 
@@ -201,14 +200,13 @@ fn check_port_contract_drift(platform_dir: &Path, root_dir: &Path) -> Result<Vec
                     let name = name.split('{').next().unwrap_or(name).trim();
                     contract_type_names.insert(name.to_string());
                 }
-            } else if line.starts_with("pub use ") {
-                if let Some(name) = line.split("::").last() {
+            } else if line.starts_with("pub use ")
+                && let Some(name) = line.split("::").last() {
                     let name = name.trim_end_matches(';').trim();
                     if !name.is_empty() {
                         contract_type_names.insert(name.to_string());
                     }
                 }
-            }
         }
     }
 
@@ -226,7 +224,7 @@ fn check_port_contract_drift(platform_dir: &Path, root_dir: &Path) -> Result<Vec
 
         if let Some(ports) = &service.ports {
             for port in ports {
-                if let Some(port_name) = port.get("name").and_then(|v| v.as_str()) {
+                if let Some(_port_name) = port.get("name").and_then(|v| v.as_str()) {
                     // Port names like "counter_repository" should map to contract types
                     // like "CounterResponse" — just verify contracts exist for this service
                     let service_upper = service
@@ -300,13 +298,12 @@ fn check_service_crate_drift(platform_dir: &Path, root_dir: &Path) -> Result<Vec
             }
 
             // Check if it has a Cargo.toml (is a Rust crate)
-            if path.join("Cargo.toml").exists() {
-                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+            if path.join("Cargo.toml").exists()
+                && let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                     // Strip -service suffix for comparison
                     let clean_name = name.strip_suffix("-service").unwrap_or(name);
                     crate_service_names.insert(clean_name.to_string());
                 }
-            }
         }
     }
 

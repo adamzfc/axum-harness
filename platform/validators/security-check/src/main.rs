@@ -161,14 +161,14 @@ fn check_service_security(
         if service
             .authentication
             .as_ref()
-            .map_or(true, |a| a.required.unwrap_or(false))
+            .is_none_or(|a| a.required.unwrap_or(false))
         {
             // Auth required but check if methods are specified
             if service
                 .authentication
                 .as_ref()
                 .and_then(|a| a.methods.as_ref())
-                .map_or(true, |m| m.is_empty())
+                .is_none_or(|m| m.is_empty())
             {
                 warnings.push(format!(
                     "Service '{}' requires authentication but no auth methods specified",

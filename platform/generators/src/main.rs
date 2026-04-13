@@ -209,9 +209,9 @@ fn generate_topology_doc(platform_dir: &Path, output_dir: &Path) -> Result<()> {
 
         // Load full topology YAML for details
         let topo_file = topologies_dir.join(format!("{}.yaml", topology.name));
-        if let Ok(content) = fs::read_to_string(&topo_file) {
-            if let Ok(yaml) = serde_yaml::from_str::<serde_json::Value>(&content) {
-                if let Some(deployables) = yaml.get("deployables").and_then(|v| v.as_array()) {
+        if let Ok(content) = fs::read_to_string(&topo_file)
+            && let Ok(yaml) = serde_yaml::from_str::<serde_json::Value>(&content)
+                && let Some(deployables) = yaml.get("deployables").and_then(|v| v.as_array()) {
                     doc.push_str("\n### Deployables\n\n");
                     for dep in deployables {
                         let name = dep
@@ -224,8 +224,6 @@ fn generate_topology_doc(platform_dir: &Path, output_dir: &Path) -> Result<()> {
                         doc.push_str(&format!("- {} {} (×{})\n", status, name, replicas));
                     }
                 }
-            }
-        }
 
         doc.push_str("\n---\n\n");
     }
@@ -269,9 +267,9 @@ fn generate_architecture_doc(platform_dir: &Path, output_dir: &Path) -> Result<(
 
     if let Ok(entries) = fs::read_dir(&services_dir) {
         for entry in entries.flatten() {
-            if entry.path().extension().and_then(|e| e.to_str()) == Some("yaml") {
-                if let Ok(content) = fs::read_to_string(&entry.path()) {
-                    if let Ok(yaml) = serde_yaml::from_str::<serde_json::Value>(&content) {
+            if entry.path().extension().and_then(|e| e.to_str()) == Some("yaml")
+                && let Ok(content) = fs::read_to_string(entry.path())
+                    && let Ok(yaml) = serde_yaml::from_str::<serde_json::Value>(&content) {
                         let name = yaml
                             .get("name")
                             .and_then(|v| v.as_str())
@@ -301,8 +299,6 @@ fn generate_architecture_doc(platform_dir: &Path, output_dir: &Path) -> Result<(
                             status_icon, name, domain, version
                         ));
                     }
-                }
-            }
         }
     }
 

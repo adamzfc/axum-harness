@@ -33,7 +33,7 @@ impl<T: TenantRepository, C: CounterRepository> AdminService for AdminDashboardS
             .tenant_repo
             .list_tenants()
             .await
-            .map_err(|e| AdminError::Database(e))?;
+            .map_err(AdminError::Database)?;
 
         // Get counter value — try tenant-scoped first, fall back to global
         let counter_value = if tenants.is_empty() {

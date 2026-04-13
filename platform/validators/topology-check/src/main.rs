@@ -119,7 +119,7 @@ fn main() -> Result<()> {
         }
 
         // Check that topology has at least one deployable
-        if topology.deployables.as_ref().map_or(true, |d| d.is_empty()) {
+        if topology.deployables.as_ref().is_none_or(|d| d.is_empty()) {
             warnings.push(format!(
                 "Topology '{}' has no deployables defined",
                 topology_name
@@ -284,5 +284,5 @@ fn is_critical_deployable(deployable: &DeployableModel) -> bool {
     deployable
         .description
         .as_ref()
-        .map_or(true, |desc| !desc.to_lowercase().contains("optional"))
+        .is_none_or(|desc| !desc.to_lowercase().contains("optional"))
 }

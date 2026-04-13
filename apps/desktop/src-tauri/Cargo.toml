@@ -4,6 +4,7 @@ name = "native-tauri"
 version = "0.1.0"
 edition = "2024"
 rust-version.workspace = true
+publish = false  # Tauri desktop app only - excluded from backend CI
 
 [build-dependencies]
 tauri-build = { workspace = true }
