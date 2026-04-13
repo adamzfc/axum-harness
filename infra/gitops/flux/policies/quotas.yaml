@@ -1,0 +1,54 @@
+# Resource Quotas
+#
+# Limits resource consumption to prevent runaway pods
+# from consuming cluster resources.
+
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: app-quota
+  namespace: app
+  labels:
+    managed-by: flux
+spec:
+  hard:
+    # Compute resources
+    requests.cpu: "8"
+    requests.memory: 16Gi
+    limits.cpu: "16"
+    limits.memory: 32Gi
+    
+    # Storage
+    requests.storage: 50Gi
+    persistentvolumeclaims: "10"
+    
+    # Object counts
+    pods: "50"
+    services: "20"
+    configmaps: "50"
+    secrets: "50"
+
+---
+# LimitRange for default container limits
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: app-limit-range
+  namespace: app
+  labels:
+    managed-by: flux
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: "500m"
+        memory: 512Mi
+      defaultRequest:
+        cpu: "100m"
+        memory: 256Mi
+      max:
+        cpu: "2"
+        memory: 2Gi
+      min:
+        cpu: "50m"
+        memory: 64Mi

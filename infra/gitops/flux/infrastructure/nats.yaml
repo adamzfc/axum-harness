@@ -1,0 +1,87 @@
+# NATS Message Broker
+#
+# NATS provides the event backbone for the platform.
+# Used by workers, services, and the outbox relay.
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nats
+  namespace: app
+  labels:
+    app: nats
+    component: messaging
+spec:
+  serviceName: nats
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nats
+  template:
+    metadata:
+      labels:
+        app: nats
+        component: messaging
+    spec:
+      containers:
+        - name: nats
+          image: nats:2.10-alpine
+          ports:
+            - containerPort: 4222
+              name: client
+            - containerPort: 6222
+              name: cluster
+            - containerPort: 8222
+              name: monitoring
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            tcpSocket:
+              port: 4222
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 4222
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          volumeMounts:
+            - name: nats-data
+              mountPath: /data
+      volumes:
+        - name: nats-config
+          configMap:
+            name: nats-config
+  volumeClaimTemplates:
+    - metadata:
+        name: nats-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats
+  namespace: app
+  labels:
+    app: nats
+spec:
+  ports:
+    - port: 4222
+      name: client
+      targetPort: 4222
+    - port: 8222
+      name: monitoring
+      targetPort: 8222
+  selector:
+    app: nats
+  clusterIP: None

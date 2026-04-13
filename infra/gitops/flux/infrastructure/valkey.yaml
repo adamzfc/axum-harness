@@ -1,0 +1,78 @@
+# Valkey Cache
+#
+# Valkey (Redis-compatible) provides caching, session storage,
+# and distributed locks for the platform.
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: valkey
+  namespace: app
+  labels:
+    app: valkey
+    component: cache
+spec:
+  serviceName: valkey
+  replicas: 1
+  selector:
+    matchLabels:
+      app: valkey
+  template:
+    metadata:
+      labels:
+        app: valkey
+        component: cache
+    spec:
+      containers:
+        - name: valkey
+          image: valkey/valkey:7-alpine
+          ports:
+            - containerPort: 6379
+              name: valkey
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          volumeMounts:
+            - name: valkey-data
+              mountPath: /data
+          command: ["valkey-server"]
+          args: ["--appendonly", "yes"]
+  volumeClaimTemplates:
+    - metadata:
+        name: valkey-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: valkey
+  namespace: app
+  labels:
+    app: valkey
+spec:
+  ports:
+    - port: 6379
+      name: valkey
+      targetPort: 6379
+  selector:
+    app: valkey
+  clusterIP: None

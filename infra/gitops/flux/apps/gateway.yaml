@@ -1,0 +1,64 @@
+# Flux Application Definition — Edge Gateway
+#
+# This Kustomization manages the Edge Gateway deployment.
+# The gateway handles routing, rate limiting, and edge-level auth.
+# Flux will automatically apply changes when this file is updated in Git.
+
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: edge-gateway
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  path: ./infra/kubernetes/rendered/edge-gateway
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  timeout: 5m0s
+  wait: true
+  retryInterval: 2m0s
+  maxRetries: 3
+
+  # Decryption of SOPS-encrypted secrets
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+
+  # Health checks to verify deployment succeeded
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: edge-gateway
+      namespace: app
+
+  # Dependencies
+  dependsOn:
+    - name: infrastructure
+      namespace: flux-system
+
+  # Post-build variable substitution
+  postBuild:
+    substitute:
+      ENV: dev
+      REPLICA_COUNT: "1"
+      LOG_LEVEL: debug
+
+  # Target namespace
+  targetNamespace: app
+
+  # Gateway must be accessible externally
+  patches:
+    - patch: |
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: edge-gateway
+          namespace: app
+        spec:
+          type: LoadBalancer
+      target:
+        kind: Service
+        name: edge-gateway

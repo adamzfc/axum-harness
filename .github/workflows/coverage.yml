@@ -2,8 +2,6 @@ name: Coverage
 
 on:
   push:
-    branches: [main, develop]
-  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -46,8 +44,11 @@ jobs:
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov
 
-      - name: Generate coverage
-        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+      - name: Generate coverage (exclude Tauri for speed)
+        run: >
+          cargo llvm-cov --workspace
+          --exclude desktop-ui-tauri
+          --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -62,6 +63,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-report
+          name: coverage-report-${{ github.run_id }}
           path: lcov.info
           retention-days: 30

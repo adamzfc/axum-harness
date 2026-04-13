@@ -1,23 +1,25 @@
 # Flux GitOps Configuration
 
-This directory contains Flux CD configuration for GitOps-based deployment.
+This directory contains Flux CD configuration for GitOps-based deployment to Kubernetes (k3s staging and production).
 
 ## Structure
 
 ```
 infra/gitops/flux/
-├── apps/              # Application definitions
-│   ├── api.yaml       # API service deployment
-│   ├── web.yaml       # Web frontend deployment
-│   └── gateway.yaml   # Gateway deployment
-├── infrastructure/    # Infrastructure components
-│   ├── nats.yaml      # NATS message broker
-│   ├── valkey.yaml    # Valkey cache
-│   └── minio.yaml     # MinIO object storage
-└── policies/          # Policy definitions
-    ├── namespace.yaml # Namespace configuration
-    ├── rbac.yaml      # RBAC configuration
-    └── quotas.yaml    # Resource quotas
+├── apps/                  # Application definitions
+│   ├── api.yaml           # API service deployment
+│   ├── web.yaml           # Web BFF deployment
+│   ├── admin-bff.yaml     # Admin BFF deployment
+│   └── gateway.yaml       # Edge gateway deployment
+├── infrastructure/        # Infrastructure components
+│   ├── nats.yaml          # NATS message broker
+│   ├── valkey.yaml        # Valkey cache (Redis-compatible)
+│   └── minio.yaml         # MinIO object storage (S3-compatible)
+├── policies/              # Policy definitions
+│   ├── namespace.yaml     # Namespace and ServiceAccount configuration
+│   ├── rbac.yaml          # RBAC Role and RoleBinding
+│   └── quotas.yaml        # ResourceQuota and LimitRange
+└── TOPOLOGY-MAPPING.md    # Topology ↔ Flux configuration mapping
 ```
 
 ## Bootstrap Flux
@@ -57,35 +59,6 @@ flux bootstrap git \
 flux check
 flux get sources git
 flux get kustomizations
-```
-
-## Add Applications
-
-### API Service
-
-```yaml
-# infra/gitops/flux/apps/api.yaml
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: api
-  namespace: flux-system
-spec:
-  interval: 10m0s
-  path: ./infra/k3s/overlays/dev
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
-  healthChecks:
-    - apiVersion: apps/v1
-      kind: Deployment
-      name: api
-      namespace: app
 ```
 
 ## Deploy New Service
@@ -136,8 +109,24 @@ git push
 flux resume kustomization api
 ```
 
+## Current Status
+
+### ✅ Implemented
+- Core infrastructure (NATS, Valkey, MinIO)
+- Application deployments (API, Web BFF, Admin BFF, Edge Gateway)
+- Namespace, RBAC, and Resource Quota policies
+- SOPS decryption integration
+- Health checks for all components
+
+### ⏳ TODO
+- Worker Kustomizations (outbox-relay, indexer, projector, scheduler, sync-reconciler)
+- Observability stack (OpenObserve, Grafana)
+- Dragonfly cache configuration (for k3s-staging topology)
+- Network policies (Cilium)
+
 ## See Also
 
 - [Flux Documentation](https://fluxcd.io/flux/)
 - [SOPS Integration](../../security/sops/SETUP.md)
-- [Kubernetes Manifests](../../k3s/base/)
+- [Kubernetes Manifests](../../kubernetes/)
+- [Topology Mapping](./TOPOLOGY-MAPPING.md)

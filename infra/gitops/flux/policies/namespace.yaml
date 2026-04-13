@@ -1,0 +1,23 @@
+# Namespace Configuration
+#
+# Defines the application namespace and associated metadata.
+# Applied first to ensure all other resources have a target namespace.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app
+  labels:
+    name: app
+    environment: production
+    managed-by: flux
+
+---
+# ServiceAccount for application workloads
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app-workload
+  namespace: app
+  labels:
+    managed-by: flux
