@@ -1,0 +1,17 @@
+# Security audit configuration
+# 
+# This file configures cargo-audit to ignore known issues
+# that are outside our control (Tauri desktop dependencies).
+
+[advisories]
+# Ignore specific advisories
+ignore = [
+    # Tauri desktop dependency chain (GTK ecosystem)
+    # These only affect the desktop app, not backend servers
+    "RUSTSEC-2021-0145",  # atomic-polyfill: unmaintained
+    "RUSTSEC-2024-0370",  # proc-macro-error: unmaintained
+]
+
+[settings]
+# Informational advisories should not cause failures
+informational_warnings = ["unmaintained", "unsound"]

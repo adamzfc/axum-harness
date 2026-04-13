@@ -44,7 +44,7 @@ impl<R: CounterRepository> CounterService for RepositoryBackedCounterService<R> 
             .repo
             .load(&id)
             .await
-            .map_err(|e| CounterError::Database(e))?;
+            .map_err(CounterError::Database)?;
 
         let value = counter.map(|c| c.value).unwrap_or(0);
         debug!(counter_id = %id, value, "counter.get_value");
@@ -58,7 +58,7 @@ impl<R: CounterRepository> CounterService for RepositoryBackedCounterService<R> 
             .repo
             .increment(&id, now)
             .await
-            .map_err(|e| CounterError::Database(e))?;
+            .map_err(CounterError::Database)?;
 
         debug!(counter_id = %id, value, "counter.increment");
         Ok(value)
@@ -71,7 +71,7 @@ impl<R: CounterRepository> CounterService for RepositoryBackedCounterService<R> 
             .repo
             .decrement(&id, now)
             .await
-            .map_err(|e| CounterError::Database(e))?;
+            .map_err(CounterError::Database)?;
 
         debug!(counter_id = %id, value, "counter.decrement");
         Ok(value)
@@ -83,7 +83,7 @@ impl<R: CounterRepository> CounterService for RepositoryBackedCounterService<R> 
         self.repo
             .reset(&id, now)
             .await
-            .map_err(|e| CounterError::Database(e))?;
+            .map_err(CounterError::Database)?;
 
         debug!(counter_id = %id, "counter.reset");
         Ok(0)
@@ -110,7 +110,7 @@ impl<R: CounterRepository> TenantScopedCounterService<R> {
             .repo
             .load(&id)
             .await
-            .map_err(|e| CounterError::Database(e))?;
+            .map_err(CounterError::Database)?;
 
         let value = counter.map(|c| c.value).unwrap_or(0);
         debug!(tenant_id = %tenant_id, value, "counter.get_value_for_tenant");
@@ -125,7 +125,7 @@ impl<R: CounterRepository> TenantScopedCounterService<R> {
             .repo
             .increment(&id, now)
             .await
-            .map_err(|e| CounterError::Database(e))?;
+            .map_err(CounterError::Database)?;
 
         debug!(tenant_id = %tenant_id, value, "counter.increment_for_tenant");
         Ok(value)
@@ -139,7 +139,7 @@ impl<R: CounterRepository> TenantScopedCounterService<R> {
             .repo
             .decrement(&id, now)
             .await
-            .map_err(|e| CounterError::Database(e))?;
+            .map_err(CounterError::Database)?;
 
         debug!(tenant_id = %tenant_id, value, "counter.decrement_for_tenant");
         Ok(value)
@@ -152,7 +152,7 @@ impl<R: CounterRepository> TenantScopedCounterService<R> {
         self.repo
             .reset(&id, now)
             .await
-            .map_err(|e| CounterError::Database(e))?;
+            .map_err(CounterError::Database)?;
 
         debug!(tenant_id = %tenant_id, "counter.reset_for_tenant");
         Ok(0)
