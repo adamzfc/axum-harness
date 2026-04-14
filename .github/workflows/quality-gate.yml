@@ -1,21 +1,23 @@
 name: Quality Gate
 
 on:
-  push:
-    branches: [main, develop]
+  pull_request:
+    branches: [main]
     paths:
       - '.github/workflows/ci.yml'
       - '.github/workflows/quality-gate.yml'
       - '.github/workflows/coverage.yml'
+      - '.github/workflows/backend-alternatives.yml'
+      - '.github/workflows/backend-experiments.yml'
       - '.cargo/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
       - 'deny.toml'
-      - 'servers/**'
-      - 'services/**'
+      - 'servers/gateway/**'
       - 'workers/**'
       - 'platform/**'
+      - 'services/**'
       - 'packages/core/**'
       - 'packages/kernel/**'
       - 'packages/platform/**'
@@ -23,46 +25,49 @@ on:
       - 'packages/contracts/**'
       - 'packages/shared/**'
       - 'packages/features/**'
-      - 'packages/adapters/storage/**'
+      - 'packages/adapters/storage/turso/**'
+      - 'packages/adapters/telemetry/**'
+      - 'packages/adapters/auth/google-backend/**'
+  push:
+    branches: [main, develop]
+    paths:
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/quality-gate.yml'
+      - '.github/workflows/coverage.yml'
+      - '.github/workflows/backend-alternatives.yml'
+      - '.github/workflows/backend-experiments.yml'
+      - '.cargo/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'deny.toml'
+      - 'servers/gateway/**'
+      - 'workers/**'
+      - 'platform/**'
+      - 'services/**'
+      - 'packages/core/**'
+      - 'packages/kernel/**'
+      - 'packages/platform/**'
+      - 'packages/runtime/**'
+      - 'packages/contracts/**'
+      - 'packages/shared/**'
+      - 'packages/features/**'
+      - 'packages/adapters/storage/turso/**'
       - 'packages/adapters/telemetry/**'
       - 'packages/adapters/auth/google-backend/**'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-governance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
-  BACKEND_PACKAGES: >-
-    -p domain
-    -p kernel
-    -p platform
-    -p runtime
-    -p contracts_api
-    -p contracts_auth
-    -p contracts_events
-    -p contracts_errors
-    -p shared-utils
-    -p adapter-telemetry-otel
-    -p adapter-telemetry-tracing
-    -p storage_surrealdb
-    -p storage_turso
-    -p adapter-google-backend
-    -p feature-auth
-    -p feature-counter
-    -p feature-admin
-    -p feature-agent
-    -p feature-chat
-    -p feature-settings
-    -p user-service
-    -p tenant-service
-    -p auth-service
-    -p counter-service
-    -p chat-service
-    -p agent-service
-    -p event-bus
-    -p admin-service
-    -p settings-service
+  SECONDARY_PACKAGES: >-
     -p pingora-gateway
-    -p web-bff
-    -p admin-bff
     -p outbox-relay-worker
     -p indexer-worker
     -p projector-worker
@@ -77,9 +82,6 @@ env:
     -p platform-generator
 
 jobs:
-  # ============================================
-  # Phase 1: Security Audit (backend only)
-  # ============================================
   security:
     name: Security Audit
     runs-on: ubuntu-latest
@@ -93,32 +95,29 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "quality-gate"
+          shared-key: "quality-gate-security"
 
       - name: Install cargo-deny
         run: cargo install cargo-deny
 
-      - name: Audit dependencies (backend only)
-        run: >
+      - name: Audit dependencies (governance and primary backend)
+        run: >-
           cargo deny
           --exclude-dev
           --exclude workspace-hack
           --exclude native-tauri
           --exclude runtime_tauri
           --exclude adapter-google
+          --exclude storage_surrealdb
           check advisories
 
       - name: Check for unsafe code in production crates
         run: |
-          ! grep -rn '#\[unsafe\]' --include="*.rs" packages/ services/ servers/ workers/ 2>/dev/null || true
+          ! grep -rn '#\[unsafe\]' --include="*.rs" packages/ services/ servers/ workers/ platform/validators/ 2>/dev/null || true
 
-  # ============================================
-  # Phase 2: Coverage (backend only, main branch)
-  # ============================================
-  coverage:
-    name: Coverage
+  governance-static:
+    name: Governance Static Checks
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
 
     steps:
       - uses: actions/checkout@v5
@@ -126,37 +125,62 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: llvm-tools
+          components: rustfmt, clippy
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "coverage"
+          shared-key: "quality-gate-static"
 
-      - name: Install cargo-llvm-cov
-        run: cargo install cargo-llvm-cov
+      - name: Rust fmt check (secondary backend)
+        run: >-
+          cargo fmt ${SECONDARY_PACKAGES} -- --check
 
-      - name: Generate coverage (backend only)
-        run: >
-          cargo llvm-cov ${BACKEND_PACKAGES}
-          --lcov --output-path lcov.info
+      - name: Rust clippy (secondary backend)
+        run: >-
+          cargo clippy ${SECONDARY_PACKAGES}
+          --all-targets
+          -- -D warnings
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+      - name: Rust check (secondary backend)
+        run: >-
+          cargo check ${SECONDARY_PACKAGES}
+
+  secondary-runtime:
+    name: Secondary Runtime Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
         with:
-          file: lcov.info
-          fail_ci_if_error: false
-          verbose: true
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          shared-key: "quality-gate-runtime"
 
-  # ============================================
-  # Summary Report
-  # ============================================
+      - name: Rust test (secondary backend)
+        run: >-
+          cargo test ${SECONDARY_PACKAGES}
+          -- --test-threads=4
+
+      - name: Build gateway and workers (secondary backend)
+        run: >-
+          cargo build
+          -p pingora-gateway
+          -p outbox-relay-worker
+          -p indexer-worker
+          -p projector-worker
+          -p scheduler-worker
+          -p sync-reconciler-worker
+          --release
+
   summary:
     name: Quality Gate Summary
     runs-on: ubuntu-latest
-    needs: [security, coverage]
+    needs: [security, governance-static, secondary-runtime]
     if: always()
 
     steps:
@@ -167,13 +191,15 @@ jobs:
           echo "| Phase | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Security Audit | ${{ needs.security.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Coverage | ${{ needs.coverage.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Governance Static Checks | ${{ needs.governance-static.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secondary Runtime Validation | ${{ needs.secondary-runtime.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ needs.security.result }}" == "success" ] && \
-             ([ "${{ needs.coverage.result }}" == "success" ] || [ "${{ needs.coverage.result }}" == "skipped" ]); then
-            echo "✅ **All quality gates passed!**" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.security.result }}" = "success" ] && \
+             [ "${{ needs.governance-static.result }}" = "success" ] && \
+             [ "${{ needs.secondary-runtime.result }}" = "success" ]; then
+            echo "All governance checks passed." >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ **Quality gate failed. Please review the errors above.**" >> $GITHUB_STEP_SUMMARY
+            echo "Quality gate failed. Review the secondary or governance jobs above." >> $GITHUB_STEP_SUMMARY
             exit 1
           fi

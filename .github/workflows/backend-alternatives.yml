@@ -1,0 +1,98 @@
+name: Backend Alternatives
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/backend-alternatives.yml'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/quality-gate.yml'
+      - '.github/workflows/coverage.yml'
+      - '.cargo/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'packages/adapters/storage/surrealdb/**'
+      - 'packages/core/domain/**'
+      - 'services/tenant-service/**'
+  push:
+    branches: [main, develop]
+    paths:
+      - '.github/workflows/backend-alternatives.yml'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/quality-gate.yml'
+      - '.github/workflows/coverage.yml'
+      - '.cargo/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'packages/adapters/storage/surrealdb/**'
+      - 'packages/core/domain/**'
+      - 'services/tenant-service/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-alternatives-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  ALTERNATIVE_PACKAGES: >-
+    -p domain
+    -p tenant-service
+    -p storage_surrealdb
+
+jobs:
+  alternatives-static:
+    name: Alternative Static Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "backend-alternatives-static"
+
+      - name: Rust fmt check (alternative backend)
+        run: >-
+          cargo fmt ${ALTERNATIVE_PACKAGES} -- --check
+
+      - name: Rust clippy (alternative backend)
+        run: >-
+          cargo clippy ${ALTERNATIVE_PACKAGES}
+          --all-targets
+          -- -D warnings
+
+      - name: Rust check (alternative backend)
+        run: >-
+          cargo check ${ALTERNATIVE_PACKAGES}
+
+  alternatives-tests:
+    name: Alternative Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "backend-alternatives-tests"
+
+      - name: Rust test (alternative backend)
+        run: >-
+          cargo test ${ALTERNATIVE_PACKAGES}
+          -- --test-threads=4

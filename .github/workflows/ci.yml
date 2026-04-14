@@ -7,15 +7,15 @@ on:
       - '.github/workflows/ci.yml'
       - '.github/workflows/quality-gate.yml'
       - '.github/workflows/coverage.yml'
+      - '.github/workflows/backend-alternatives.yml'
+      - '.github/workflows/backend-experiments.yml'
       - '.cargo/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
       - 'deny.toml'
-      - 'servers/**'
+      - 'servers/bff/**'
       - 'services/**'
-      - 'workers/**'
-      - 'platform/**'
       - 'packages/core/**'
       - 'packages/kernel/**'
       - 'packages/platform/**'
@@ -23,7 +23,7 @@ on:
       - 'packages/contracts/**'
       - 'packages/shared/**'
       - 'packages/features/**'
-      - 'packages/adapters/storage/**'
+      - 'packages/adapters/storage/turso/**'
       - 'packages/adapters/telemetry/**'
       - 'packages/adapters/auth/google-backend/**'
   push:
@@ -32,15 +32,15 @@ on:
       - '.github/workflows/ci.yml'
       - '.github/workflows/quality-gate.yml'
       - '.github/workflows/coverage.yml'
+      - '.github/workflows/backend-alternatives.yml'
+      - '.github/workflows/backend-experiments.yml'
       - '.cargo/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
       - 'deny.toml'
-      - 'servers/**'
+      - 'servers/bff/**'
       - 'services/**'
-      - 'workers/**'
-      - 'platform/**'
       - 'packages/core/**'
       - 'packages/kernel/**'
       - 'packages/platform/**'
@@ -48,7 +48,7 @@ on:
       - 'packages/contracts/**'
       - 'packages/shared/**'
       - 'packages/features/**'
-      - 'packages/adapters/storage/**'
+      - 'packages/adapters/storage/turso/**'
       - 'packages/adapters/telemetry/**'
       - 'packages/adapters/auth/google-backend/**'
   workflow_dispatch:
@@ -56,9 +56,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: backend-primary-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
-  BACKEND_PACKAGES: >-
+  PRIMARY_PACKAGES: >-
     -p domain
     -p kernel
     -p platform
@@ -70,7 +74,6 @@ env:
     -p shared-utils
     -p adapter-telemetry-otel
     -p adapter-telemetry-tracing
-    -p storage_surrealdb
     -p storage_turso
     -p adapter-google-backend
     -p feature-auth
@@ -88,28 +91,12 @@ env:
     -p event-bus
     -p admin-service
     -p settings-service
-    -p pingora-gateway
     -p web-bff
     -p admin-bff
-    -p outbox-relay-worker
-    -p indexer-worker
-    -p projector-worker
-    -p scheduler-worker
-    -p sync-reconciler-worker
-    -p platform-validator
-    -p dependency-validator
-    -p contract-drift-detector
-    -p topology-validator
-    -p security-validator
-    -p observability-validator
-    -p platform-generator
 
 jobs:
-  # ============================================
-  # Backend: Lint, Build, Test
-  # ============================================
-  backend-ci:
-    name: Backend CI
+  primary-static:
+    name: Primary Static Checks
     runs-on: ubuntu-latest
 
     steps:
@@ -125,29 +112,66 @@ jobs:
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "backend-ci"
+          shared-key: "backend-primary-static"
 
-      - name: Rust fmt check (backend only)
-        run: >
-          cargo fmt ${BACKEND_PACKAGES} -- --check
+      - name: Rust fmt check (primary backend)
+        run: >-
+          cargo fmt ${PRIMARY_PACKAGES} -- --check
 
-      - name: Rust clippy (backend only)
-        run: >
-          cargo clippy ${BACKEND_PACKAGES}
+      - name: Rust clippy (primary backend)
+        run: >-
+          cargo clippy ${PRIMARY_PACKAGES}
           --all-targets
           -- -D warnings
 
-      - name: Rust check (backend only)
-        run: >
-          cargo check ${BACKEND_PACKAGES}
+      - name: Rust check (primary backend)
+        run: >-
+          cargo check ${PRIMARY_PACKAGES}
 
-      - name: Rust test (backend only)
-        run: >
-          cargo test ${BACKEND_PACKAGES}
+  primary-tests:
+    name: Primary Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "backend-primary-tests"
+
+      - name: Rust test (primary backend)
+        run: >-
+          cargo test ${PRIMARY_PACKAGES}
           -- --test-threads=4
 
-      - name: Build BFF servers (backend only)
-        run: >
+  bff-smoke:
+    name: BFF Smoke Tests
+    runs-on: ubuntu-latest
+    needs: [primary-static, primary-tests]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "backend-primary-smoke"
+
+      - name: Build BFF servers (primary backend)
+        run: >-
           cargo build
           -p web-bff
           -p admin-bff
@@ -155,40 +179,57 @@ jobs:
 
       - name: Test web-bff /scalar endpoint
         run: |
-          # Start web-bff in background
           ./target/release/web-bff &
           WEB_BFF_PID=$!
-          
-          # Wait for startup
+
           sleep 2
-          
-          # Test /scalar endpoint
+
           curl -f http://localhost:3010/scalar || exit 1
-          echo "✅ web-bff /scalar endpoint accessible"
-          
-          # Test /healthz endpoint
+          echo "web-bff /scalar endpoint accessible"
+
           curl -f http://localhost:3010/healthz || exit 1
-          echo "✅ web-bff /healthz endpoint accessible"
-          
-          # Cleanup
+          echo "web-bff /healthz endpoint accessible"
+
           kill $WEB_BFF_PID || true
 
       - name: Test admin-bff /scalar endpoint
         run: |
-          # Start admin-bff in background
           ./target/release/admin-bff &
           ADMIN_BFF_PID=$!
-          
-          # Wait for startup
+
           sleep 2
-          
-          # Test /scalar endpoint
+
           curl -f http://localhost:3020/scalar || exit 1
-          echo "✅ admin-bff /scalar endpoint accessible"
-          
-          # Test /healthz endpoint
+          echo "admin-bff /scalar endpoint accessible"
+
           curl -f http://localhost:3020/healthz || exit 1
-          echo "✅ admin-bff /healthz endpoint accessible"
-          
-          # Cleanup
+          echo "admin-bff /healthz endpoint accessible"
+
           kill $ADMIN_BFF_PID || true
+
+  summary:
+    name: Backend CI
+    runs-on: ubuntu-latest
+    needs: [primary-static, primary-tests, bff-smoke]
+    if: always()
+
+    steps:
+      - name: Print Summary
+        run: |
+          echo "## Backend Primary Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Phase | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Primary Static Checks | ${{ needs.primary-static.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Primary Tests | ${{ needs.primary-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| BFF Smoke Tests | ${{ needs.bff-smoke.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.primary-static.result }}" = "success" ] && \
+             [ "${{ needs.primary-tests.result }}" = "success" ] && \
+             [ "${{ needs.bff-smoke.result }}" = "success" ]; then
+            echo "Primary backend admission passed." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Primary backend admission failed. Review the failing primary jobs above." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi

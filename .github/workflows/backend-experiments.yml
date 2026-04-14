@@ -1,0 +1,108 @@
+name: Backend Experiments
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-experiments-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  PRIMARY_PACKAGES: >-
+    -p domain
+    -p kernel
+    -p platform
+    -p runtime
+    -p contracts_api
+    -p contracts_auth
+    -p contracts_events
+    -p contracts_errors
+    -p shared-utils
+    -p adapter-telemetry-otel
+    -p adapter-telemetry-tracing
+    -p storage_turso
+    -p adapter-google-backend
+    -p feature-auth
+    -p feature-counter
+    -p feature-admin
+    -p feature-agent
+    -p feature-chat
+    -p feature-settings
+    -p user-service
+    -p tenant-service
+    -p auth-service
+    -p counter-service
+    -p chat-service
+    -p agent-service
+    -p event-bus
+    -p admin-service
+    -p settings-service
+    -p web-bff
+    -p admin-bff
+  SECONDARY_PACKAGES: >-
+    -p pingora-gateway
+    -p outbox-relay-worker
+    -p indexer-worker
+    -p projector-worker
+    -p scheduler-worker
+    -p sync-reconciler-worker
+    -p platform-validator
+    -p dependency-validator
+    -p contract-drift-detector
+    -p topology-validator
+    -p security-validator
+    -p observability-validator
+    -p platform-generator
+  ALTERNATIVE_PACKAGES: >-
+    -p storage_surrealdb
+
+jobs:
+  compile-drift:
+    name: Compile Drift (${{ matrix.toolchain }})
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.allow_failure }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolchain: stable
+            allow_failure: false
+          - toolchain: beta
+            allow_failure: true
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          components: clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: backend-experiments-${{ matrix.toolchain }}
+
+      - name: Cargo check (all backend tiers)
+        run: >-
+          cargo check
+          ${PRIMARY_PACKAGES}
+          ${SECONDARY_PACKAGES}
+          ${ALTERNATIVE_PACKAGES}
+
+      - name: Cargo clippy (stable baseline)
+        if: matrix.toolchain == 'stable'
+        run: >-
+          cargo clippy
+          ${PRIMARY_PACKAGES}
+          ${SECONDARY_PACKAGES}
+          ${ALTERNATIVE_PACKAGES}
+          --all-targets
+          -- -D warnings
