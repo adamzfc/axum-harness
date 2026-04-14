@@ -49,6 +49,38 @@
         "interval_seconds": { "type": "integer" }
       }
     },
+    "environment_variables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "sensitive": { "type": "boolean" }
+        }
+      }
+    },
+    "observability": {
+      "type": "object",
+      "properties": {
+        "health_check": {
+          "type": "object",
+          "properties": {
+            "endpoint": { "type": "string" },
+            "interval": { "type": "string" },
+            "timeout": { "type": "string" }
+          }
+        },
+        "readiness_check": {
+          "type": "object",
+          "properties": {
+            "endpoint": { "type": "string" },
+            "interval": { "type": "string" },
+            "timeout": { "type": "string" }
+          }
+        }
+      }
+    },
     "ports": {
       "type": "array",
       "items": { "type": "integer" },

@@ -161,6 +161,7 @@ modules:
 
     settings:
       path: services/settings-service
+      status: partial
       kind: domain-service
       owns:
         - 用户或租户设置
@@ -176,6 +177,7 @@ modules:
 
     counter:
       path: services/counter-service
+      status: partial
       kind: demo-service
       owns:
         - 最小完整业务链路示例
@@ -191,6 +193,7 @@ modules:
 
     admin:
       path: services/admin-service
+      status: partial
       kind: domain-service
       owns:
         - 平台级管理动作
@@ -207,6 +210,7 @@ modules:
 
     indexing:
       path: services/indexing-service
+      status: planned
       kind: domain-service
       owns:
         - 索引域规则
@@ -223,9 +227,71 @@ modules:
       notes: >
         目标态模块，尚未实现。对应目录以 .gitkeep 占位。
 
+    auth:
+      path: services/auth-service
+      status: partial
+      kind: domain-service
+      owns:
+        - OAuth 登录流程
+        - 会话与 token 生命周期
+      depends_on:
+        - packages/kernel
+        - packages/contracts
+        - packages/runtime/ports
+        - packages/authn
+      forbidden:
+        - services/*
+        - packages/**/adapters/**
+
+    chat:
+      path: services/chat-service
+      status: partial
+      kind: domain-service
+      owns:
+        - 对话与消息业务规则
+        - 参与者与消息流转约束
+      depends_on:
+        - packages/kernel
+        - packages/contracts
+        - packages/runtime/ports
+      forbidden:
+        - services/*
+        - packages/**/adapters/**
+
+    agent:
+      path: services/agent-service
+      status: partial
+      kind: domain-service
+      owns:
+        - agent 会话管理
+        - 工具调用与流式回复约束
+      depends_on:
+        - packages/kernel
+        - packages/contracts
+        - packages/runtime/ports
+      forbidden:
+        - services/*
+        - packages/**/adapters/**
+
+    event-bus:
+      path: services/event-bus
+      status: partial
+      kind: domain-service
+      owns:
+        - 事件包络与发布语义
+        - outbox 协调能力
+      depends_on:
+        - packages/kernel
+        - packages/contracts
+        - packages/runtime/ports
+      forbidden:
+        - services/*
+        - packages/**/adapters/**
+
   servers:
     web-bff:
       path: servers/bff/web-bff
+      status: partial
       kind: server
       owns:
         - Web 端视图聚合
@@ -241,6 +307,7 @@ modules:
 
     admin-bff:
       path: servers/bff/admin-bff
+      status: partial
       kind: server
       owns:
         - 管理端视图聚合
@@ -255,6 +322,7 @@ modules:
 
     edge-gateway:
       path: servers/gateway
+      status: partial
       kind: server
       owns:
         - 应用级入口路由与限流
@@ -269,6 +337,7 @@ modules:
 
     internal-rpc:
       path: servers/internal-rpc
+      status: planned
       kind: server
       owns:
         - 内部 RPC 入口
@@ -283,6 +352,7 @@ modules:
   workers:
     indexer:
       path: workers/indexer
+      status: partial
       kind: worker
       owns:
         - 协议源抓取
@@ -297,6 +367,7 @@ modules:
 
     outbox-relay:
       path: workers/outbox-relay
+      status: partial
       kind: worker
       owns:
         - outbox 轮询
@@ -312,6 +383,7 @@ modules:
 
     projector:
       path: workers/projector
+      status: partial
       kind: worker
       owns:
         - 读模型构建
@@ -324,6 +396,7 @@ modules:
 
     scheduler:
       path: workers/scheduler
+      status: partial
       kind: worker
       owns:
         - 定时作业调度与分发
@@ -335,6 +408,7 @@ modules:
 
     sync-reconciler:
       path: workers/sync-reconciler
+      status: partial
       kind: worker
       owns:
         - 同步计划执行
@@ -348,6 +422,7 @@ modules:
 
     workflow-runner:
       path: workers/workflow-runner
+      status: planned
       kind: worker
       owns:
         - 业务工作流/Saga 执行
@@ -362,6 +437,7 @@ modules:
   apps:
     web:
       path: apps/web
+      status: partial
       kind: client-app
       depends_on:
         - packages/sdk/typescript
@@ -374,6 +450,7 @@ modules:
 
     desktop:
       path: apps/desktop
+      status: partial
       kind: client-app
       depends_on:
         - packages/sdk/typescript
@@ -386,6 +463,7 @@ modules:
 
     mobile:
       path: apps/mobile
+      status: planned
       kind: client-app
       depends_on:
         - packages/sdk/typescript

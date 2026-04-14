@@ -5,12 +5,8 @@ description: >
   with reduced replicas. Uses Flux for GitOps deployment.
 
 deployables:
-  - name: api-server
-    replicas: 2
-    enabled: true
-
   - name: web-bff
-    replicas: 1
+    replicas: 2
     enabled: true
 
   - name: admin-bff

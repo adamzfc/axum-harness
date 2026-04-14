@@ -31,7 +31,7 @@ async function main(): Promise<number> {
 
   console.log('\n=== Config Files Check ===\n');
 
-  const configs = ['.env', '.env.example', '.tool-versions', 'rust-toolchain.toml'];
+  const configs = ['.env', '.env.example', '.mise.toml', 'rust-toolchain.toml'];
   for (const config of configs) {
     const fullPath = path.join(workspaceRoot, config);
     if (existsSync(fullPath)) {

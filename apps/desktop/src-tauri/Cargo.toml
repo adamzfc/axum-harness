@@ -49,8 +49,6 @@ thiserror = { workspace = true }
 
 # Internal crates
 domain = { workspace = true }
-counter-service = { workspace = true }
-agent-service = { workspace = true }
 runtime_tauri = { workspace = true }
 workspace-hack = { version = "0.1", path = "../../../packages/core/workspace-hack" }
 

@@ -76,7 +76,7 @@ boilerplate/
 ### 必须
 - 所有开发与运维命令统一从 `justfile` 暴露。
 - 所有工具版本由 `.mise.toml`、`rust-toolchain.toml` 锁定。
-- 所有工作区成员在根 `Cargo.toml` 与 `bun-workspace.yaml` 可追踪。
+- 所有工作区成员在根 `Cargo.toml` 与根 `package.json` 的 `workspaces` 字段可追踪。
 - CI 通过根命令调用，不直接拼接深层脚本。
 
 ### 禁止
@@ -561,3 +561,21 @@ just perf-smoke
 6. generated 目录禁止手改
 7. 拓扑变化通过 topology model 完成，不允许靠重构业务来实现
 
+---
+
+## 9. Gate 演进协议
+
+### 9.1 统一入口
+- 本地、pre-push、CI、release 门禁统一从 `just gate-local`、`just gate-prepush`、`just gate-ci`、`just gate-release` 进入。
+- `lefthook.yml` 只调用 `just gate-*`，不得在 hook 中散落独立检查命令。
+- 人类与 agent 都不得绕过 `just` 直接拼接深层质量命令作为正式门禁入口。
+
+### 9.2 软硬分层
+- Phase 0 默认采用 warn-only：`gate-local` 与 `gate-prepush` 允许失败告警但不阻断提交/推送。
+- 当某类规则稳定、噪声可控后，再将对应 gate 或单项检查切换为 strict。
+- `gate-ci` 与 `gate-release` 可以先于本地 gate 进入 strict，但必须保持规则来源可追踪。
+
+### 9.3 规则同步
+- 结构事实变化时，必须同步更新 `agent/codemap.yml` 或本文档。
+- 规则进入 gate 后，必须对应真实的检查命令或验证脚本，不能只写文档不落地。
+- gate 语义发生变化时，必须同步更新迭代计划中的进度记录与接力交接单。

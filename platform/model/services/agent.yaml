@@ -38,7 +38,23 @@ dependencies:
   - packages/features/agent
   - services/event-bus
 
-deployable: api-server
+authentication:
+  required: true
+  methods:
+    - jwt
+    - session
+
+observability:
+  tracing:
+    enabled: true
+    sampler: always_on
+  metrics:
+    enabled: true
+  logging:
+    level: info
+    format: json
+
+deployable: web-bff
 tests: services/agent-service/tests/
 migrations: services/agent-service/migrations/
 status: active

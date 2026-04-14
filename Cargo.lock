@@ -5183,11 +5183,9 @@ dependencies = [
 name = "native-tauri"
 version = "0.1.0"
 dependencies = [
- "agent-service",
  "async-trait",
  "base64 0.22.1",
  "chrono",
- "counter-service",
  "domain",
  "dotenvy",
  "log",

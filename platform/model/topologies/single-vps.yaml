@@ -6,10 +6,6 @@ description: >
   or staging. Includes all workers and observability stack.
 
 deployables:
-  - name: api-server
-    replicas: 1
-    enabled: true
-
   - name: web-bff
     replicas: 1
     enabled: true

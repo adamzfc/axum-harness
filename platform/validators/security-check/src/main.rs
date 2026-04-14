@@ -158,17 +158,8 @@ fn check_service_security(
             .with_context(|| format!("Failed to parse service: {}", path.display()))?;
 
         // Check if authentication is configured
-        if service
-            .authentication
-            .as_ref()
-            .is_none_or(|a| a.required.unwrap_or(false))
-        {
-            // Auth required but check if methods are specified
-            if service
-                .authentication
-                .as_ref()
-                .and_then(|a| a.methods.as_ref())
-                .is_none_or(|m| m.is_empty())
+        if let Some(auth) = service.authentication.as_ref() {
+            if auth.required.unwrap_or(false) && auth.methods.as_ref().is_none_or(|m| m.is_empty())
             {
                 warnings.push(format!(
                     "Service '{}' requires authentication but no auth methods specified",

@@ -7,7 +7,14 @@ description: >
   handles server-side rendering data fetching, and manages
   web-specific auth/session concerns.
 
-services: []
+services:
+  - counter
+  - user
+  - tenant
+  - settings
+  - agent
+  - chat
+  - auth
 
 resources:
   - cache
@@ -22,3 +29,11 @@ health_check:
 
 ports:
   - 3010
+
+observability:
+  health_check:
+    endpoint: /healthz
+    interval: 10s
+  readiness_check:
+    endpoint: /readyz
+    interval: 10s

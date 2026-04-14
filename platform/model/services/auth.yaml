@@ -1,0 +1,46 @@
+name: auth
+domain: auth
+version: 0.1.0
+description: >
+  Authentication service — OAuth flow, session management, token handling.
+  Manages user authentication lifecycle including JWT generation,
+  OAuth provider integration, session management, and token refresh.
+
+ports:
+  - name: oauth_provider
+    type: external_api
+    description: OAuth provider integration (Google, etc.)
+  - name: session_repository
+    type: repository
+    description: User session state persistence
+  - name: token_repository
+    type: repository
+    description: Token state persistence (JWT, refresh tokens)
+
+events: []
+
+dependencies:
+  - packages/core/kernel
+  - packages/contracts/api
+  - packages/contracts/auth
+  - services/event-bus
+
+authentication:
+  required: false
+  methods:
+    - oauth
+    - magic_link
+
+observability:
+  tracing:
+    enabled: true
+    sampler: always_on
+  metrics:
+    enabled: true
+  logging:
+    level: info
+    format: json
+
+deployable: web-bff
+tests: services/auth-service/tests/
+status: active

@@ -26,6 +26,19 @@ dependencies:
   - packages/core/kernel
   - packages/contracts/events
 
+authentication:
+  required: false
+
+observability:
+  tracing:
+    enabled: true
+    sampler: always_on
+  metrics:
+    enabled: true
+  logging:
+    level: info
+    format: json
+
 deployable: outbox-relay-worker
 tests: services/event-bus/tests/
 status: active

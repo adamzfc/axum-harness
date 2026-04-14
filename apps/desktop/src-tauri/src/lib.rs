@@ -4,6 +4,7 @@ mod commands;
 mod sync;
 
 use runtime_tauri::commands::{admin, agent, auth, config, counter, settings};
+use runtime_tauri::schema::{AGENT_MIGRATIONS, COUNTER_MIGRATION};
 
 use domain::ports::lib_sql::LibSqlPort;
 use std::path::{Path, PathBuf};
@@ -229,11 +230,11 @@ pub fn run() {
                     .await
                     .expect("Failed to run tenant migrations");
 
-                db.execute(counter_service::application::COUNTER_MIGRATION, vec![])
+                db.execute(COUNTER_MIGRATION, vec![])
                     .await
                     .expect("Failed to run counter migration");
 
-                for migration in agent_service::application::migrations::AGENT_MIGRATIONS {
+                for migration in AGENT_MIGRATIONS {
                     db.execute(migration, vec![])
                         .await
                         .expect("Failed to run agent migration");

@@ -38,7 +38,23 @@ dependencies:
   - packages/features/chat
   - services/event-bus
 
-deployable: api-server
+authentication:
+  required: true
+  methods:
+    - jwt
+    - session
+
+observability:
+  tracing:
+    enabled: true
+    sampler: always_on
+  metrics:
+    enabled: true
+  logging:
+    level: info
+    format: json
+
+deployable: web-bff
 tests: services/chat-service/tests/
 migrations: services/chat-service/migrations/
 status: stub

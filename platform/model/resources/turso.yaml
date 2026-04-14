@@ -18,6 +18,14 @@ local_dev:
     TURSO_DATABASE_URL: "file:local.db"
     TURSO_AUTH_TOKEN: "dev-token"
 
+encryption:
+  at_rest: true
+  in_transit: true
+
+access_control:
+  rbac: true
+  abac: false
+
 required_by:
   - counter
   - user

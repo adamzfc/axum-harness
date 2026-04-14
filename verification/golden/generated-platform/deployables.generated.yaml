@@ -9,23 +9,6 @@
   - cache
   ports:
   - 3020
-- name: api-server
-  type: server
-  version: 1.0.0
-  description: |
-    Main Axum API server aggregating all service routes. Provides REST/JSON API for all services. Internal-facing, behind edge-gateway in production topologies.
-  services:
-  - counter
-  - user
-  - tenant
-  - settings
-  - agent
-  - chat
-  resources:
-  - turso
-  - cache
-  ports:
-  - 3001
 - name: edge-gateway
   type: gateway
   version: 1.0.0
@@ -94,7 +77,14 @@
   version: 1.0.0
   description: |
     Backend-for-Frontend for the web application (SvelteKit). Aggregates service APIs into view-optimized endpoints, handles server-side rendering data fetching, and manages web-specific auth/session concerns.
-  services: []
+  services:
+  - counter
+  - user
+  - tenant
+  - settings
+  - agent
+  - chat
+  - auth
   resources:
   - cache
   ports:

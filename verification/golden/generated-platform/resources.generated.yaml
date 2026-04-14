@@ -23,7 +23,6 @@
     Telemetry stack for logging, metrics, tracing, and distributed tracing. Uses OpenTelemetry SDK with vector for log aggregation and OpenObserve for storage and visualization.
   technology: otel/vector/openobserve
   required_by:
-  - api-server
   - web-bff
   - admin-bff
   - edge-gateway

@@ -14,5 +14,4 @@ rules:
       scope: "tenant"
 
 applies_to:
-  - api-server
   - web-bff

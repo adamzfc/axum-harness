@@ -47,6 +47,20 @@
       "type": "array",
       "items": { "type": "string" },
       "description": "Services that depend on this resource"
+    },
+    "encryption": {
+      "type": "object",
+      "properties": {
+        "at_rest": { "type": "boolean" },
+        "in_transit": { "type": "boolean" }
+      }
+    },
+    "access_control": {
+      "type": "object",
+      "properties": {
+        "rbac": { "type": "boolean" },
+        "abac": { "type": "boolean" }
+      }
     }
   }
 }

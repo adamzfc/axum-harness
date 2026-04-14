@@ -257,12 +257,19 @@ fn check_broken_references(platform_dir: &Path) -> Result<Vec<String>> {
 
         if let Some(deps) = &service.dependencies {
             for dep in deps {
-                // Skip package paths (packages/*, services/*) — those are not service refs
-                if dep.contains('/') || dep.contains('-') && dep.len() > 15 {
+                // Skip package paths (packages/*) — those are not service refs
+                if dep.starts_with("packages/") {
                     continue;
                 }
-                // Only warn if it looks like a short service name that's not registered
-                if !service_names.contains(dep.as_str()) && dep.len() < 30 {
+                // Handle "services/<name>" references — extract service name
+                let service_name = dep.strip_prefix("services/").unwrap_or(dep.as_str());
+
+                // Only check if the reference looks like a service name (short, no /)
+                if service_name.contains('/') {
+                    continue;
+                }
+
+                if !service_names.contains(service_name) && service_name.len() < 30 {
                     broken.push(format!(
                         "Service '{}' depends on unknown service '{}'",
                         service.name, dep

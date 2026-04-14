@@ -1,0 +1,9 @@
+pre-commit:
+  jobs:
+    - name: gate-local
+      run: just gate-local
+
+pre-push:
+  jobs:
+    - name: gate-prepush
+      run: just gate-prepush

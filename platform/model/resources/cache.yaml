@@ -16,6 +16,14 @@ local_dev:
     CACHE_BACKEND: "moka"
     CACHE_TTL_SECONDS: "300"
 
+encryption:
+  at_rest: true
+  in_transit: true
+
+access_control:
+  rbac: true
+  abac: false
+
 required_by:
   - settings
   - web-bff

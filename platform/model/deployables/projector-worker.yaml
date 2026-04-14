@@ -23,3 +23,11 @@ health_check:
 
 ports:
   - 3050
+
+observability:
+  health_check:
+    endpoint: /healthz
+    interval: 10s
+  readiness_check:
+    endpoint: /readyz
+    interval: 10s

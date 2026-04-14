@@ -19,7 +19,6 @@ local_dev:
     LOG_LEVEL: "debug"
 
 required_by:
-  - api-server
   - web-bff
   - admin-bff
   - edge-gateway

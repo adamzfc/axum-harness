@@ -288,14 +288,24 @@ fn check_observability_resources(
 
         let content = fs::read_to_string(&path)?;
 
-        // Simple check for resource type in content
-        if content.contains("type: tracing") || content.contains("type: jaeger") {
+        // Check for specific observability resource types or a unified "observability" type
+        let content_lower = content.to_lowercase();
+        if content_lower.contains("type: tracing")
+            || content_lower.contains("type: jaeger")
+            || content_lower.contains("type: observability")
+        {
             has_tracing_resource = true;
         }
-        if content.contains("type: metrics") || content.contains("type: prometheus") {
+        if content_lower.contains("type: metrics")
+            || content_lower.contains("type: prometheus")
+            || content_lower.contains("type: observability")
+        {
             has_metrics_resource = true;
         }
-        if content.contains("type: logging") || content.contains("type: loki") {
+        if content_lower.contains("type: logging")
+            || content_lower.contains("type: loki")
+            || content_lower.contains("type: observability")
+        {
             has_logging_resource = true;
         }
     }

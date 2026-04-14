@@ -26,6 +26,26 @@ dependencies:
   - packages/features/admin
   - services/event-bus
 
+authentication:
+  required: true
+  methods:
+    - jwt
+    - session
+
+authorization:
+  required: true
+  model: openfga
+
+observability:
+  tracing:
+    enabled: true
+    sampler: always_on
+  metrics:
+    enabled: true
+  logging:
+    level: info
+    format: json
+
 deployable: admin-bff
 tests: services/admin-service/tests/
 status: active
