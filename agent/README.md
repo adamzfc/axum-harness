@@ -1,55 +1,25 @@
-# Agent Harness — AI Agent 协作约束
+# Agent Harness
 
-> **设计原则**: Agent 只能在此定义的边界内生成代码。
-> 业务逻辑代码**禁止**出现在此目录。
+`agent/` 只保留最小的 agent 协作真理源，不承载业务逻辑、模板、checklist 或流程散文。
 
-## 核心约束
+## 目录职责
 
-1. **Agent 首要阅读入口**: 新 Agent 会话必须首先加载根级 `AGENTS.md`（总控协议）
-2. **模块边界**: 参见 `codemap.yml` — 每个模块的允许/禁止依赖、允许引入的 external crates、必须遵循的代码模式
-3. **目录修改边界**: 参见 `boundaries.md` — 明确哪些目录可改、哪些禁止跨改、哪些只读
-4. **约束规则**: 参见 `constraints/` — 依赖白/黑名单、禁止代码模式、契约变更流程、存储策略约束
-5. **生成模板**: 参见 `templates/` — 新增模块、BFF 端点的代码生成模板
-6. **检查清单**: 参见 `checklists/` — 关键操作的验证清单
+1. `codemap.yml`
+   负责模块边界、写权限、依赖方向、分布式硬约束与必填语义。
+2. `manifests/routing-rules.yml`
+   负责 touched paths 到 subagent 的路由与派发顺序。
+3. `manifests/gate-matrix.yml`
+   负责 subagent 对应的 scoped gates 与最终总验证。
 
-## Subagent 架构
+## 使用顺序
 
-本仓库采用 Planner → Subagents 架构，每个 subagent 的完整定义在 `.agents/skills/*/SKILL.md`：
+1. 先读根级 `AGENTS.md`。
+2. 再读 `docs/architecture/repo-layout.md`，理解目标态结构与后端分布式边界。
+3. 再读 `agent/codemap.yml`，确认当前任务的边界、禁止事项与 required fields。
+4. 最后根据 `routing-rules.yml` 和 `gate-matrix.yml` 决定派发与验证。
 
-| Subagent | Skill |
-|---|---|
-| contract-agent | `.agents/skills/contract-agent/SKILL.md` |
-| app-shell-agent | `.agents/skills/app-shell-agent/SKILL.md` |
-| server-agent | `.agents/skills/server-agent/SKILL.md` |
-| service-agent | `.agents/skills/service-agent/SKILL.md` |
-| worker-agent | `.agents/skills/worker-agent/SKILL.md` |
-| platform-ops-agent | `.agents/skills/platform-ops-agent/SKILL.md` |
+## 说明
 
-路由规则：`agent/manifests/routing-rules.yml`
-门禁矩阵：`agent/manifests/gate-matrix.yml`
-完整定义：`agent/manifests/subagents.yml`
-
-辅助脚本：
-- `scripts/route-task.ts` — 路由分析
-- `scripts/run-scoped-gates.ts` — 作用域门禁
-- `scripts/verify-handoff.ts` — 交接验证
-
-## 快速规则
-
-| 操作 | 必须参考 |
-|------|----------|
-| 新增模块 | `prompts/add-module.md` + `templates/module/` |
-| 新增 API 端点 | `prompts/add-endpoint.md` + `templates/bff-endpoint/` |
-| 新增同步策略 | `prompts/add-sync-strategy.md` |
-| 物理拆分服务 | `prompts/split-service.md` |
-| 契约变更 | `checklists/schema-change.md` |
-| 数据库迁移 | `checklists/migration.md` |
-| 同步冲突处理 | `checklists/sync-conflict.md` |
-| 多 agent 交接 | `checklists/handoff.md` |
-| 发版 | `checklists/release.md` |
-
-## 验证
-
-- CI 必须校验 `codemap.yml` 语法 + 语义
-- `just quality boundary` 必须校验依赖方向
-- Agent 生成代码必须在约束边界内，CI 必须拦截越界行为
+1. 详细 subagent 行为定义仍在 `.agents/skills/*/SKILL.md`。
+2. 参考实现与真实开发模式应优先从现有 `services/*`、`workers/*`、`servers/*` 和 `packages/contracts/*` 获取，而不是依赖 agent 模板。
+3. 如果 `agent/` 文档与代码冲突，以代码和可执行验证结果为准。

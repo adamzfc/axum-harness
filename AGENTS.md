@@ -35,9 +35,7 @@
 | **P0** | `agent/codemap.yml` | 模块级约束：路径、依赖、禁止、文件要求 |
 | **P0** | `agent/manifests/routing-rules.yml` | 路径到 subagent 的机器可读映射 |
 | **P0** | `agent/manifests/gate-matrix.yml` | subagent 到门禁的机器可读映射 |
-| **P1** | `agent/manifests/subagents.yml` | subagent 定义、可写/禁写目录、职责 |
-| **P1** | `docs/architecture/repo-layout.md` | 目录布局规则 |
-| **P2** | `agent/constraints/` | 机器可读的依赖/模式/契约约束 |
+| **P1** | `docs/architecture/repo-layout.md` | 目录布局规则与目标态架构入口 |
 | **P2** | `docs/adr/` | 架构决策记录（001-008） |
 | **P2** | `.agents/skills/*/SKILL.md` | 各领域 subagent 的详细技能说明 |
 
