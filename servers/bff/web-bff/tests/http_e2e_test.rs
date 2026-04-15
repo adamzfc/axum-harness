@@ -7,6 +7,7 @@ use axum::{
     body::Body,
     http::{self, Request, StatusCode},
 };
+use counter_service::infrastructure::LibSqlCounterRepository;
 use http_body_util::BodyExt;
 use storage_turso::EmbeddedTurso;
 use tower::ServiceExt;
@@ -29,13 +30,10 @@ async fn build_test_state() -> BffState {
         .expect("Failed to run tenant migrations");
 
     // Run counter migration
-    data::ports::lib_sql::LibSqlPort::execute(
-        &db,
-        counter_service::application::COUNTER_MIGRATION,
-        vec![],
-    )
-    .await
-    .expect("Failed to run counter migration");
+    let repo = LibSqlCounterRepository::new(db.clone());
+    repo.migrate()
+        .await
+        .expect("Failed to run counter migration");
 
     BffState::new_with_db(db).await
 }

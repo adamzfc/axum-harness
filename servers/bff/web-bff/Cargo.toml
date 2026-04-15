@@ -13,6 +13,7 @@ tenant-service = { workspace = true }
 user-service = { workspace = true }
 event-bus = { workspace = true }
 contracts_api = { workspace = true }
+contracts_errors = { workspace = true }
 contracts_events = { workspace = true }
 kernel = { workspace = true }
 data = { workspace = true }
