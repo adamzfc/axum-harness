@@ -1,0 +1,26 @@
+# Outbox Relay Worker — ConfigMap (Public Configuration)
+#
+# This ConfigMap contains NON-SENSITIVE configuration.
+# Sensitive values go in SOPS-encrypted Secrets.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: outbox-relay-worker-config
+  namespace: app-dev
+  labels:
+    app.kubernetes.io/name: outbox-relay-worker
+    app.kubernetes.io/env: dev
+data:
+  # ── Worker ─────────────────────────────────────────────────
+  RUST_LOG: "debug,outbox-relay-worker=trace"
+
+  # ── Outbox Relay (tuning parameters) ──────────────────────
+  OUTBOX_POLL_INTERVAL_MS: "500"
+  OUTBOX_BATCH_SIZE: "100"
+
+  # ── NATS Subject Prefix ───────────────────────────────────
+  NATS_SUBJECT_PREFIX: "counter"
+
+  # ── Checkpoint Path ───────────────────────────────────────
+  CHECKPOINT_PATH: "/data/outbox-relay-checkpoint.json"

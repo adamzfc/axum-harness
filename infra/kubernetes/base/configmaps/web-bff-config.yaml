@@ -1,0 +1,32 @@
+# Web BFF — ConfigMap (Public Configuration)
+#
+# This ConfigMap contains NON-SENSITIVE configuration.
+# Sensitive values (JWT secrets, tokens, passwords) go in Secrets (SOPS-encrypted).
+#
+# This separation allows:
+# - Public config to be visible in Git
+# - Secrets to be encrypted and audited
+# - Runtime overrides via separate mechanism
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-bff-config
+  namespace: app-dev
+  labels:
+    app.kubernetes.io/name: web-bff
+    app.kubernetes.io/env: dev
+data:
+  # ── Server (non-sensitive) ─────────────────────────────────
+  SERVER_HOST: "0.0.0.0"
+  SERVER_PORT: "3010"
+
+  # ── Logging ────────────────────────────────────────────────
+  RUST_LOG: "debug,web-bff=trace"
+
+  # ── CORS (public origins) ─────────────────────────────────
+  CORS_ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:3000"
+
+  # ── Feature Flags ─────────────────────────────────────────
+  # ENABLE_EMBEDDED_MODE: "true"
+  # ENABLE_REMOTE_TURSO: "false"

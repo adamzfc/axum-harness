@@ -1,0 +1,46 @@
+# .sops.yaml — Unified SOPS encryption rules for all environments and deployables
+#
+# SOPS (Secrets OPerationS) encrypts YAML/JSON/ENV secrets
+# using age encryption. This is the SINGLE source of truth for SOPS rules.
+#
+# Backend binaries consume standard environment variables.
+# Environment variables are injected via SOPS/Kustomize/Flux, NOT from .env files.
+#
+# Quick inner loop (local dev, no cluster):
+#   sops exec-env infra/security/sops/dev/web-bff.enc.yaml -- cargo run -p web-bff
+#
+# This file defines creation rules organized by:
+#   1. Environment (dev/staging/prod)
+#   2. Deployable granularity (per-service/worker secrets)
+#
+# Setup:
+#   1. Install: mise install (includes age + sops)
+#   2. Generate key: just sops-gen-age-key
+#   3. Update public key in this file (or use just sops-set-age-key)
+#   4. Create/edit secrets: just sops-edit <deployable> <env>
+#   5. Local reconcile: just sops-reconcile-dev
+
+creation_rules:
+  # ── Templates (for encryption) ─────────────────────────────
+  # Matches template files that will be encrypted
+  - path_regex: infra/security/sops/templates/.*\.yaml$
+    age: >-
+      age1p5v7s6gpq7grkdgldlguha9x3z79lgwl8vhwppwjs0xvng2g84rs8j67pm
+
+  # ── Production secrets (all deployables) ──────────────────────
+  # Matches: infra/security/sops/prod/*.enc.yaml
+  - path_regex: infra/security/sops/prod/.*\.enc\.yaml$
+    age: >-
+      age1p5v7s6gpq7grkdgldlguha9x3z79lgwl8vhwppwjs0xvng2g84rs8j67pm
+
+  # ── Staging secrets (all deployables) ─────────────────────────
+  # Matches: infra/security/sops/staging/*.enc.yaml
+  - path_regex: infra/security/sops/staging/.*\.enc\.yaml$
+    age: >-
+      age1p5v7s6gpq7grkdgldlguha9x3z79lgwl8vhwppwjs0xvng2g84rs8j67pm
+
+  # ── Dev secrets (all deployables) ─────────────────────────────
+  # Matches: infra/security/sops/dev/*.enc.yaml
+  - path_regex: infra/security/sops/dev/.*\.enc\.yaml$
+    age: >-
+      age1p5v7s6gpq7grkdgldlguha9x3z79lgwl8vhwppwjs0xvng2g84rs8j67pm
