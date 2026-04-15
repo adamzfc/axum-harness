@@ -1,13 +1,22 @@
-//! Kernel — base types for the entire system.
+//! Kernel — base types and utilities for the entire system.
 //!
 //! This crate defines the foundational types used across all layers:
 //! - `TenantId` — tenant identifier (extracted from JWT)
 //! - `UserId` — user identifier
 //! - `AppError` — unified error type
 //! - `Cursor` — pagination cursor
+//! - `crypto` — cryptographic and encoding helpers
+//! - `id` — ID generation utilities
+//! - `time` — time formatting helpers
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+// ── Utility modules (from shared-utils) ────────────────────────
+
+pub mod crypto;
+pub mod id;
+pub mod time;
 
 // ── TenantId ──────────────────────────────────────────────────
 

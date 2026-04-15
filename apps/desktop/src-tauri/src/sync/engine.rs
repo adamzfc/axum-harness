@@ -1,6 +1,6 @@
 use crate::sync::conflict::{ConflictRecord, ConflictStrategy, resolve_conflict};
 use chrono::{DateTime, Utc};
-use domain::ports::lib_sql::LibSqlPort;
+use data::ports::lib_sql::LibSqlPort;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;

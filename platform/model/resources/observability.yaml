@@ -20,5 +20,4 @@ local_dev:
 
 required_by:
   - web-bff
-  - admin-bff
   - edge-gateway

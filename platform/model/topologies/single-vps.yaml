@@ -10,10 +10,6 @@ deployables:
     replicas: 1
     enabled: true
 
-  - name: admin-bff
-    replicas: 1
-    enabled: true
-
   - name: edge-gateway
     replicas: 1
     enabled: true

@@ -4,7 +4,7 @@
 //! against a LibSqlPort (embedded Turso / SQLite).
 
 use async_trait::async_trait;
-use domain::ports::lib_sql::LibSqlPort;
+use data::ports::lib_sql::LibSqlPort;
 use serde::Deserialize;
 
 use crate::domain::{CreateTenantInput, Tenant};

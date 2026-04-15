@@ -34,23 +34,6 @@ patches:
 
   - target:
       kind: Deployment
-      name: admin-bff
-    patch: |
-      - op: replace
-        path: /spec/replicas
-        value: 2
-      - op: replace
-        path: /spec/template/spec/containers/0/resources
-        value:
-          requests:
-            cpu: 250m
-            memory: 256Mi
-          limits:
-            cpu: "2"
-            memory: 2Gi
-
-  - target:
-      kind: Deployment
       name: web-server
     patch: |
       - op: replace
@@ -76,10 +59,7 @@ patches:
         value: api.example.com
       - op: replace
         path: /spec/rules/1/host
-        value: admin.example.com
-      - op: replace
-        path: /spec/rules/2/host
         value: app.example.com
       - op: replace
-        path: /spec/rules/3/host
+        path: /spec/rules/2/host
         value: example.com

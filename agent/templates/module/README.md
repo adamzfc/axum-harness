@@ -1,26 +1,35 @@
-# services/{{domain}}
+# {{domain}} Service
 
-> {{domain}} domain service — {{description}}
+> {{description}}
 
 ## Status
-- [ ] Phase 0: Stub
-- [ ] Phase 1: Implement domain/application/ports
-- [ ] Phase 2: Independent deployment
 
-## Dependencies
-- `packages/core/kernel` (TenantId, AppError)
-- `packages/core/domain` (port traits)
-- `packages/contracts/*` (HTTP/Event contracts)
-- `packages/features/{{domain}}` (trait definition)
+1. Decide first whether this directory is a `reference`, `stub`, or `planned` service.
+2. New business capabilities should usually start by copying `counter-service` or `tenant-service`, not by improvising structure.
 
-## Architecture
-- `domain/` — Pure domain logic
-- `application/` — Use case orchestration
-- `ports/` — External dependency abstractions
-- `contracts/` — Stable contract definitions
-- `sync/` — OfflineFirst sync strategies
+## Required Files
 
-## Migration
+1. `model.yaml` — service-local distributed semantics
+2. `src/domain/` — entities, value objects, invariants
+3. `src/application/` — command/query orchestration
+4. `src/ports/` — external dependency abstractions
+5. `src/events/` — service-local event intent
+6. `src/policies/` — service-local policy hooks
+7. `src/contracts/` — shared contract glue
+8. `tests/` and `migrations/`
+
+## Required Questions
+
+1. Which entities does this service own?
+2. Which commands require idempotency keys?
+3. Which events are replayable?
+4. Which queries need strong or read-your-write consistency?
+5. Which cross-service reads are allowed and why?
+
+## Verification
+
 ```bash
-just migrate up -p {{domain}}
+cargo build -p {{domain}}-service
+cargo test -p {{domain}}-service
+just validate-state strict
 ```

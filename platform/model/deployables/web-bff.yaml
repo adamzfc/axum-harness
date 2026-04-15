@@ -2,19 +2,22 @@ name: web-bff
 type: bff
 version: 1.0.0
 description: >
-  Backend-for-Frontend for the web application (SvelteKit).
-  Aggregates service APIs into view-optimized endpoints,
-  handles server-side rendering data fetching, and manages
-  web-specific auth/session concerns.
+  Web backend-for-frontend for user-facing surfaces.
+  Aggregates reference services into view-oriented APIs and exposes
+  the primary synchronous reference entrypoints.
 
 services:
   - counter
-  - user
   - tenant
-  - settings
-  - agent
-  - chat
-  - auth
+
+runtime_profile: http-latency-sensitive
+statefulness: stateless
+required_identity: ephemeral
+required_storage: none
+scaling_axis:
+  - cpu
+  - request_rate
+failure_domain: web-edge
 
 resources:
   - cache

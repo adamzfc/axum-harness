@@ -3,7 +3,7 @@ name: server-agent
 description: >
   Maintains servers, handlers, routes, middleware, and sync entrypoints.
   Owns servers/bff/**, servers/gateway/**, servers/internal-rpc/**.
-  Does protocol adaptation and API composition only — never owns core domain logic.
+  Does protocol adaptation and API composition only — never owns core domain logic or long-running transaction semantics.
 ---
 
 # Server Agent
@@ -15,11 +15,10 @@ You maintain **server entrypoints** — HTTP handlers, routes, middleware, and A
 ## Responsibility
 
 1. Own `servers/bff/web-bff/**` — Web Backend-for-Frontend
-2. Own `servers/bff/admin-bff/**` — Admin Backend-for-Frontend
-3. Own `servers/gateway/**` — Edge gateway (planned, Pingora-based)
-4. Own `servers/internal-rpc/**` — Internal RPC server (planned)
-5. Handle request/response adaptation, authn/z integration, API composition
-6. Core domain rules live in `services/**`, not in servers
+2. Own `servers/gateway/**` — Edge gateway
+3. Own `servers/internal-rpc/**` — Internal RPC server
+4. Handle request/response adaptation, authn/z integration, API composition
+5. Keep domain rules in `services/**`, not in servers
 
 ---
 
@@ -28,8 +27,9 @@ You maintain **server entrypoints** — HTTP handlers, routes, middleware, and A
 ```
 AGENTS.md                                → global protocol
 agent/codemap.yml                        → module constraints (servers layer)
-servers/bff/web-bff/Cargo.toml           → web-bff dependencies
-servers/bff/admin-bff/Cargo.toml         → admin-bff dependencies
+docs/architecture/repo-layout.md         → repo layout target state
+services/<name>/model.yaml               → service commands / queries / consistency expectations
+packages/contracts/**                    → protocol truth source
 ```
 
 ---
@@ -39,10 +39,9 @@ servers/bff/admin-bff/Cargo.toml         → admin-bff dependencies
 | Directory | Scope |
 |---|---|
 | `servers/bff/web-bff/**` | Web BFF handlers, routes, middleware |
-| `servers/bff/admin-bff/**` | Admin BFF handlers, routes, middleware |
 | `servers/gateway/**` | Gateway configuration, routes |
 | `servers/internal-rpc/**` | Internal RPC definitions |
-| `packages/contracts/**` | When protocol changes are needed (coordinate with contract-agent) |
+| `packages/contracts/**` | When protocol changes are needed |
 
 ---
 
@@ -66,37 +65,24 @@ servers/bff/admin-bff/Cargo.toml         → admin-bff dependencies
 | Typecheck | `just typecheck` |
 | Boundary check | `just boundary-check` |
 
-### Conditional Gates
-
-| Gate | Command | When |
-|---|---|---|
-| Contract checks | `just contracts-check` | `packages/contracts/` changed |
-
 ---
 
 ## Hard Rules
 
-1. Servers MAY import `services/**` (via traits/ports) and `packages/**`
-2. Server handlers must align with `packages/contracts/api/**` types
+1. Servers may import `services/**` and `packages/**`
+2. Server handlers must align with `packages/contracts/**`
 3. Protocol changes: update contracts first, then handlers
-4. Servers must NOT implement domain logic — delegate to services
-5. Servers must NOT import `infra/**`
-
----
-
-## Server Structure Convention
-
-Per `agent/codemap.yml`, each server should have:
-- `Cargo.toml`, `openapi.yaml`, `src/main.rs`
-- `src/handlers/`, `src/middleware/`, `src/routes/`
-- `README.md`
+4. Servers must NOT implement domain logic
+5. Servers must NOT implement long transactions — those belong in workflow models
+6. Servers must respect service-declared consistency expectations when exposing query endpoints
+7. Servers must NOT import `infra/**`
 
 ---
 
 ## When to Escalate
 
-1. Server handler implements domain logic (should be extracted to service)
-2. Protocol change without updating contracts first
-3. Server imports another server (circular dependency risk)
+1. Server handler implements domain logic
+2. Protocol change happens without updating contracts first
+3. Handler needs to orchestrate multi-step cross-service mutation (requires workflow)
 4. Server directly imports concrete storage/messaging adapters instead of ports
-5. BFF endpoint missing authn/z integration that existing pattern requires
+5. BFF endpoint cannot satisfy required consistency semantics with current service/query model

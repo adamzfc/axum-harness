@@ -1,0 +1,29 @@
+version: 1
+description: >
+  Global idempotency defaults for commands, workflows, relays, and workers.
+  Domain-specific rules are declared in services/<name>/model.yaml and workflow models.
+
+defaults:
+  command_side_effect:
+    required: true
+    dedupe_window: PT1H
+    scope: tenant
+    note: Any cross-process side effect must carry an idempotency key.
+
+  workflow_step:
+    required: true
+    dedupe_window: PT24H
+    scope: workflow-instance
+    note: Durable workflow steps must support retries and resume without duplicate effects.
+
+  relay_publish:
+    required: true
+    dedupe_window: PT24H
+    scope: message-stream
+    note: Relay and outbox publishing paths must tolerate retries and at-least-once delivery.
+
+  projector_consume:
+    required: true
+    dedupe_window: PT24H
+    scope: projection-consumer
+    note: Projectors must accept replay, duplicate delivery, and restart recovery.

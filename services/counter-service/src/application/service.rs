@@ -3,9 +3,9 @@
 //! This is the **only** place that implements `feature_counter::CounterService`
 //! for the repository-backed path.
 
+use crate::contracts::service::{CounterError, CounterService};
 use async_trait::async_trait;
 use chrono::Utc;
-use feature_counter::{CounterError, CounterService};
 use tracing::debug;
 
 use crate::domain::{Counter, CounterId};

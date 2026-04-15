@@ -5,11 +5,13 @@
 1. **Read constraints**: Load `agent/codemap.yml` and `agent/boundaries.md`
 2. **Copy template**: Duplicate `agent/templates/module/` to `services/<module-name>/`
 3. **Fill module structure**:
+   - `model.yaml` — service-local distributed semantics
    - `src/domain/` — Pure domain logic (entities, value objects, domain events)
    - `src/application/` — Use case orchestration (pure functions, port-driven)
    - `src/ports/` — External dependency abstractions (traits)
-   - `src/contracts/` — Stable contract definitions (DTOs, errors)
-   - `src/sync/` — Sync strategy definition (SyncStrategy, ConflictResolver)
+    - `src/contracts/` — Stable contract definitions (DTOs, errors)
+   - `src/events/` — service-local event intent
+   - `src/policies/` — service-local policy hooks
    - `src/lib.rs` — Module entry, re-exports
 4. **Update workspace**: Add to root `Cargo.toml` `[workspace.members]`
 5. **Update moon.yml**: Add build/test task for new module
@@ -23,10 +25,10 @@
 ## Checklist
 
 - [ ] Module name follows convention (kebab-case)
+- [ ] `model.yaml` declares owner/commands/events/queries/completeness
 - [ ] `Cargo.toml` has correct dependencies (no forbidden crates)
-- [ ] All `SyncStrategy` declarations present
 - [ ] Port traits defined in `src/ports/`
 - [ ] No direct adapter imports
-- [ ] Tests cover domain + application + sync
+- [ ] Tests cover domain + application
 - [ ] Contract types added to `packages/contracts/`
 - [ ] `agent/codemap.yml` updated if boundaries changed

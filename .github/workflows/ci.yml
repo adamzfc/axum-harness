@@ -71,28 +71,19 @@ env:
     -p contracts_auth
     -p contracts_events
     -p contracts_errors
-    -p shared-utils
+    # shared-utils removed — contents merged into kernel
     -p adapter-telemetry-otel
     -p adapter-telemetry-tracing
     -p storage_turso
     -p adapter-google-backend
     -p feature-auth
     -p feature-counter
-    -p feature-admin
-    -p feature-agent
-    -p feature-chat
-    -p feature-settings
     -p user-service
     -p tenant-service
     -p auth-service
     -p counter-service
-    -p chat-service
-    -p agent-service
     -p event-bus
-    -p admin-service
-    -p settings-service
     -p web-bff
-    -p admin-bff
 
 jobs:
   primary-static:
@@ -105,9 +96,6 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          components: rustfmt, clippy
 
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
@@ -174,7 +162,6 @@ jobs:
         run: >-
           cargo build
           -p web-bff
-          -p admin-bff
           --release
 
       - name: Test web-bff /scalar endpoint
@@ -191,21 +178,6 @@ jobs:
           echo "web-bff /healthz endpoint accessible"
 
           kill $WEB_BFF_PID || true
-
-      - name: Test admin-bff /scalar endpoint
-        run: |
-          ./target/release/admin-bff &
-          ADMIN_BFF_PID=$!
-
-          sleep 2
-
-          curl -f http://localhost:3020/scalar || exit 1
-          echo "admin-bff /scalar endpoint accessible"
-
-          curl -f http://localhost:3020/healthz || exit 1
-          echo "admin-bff /healthz endpoint accessible"
-
-          kill $ADMIN_BFF_PID || true
 
   summary:
     name: Backend CI

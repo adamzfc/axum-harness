@@ -2,7 +2,7 @@
 
 ## Steps
 
-1. **Identify target BFF**: web-bff, mobile-bff, or admin-bff
+1. **Identify target BFF**: web-bff or future mobile/desktop-facing shell boundary
 2. **Define contract**: Add request/response types to `packages/contracts/http/`
 3. **Create handler**: Use `agent/templates/bff-endpoint/src/handler.rs.gitkeep` as template
 4. **Create adapter**: Use `agent/templates/bff-endpoint/src/adapter.rs.gitkeep` as template

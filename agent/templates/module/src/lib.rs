@@ -5,4 +5,5 @@
 //! - `application/` — Use case orchestration
 //! - `ports/` — External dependency abstractions
 //! - `contracts/` — Stable contract definitions
-//! - `sync/` — OfflineFirst sync strategies
+//! - `events/` — service-local event intent
+//! - `policies/` — service-local policy hooks

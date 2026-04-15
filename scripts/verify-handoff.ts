@@ -76,13 +76,13 @@ function checkBoundary(paths: string[], boundary: SubagentBoundary): { valid: st
   const violations: string[] = [];
 
   for (const path of paths) {
-    const inReadonly = boundary.readonly.some((b) => pathMatchesBoundary(path, b));
     const inWritable = boundary.writable.some((b) => pathMatchesBoundary(path, b));
+    const inReadonly = boundary.readonly.some((b) => pathMatchesBoundary(path, b));
 
-    if (inReadonly) {
-      violations.push(`${path} (read-only — generated or owned by another agent)`);
-    } else if (inWritable) {
+    if (inWritable) {
       valid.push(path);
+    } else if (inReadonly) {
+      violations.push(`${path} (read-only — generated or owned by another agent)`);
     } else {
       // Path not in explicit writable or readonly — allow (planner-level files)
       valid.push(path);

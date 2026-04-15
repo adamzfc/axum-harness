@@ -3,7 +3,7 @@
 //! POST /api/tenant/init — ensure tenant exists for user (auto-create on first login).
 
 use axum::{Json, Router, extract::State, routing::post};
-use domain::ports::lib_sql::LibSqlPort;
+use data::ports::lib_sql::LibSqlPort;
 use serde_json::{Value, json};
 
 use contracts_api::InitTenantRequest;

@@ -44,7 +44,6 @@
 - `packages/adapters/auth/google-backend`
 - `services/*`
 - `servers/bff/web-bff`
-- `servers/bff/admin-bff`
 
 要求：
 

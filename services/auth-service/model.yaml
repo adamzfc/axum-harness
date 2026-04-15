@@ -1,0 +1,49 @@
+apiVersion: platform/v1
+kind: ServiceSemantics
+metadata:
+  name: auth-service
+spec:
+  owns_entities:
+    - name: auth-session
+      aggregate_root: auth-session
+      authoritative_store: libsql-primary
+      write_authority: single-writer
+      partition_key: user_sub
+      delete_semantics: soft
+
+  accepted_commands:
+    - name: start-login
+      idempotency_key: provider + login_nonce
+      timeout: PT15S
+      consistency_requirement: eventual
+      audit: true
+
+    - name: exchange-oauth-callback
+      idempotency_key: provider + authorization_code
+      timeout: PT20S
+      consistency_requirement: strong
+      audit: true
+
+  published_events:
+    - name: session-established
+      ordering_scope: per-entity
+      dedupe_rule: session_id + version
+      replayable: true
+      schema_version: 0.1.0
+      retention: P30D
+      compatibility_policy: backward
+
+  served_queries:
+    - name: get-session
+      consistency_level: read-your-write
+      staleness_budget: PT0S
+      cacheability: private-cacheable
+
+  cross_service_reads: []
+
+  spec_completeness:
+    ownership: declared
+    consistency: draft
+    idempotency: declared
+    partitioning: deferred
+    failure_behavior: deferred

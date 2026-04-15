@@ -1,53 +1,25 @@
-//! Counter Service — Golden Module 🏆
+//! Counter service reference library.
 //!
-//! This is the reference implementation for all services in this project.
-//! New services should copy this structure and conventions.
+//! This is the smallest end-to-end sample in the repo and the primary copy target
+//! for new business service skeletons.
 //!
-//! ## Architecture (Clean Architecture / Hexagonal)
+//! Target reference layout:
+//! - `domain/` → aggregate rules and invariants
+//! - `application/` → command/query orchestration
+//! - `ports/` → external dependency abstractions
+//! - `events/` → service-local event intent
+//! - `policies/` → policy placeholders and rule hooks
+//! - `contracts/` → DTO re-exports from shared contracts
 //!
-//! ```text
-//! ┌─────────────────────────────────────────────────┐
-//! │  interfaces/  (future: gRPC, HTTP routes)       │  ← Outer: protocol adapters
-//! ├─────────────────────────────────────────────────┤
-//! │  infrastructure/ (LibSqlCounterRepository)      │  ← Outer: storage adapters
-//! ├─────────────────────────────────────────────────┤
-//! │  application/   (TenantScopedCounterService)    │  ← Inner: use case orchestration
-//! ├─────────────────────────────────────────────────┤
-//! │  ports/         (CounterRepository trait)       │  ← Inner: external dependency abstract
-//! ├─────────────────────────────────────────────────┤
-//! │  domain/        (Counter, CounterId, errors)    │  ← Core: entities & invariants
-//! └─────────────────────────────────────────────────┘
-//!
-//!  contracts/     (DTO re-exports from packages/contracts/)
-//!  sync/          (OfflineFirst sync strategies)
-//! ```
-//!
-//! ## Dependency rules
-//! - `domain/` → zero external dependencies (pure Rust types)
-//! - `ports/` → only `domain/` + async-trait
-//! - `application/` → `domain/` + `ports/` + feature traits
-//! - `infrastructure/` → `ports/` + specific storage crates
-//! - `interfaces/` → `application/` + HTTP/gRPC frameworks
-//!
-//! ## Feature flags
-//! - `trait-only` — exports only trait definitions (for BFF compile-time dependency)
-//!
-//! ## Migration
-//! The `COUNTER_MIGRATION` constant in `application::service` contains the SQL
-//! DDL. Run this at startup from the composition root:
-//!
-//! ```ignore
-//! use counter_service::application::service::COUNTER_MIGRATION;
-//! db.execute(COUNTER_MIGRATION, vec![]).await?;
-//! ```
+//! `infrastructure/` remains temporarily because existing server and desktop
+//! composition roots still instantiate `LibSqlCounterRepository` from here.
 
 // ── Core layers ──
 pub mod application;
 pub mod contracts;
 pub mod domain;
+pub mod events;
+pub mod policies;
 pub mod ports;
-pub mod sync;
 
-// ── Outer layers ──
 pub mod infrastructure;
-pub mod interfaces;

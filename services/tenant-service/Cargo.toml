@@ -8,7 +8,7 @@ rust-version.workspace = true
 
 [dependencies]
 # Core abstractions
-domain = { workspace = true }
+data = { workspace = true }
 kernel = { workspace = true }
 
 # Contracts

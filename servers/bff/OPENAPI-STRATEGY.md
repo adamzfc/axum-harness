@@ -22,7 +22,7 @@
 - BFF 聚合多个 API 后返回新的组合视图
 - BFF 实现端特有的业务逻辑
 
-则该 BFF 需要补充独立 OpenAPI。当前 web-bff 和 admin-bff 均不属于此情况。
+则该 BFF 需要补充独立 OpenAPI。当前 web-bff 不属于此情况。
 
 ## 验证
 

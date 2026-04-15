@@ -18,4 +18,3 @@ rules:
 
 applies_to:
   - web-bff
-  - admin-bff

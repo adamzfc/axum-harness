@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Workflow",
-  "description": "A multi-step business process that orchestrates services and events",
+  "description": "A durable multi-step business workflow with explicit retry, checkpoint, compensation, and recovery semantics.",
   "type": "object",
   "required": ["name", "version", "steps"],
   "properties": {
@@ -22,22 +22,38 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["http_request", "event", "schedule", "manual"]
+          "enum": ["http_request", "event", "schedule", "manual", "command"]
         },
-        "source": { "type": "string" }
-      }
+        "source": { "type": "string" },
+        "ref": { "type": "string" }
+      },
+      "additionalProperties": false
     },
-    "steps": {
-      "type": "array",
-      "items": { "$ref": "#/definitions/step" }
+    "idempotency_key": {
+      "type": "string"
     },
     "timeout": {
       "type": "string",
       "description": "ISO 8601 duration (e.g., PT30S)"
     },
+    "checkpoint_policy": {
+      "type": "string",
+      "enum": ["per-step", "per-workflow", "none"]
+    },
     "retry_policy": {
       "type": "string",
       "description": "Reference to retry policy in policies/"
+    },
+    "steps": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/step" }
+    },
+    "compensation": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/compensation" }
+    },
+    "recovery": {
+      "$ref": "#/definitions/recovery"
     }
   },
   "definitions": {
@@ -50,17 +66,73 @@
           "type": "string",
           "description": "Service method or event to invoke"
         },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "timeout": {
+          "type": "string"
+        },
+        "max_retries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "checkpoint": {
+          "type": "boolean"
+        },
+        "parameters": {
+          "type": "object"
+        },
+        "depends_on": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
         "next": {
           "type": "array",
           "items": { "type": "string" },
           "description": "Next step names on success"
         },
+        "on_success": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
         "on_failure": {
           "type": "array",
           "items": { "type": "string" },
           "description": "Next step names on failure"
+        },
+        "compensation_ref": {
+          "type": "string"
         }
-      }
+      },
+      "additionalProperties": false
+    },
+    "compensation": {
+      "type": "object",
+      "required": ["for_step", "action"],
+      "properties": {
+        "for_step": { "type": "string" },
+        "action": { "type": "string" },
+        "idempotency_key": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "recovery": {
+      "type": "object",
+      "properties": {
+        "resume_from": {
+          "type": "string",
+          "enum": ["last_checkpoint", "beginning", "manual"]
+        },
+        "operator_intervention_on": {
+          "type": "string"
+        },
+        "data_risk": {
+          "type": "string",
+          "enum": ["none", "low", "moderate", "high"]
+        }
+      },
+      "additionalProperties": false
     }
-  }
+  },
+  "additionalProperties": false
 }

@@ -1,13 +1,20 @@
 name: projector-worker
-type: worker
+type: projector
 version: 0.1.0
 description: >
-  Event-driven read model projector. Consumes domain events and
-  builds denormalized read models optimized for query patterns.
-  Maintains projection state with checkpoint tracking per event
-  stream. Supports projection rebuild from arbitrary point.
+  Reference event-driven projector. Consumes domain events and builds
+  denormalized read models that must remain replayable and rebuildable.
 
 services: []
+
+runtime_profile: async-projection
+statefulness: checkpointed
+required_identity: ephemeral
+required_storage: ephemeral
+scaling_axis:
+  - event_throughput
+  - projection_lag
+failure_domain: async-projection
 
 resources:
   - nats

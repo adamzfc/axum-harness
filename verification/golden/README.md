@@ -1,21 +1,26 @@
 # Golden Baseline
 
-This directory contains the golden baseline for generated artifacts.
-After running generation commands, compare output against this baseline to detect drift.
+This directory contains the golden baseline for generated and reference artifacts.
+After running generation or replay-related verification commands, compare output against this baseline to detect drift.
 
 ## Contents
-
-### generated-sdk/
-Golden baseline for SDK generation output.
-After `just gen-sdk`, diff against this directory.
-
-### rendered-manifests/
-Golden baseline for rendered infrastructure manifests.
-After `just render-manifests`, diff against this directory.
 
 ### contracts/
 Golden baseline for generated contract types.
 After `just typegen`, diff `packages/contracts/generated/` against this directory.
+
+### generated-platform/
+Golden baseline for generated platform catalog output.
+After `just gen-platform`, diff platform outputs against this directory.
+
+### replay lanes
+Replay and rebuild references are anchored by:
+
+1. `workers/projector/`
+2. `workers/outbox-relay/`
+3. `services/counter-service/`
+
+These are not copied here wholesale, but `just verify-replay` treats them as required golden lanes.
 
 ## Usage
 
@@ -23,6 +28,7 @@ After `just typegen`, diff `packages/contracts/generated/` against this director
 # Generate all artifacts
 just gen-platform
 just typegen
+just verify-replay strict
 
 # Check for drift
 just verify-generated
@@ -30,7 +36,7 @@ just verify-generated
 
 ## Initial Baseline
 
-The initial baseline was created during Phase 4 (verification/ setup).
+The baseline is currently a harness-focused snapshot while the distributed reference set converges.
 To update the baseline after intentional changes:
 
 ```bash
@@ -38,11 +44,5 @@ To update the baseline after intentional changes:
 just gen-platform
 just typegen
 
-# Copy to golden directory
-cp -r platform/catalog/ verification/golden/generated-platform/
-cp -r packages/contracts/generated/ verification/golden/generated-contracts/
-
-# Commit the change
-git add verification/golden/
-git commit -m "chore: update golden baseline"
+# Refresh generated platform and contract outputs, then update the matching golden files.
 ```

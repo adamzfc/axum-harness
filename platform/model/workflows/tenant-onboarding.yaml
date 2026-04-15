@@ -1,36 +1,59 @@
 name: tenant-onboarding
 version: 1.0.0
 description: >
-  Workflow for onboarding a new tenant. Creates tenant record,
-  initializes default settings, provisions tenant-scoped resources,
-  and sends welcome notification.
+  Durable workflow for onboarding a new tenant. Creates the tenant record,
+  provisions tenant-scoped resources, and emits a completion event.
+  Designed as the reference multi-step workflow with
+  checkpointing and compensation.
 
 trigger:
-  type: http_request
-  source: POST /api/tenants
+  type: command
+  ref: create-tenant
+
+idempotency_key: tenant_id
+timeout: PT2M
+checkpoint_policy: per-step
+retry_policy: retry.default
 
 steps:
-  - name: create_tenant
+  - name: create-tenant-record
     action: tenant-service/create_tenant
-    next:
-      - initialize_settings
-      - provision_resources
+    idempotency_key: tenant_id
+    timeout: PT10S
+    max_retries: 3
+    checkpoint: true
+    on_success:
+      - provision-resources
 
-  - name: initialize_settings
-    action: settings-service/initialize_defaults
-    next:
-      - send_welcome
-
-  - name: provision_resources
+  - name: provision-resources
     action: tenant-service/provision_tenant_resources
-    next:
-      - send_welcome
+    idempotency_key: tenant_id
+    timeout: PT30S
+    max_retries: 5
+    checkpoint: true
+    depends_on:
+      - create-tenant-record
+    compensation_ref: compensate-resources
+    on_success:
+      - publish-completed
 
-  - name: send_welcome
-    action: event-bus/publish
+  - name: publish-completed
+    action: packages/messaging/publish
+    idempotency_key: tenant_id + completed
+    timeout: PT10S
+    max_retries: 3
+    checkpoint: true
     parameters:
-      event: TenantCreated
-    next: []
+      event: tenant-created
+    depends_on:
+      - provision-resources
 
-timeout: PT30S
-retry_policy: retry.default
+compensation:
+  - for_step: provision-resources
+    action: tenant-service/deprovision_tenant_resources
+    idempotency_key: tenant_id + compensate-resources
+
+recovery:
+  resume_from: last_checkpoint
+  operator_intervention_on: exhausted_retries
+  data_risk: moderate

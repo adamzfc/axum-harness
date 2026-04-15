@@ -1,136 +1,268 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Service",
-  "description": "A service is a business capability library, not a process. It provides domain logic that can be consumed by servers and workers.",
+  "description": "A service is a business capability and state boundary library. Its fine-grained distributed semantics live in services/<name>/model.yaml.",
   "type": "object",
-  "required": ["name", "domain", "version", "ports", "events"],
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
   "properties": {
-    "name": {
+    "apiVersion": {
       "type": "string",
-      "pattern": "^[a-z][a-z0-9-]*$",
-      "description": "Service identifier (kebab-case)"
+      "const": "platform/v1"
     },
-    "domain": {
+    "kind": {
       "type": "string",
-      "pattern": "^[a-z][a-z0-9-]*$",
-      "description": "Bounded context this service belongs to"
+      "const": "ServiceSemantics"
     },
-    "version": {
-      "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$",
-      "description": "Semantic version"
-    },
-    "description": {
-      "type": "string",
-      "description": "Human-readable description of service responsibilities"
-    },
-    "ports": {
-      "type": "array",
-      "items": { "$ref": "#/definitions/port" },
-      "description": "External dependency abstractions"
-    },
-    "events": {
-      "type": "array",
-      "items": { "$ref": "#/definitions/event" },
-      "description": "Events published by this service"
-    },
-    "dependencies": {
-      "type": "array",
-      "items": { "type": "string" },
-      "description": "Platform-level dependencies (packages/* and shared infrastructure services like services/event-bus)"
-    },
-    "deployable": {
-      "type": "string",
-      "description": "Reference to deployable that includes this service"
-    },
-    "tests": {
-      "type": "string",
-      "description": "Path to test directory"
-    },
-    "migrations": {
-      "type": "string",
-      "description": "Path to migration directory"
-    },
-    "status": {
-      "type": "string",
-      "enum": ["active", "stub", "pending"],
-      "description": "Implementation status"
-    },
-    "authentication": {
+    "metadata": {
       "type": "object",
+      "required": ["name"],
       "properties": {
-        "required": { "type": "boolean" },
-        "methods": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "spec": {
+      "type": "object",
+      "required": [
+        "owns_entities",
+        "accepted_commands",
+        "published_events",
+        "served_queries",
+        "cross_service_reads",
+        "spec_completeness"
+      ],
+      "properties": {
+        "owns_entities": {
           "type": "array",
-          "items": { "type": "string" }
-        }
-      }
-    },
-    "authorization": {
-      "type": "object",
-      "properties": {
-        "required": { "type": "boolean" },
-        "model": { "type": "string" }
-      }
-    },
-    "observability": {
-      "type": "object",
-      "properties": {
-        "tracing": {
-          "type": "object",
-          "properties": {
-            "enabled": { "type": "boolean" },
-            "sampler": { "type": "string" }
-          }
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/entity" }
         },
-        "metrics": {
-          "type": "object",
-          "properties": {
-            "enabled": { "type": "boolean" },
-            "port": { "type": "integer" }
-          }
+        "accepted_commands": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/command" }
         },
-        "logging": {
+        "published_events": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/event" }
+        },
+        "served_queries": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/query" }
+        },
+        "cross_service_reads": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/cross_service_read" }
+        },
+        "authz": {
           "type": "object",
           "properties": {
-            "level": { "type": "string" },
-            "format": { "type": "string" }
-          }
+            "required": { "type": "boolean" },
+            "model": { "type": "string" },
+            "consistency_hint": {
+              "type": "string",
+              "enum": ["MINIMIZE_LATENCY", "HIGHER_CONSISTENCY"]
+            }
+          },
+          "additionalProperties": false
+        },
+        "spec_completeness": {
+          "$ref": "#/definitions/spec_completeness"
         }
-      }
+      },
+      "additionalProperties": false
     }
   },
   "definitions": {
-    "port": {
+    "entity": {
       "type": "object",
-      "required": ["name", "type"],
+      "required": [
+        "name",
+        "aggregate_root",
+        "authoritative_store",
+        "write_authority",
+        "partition_key",
+        "delete_semantics"
+      ],
       "properties": {
         "name": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_]*$"
+          "pattern": "^[a-z][a-z0-9_-]*$"
         },
-        "type": {
+        "aggregate_root": {
           "type": "string",
-          "enum": ["repository", "cache", "publisher", "clock", "external_api", "storage", "workflow"]
+          "pattern": "^[a-z][a-z0-9_-]*$"
         },
-        "description": {
+        "authoritative_store": {
+          "type": "string"
+        },
+        "write_authority": {
+          "type": "string",
+          "enum": ["single-writer", "partitioned-single-writer", "lease-writer"]
+        },
+        "versioning": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["cas", "monotonic-version", "sequence", "custom"]
+            },
+            "field": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "partition_key": {
+          "type": "string"
+        },
+        "delete_semantics": {
+          "type": "string",
+          "enum": ["soft", "hard", "tombstone"]
+        },
+        "rebuild_source": {
           "type": "string"
         }
-      }
+      },
+      "additionalProperties": false
+    },
+    "command": {
+      "type": "object",
+      "required": ["name", "idempotency_key"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "timeout": {
+          "type": "string"
+        },
+        "consistency_requirement": {
+          "type": "string",
+          "enum": ["strong", "read-your-write", "monotonic-read", "bounded-staleness", "eventual"]
+        },
+        "compensation": {
+          "type": "string"
+        },
+        "audit": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
     },
     "event": {
       "type": "object",
-      "required": ["name", "schema"],
+      "required": ["name", "ordering_scope", "replayable"],
       "properties": {
         "name": {
           "type": "string",
-          "pattern": "^[A-Z][a-zA-Z0-9]*$"
+          "pattern": "^[a-z][a-z0-9-]*$"
         },
-        "schema": {
+        "ordering_scope": {
           "type": "string",
-          "description": "Path to event schema (relative to workspace root)"
+          "enum": ["global", "per-tenant", "per-entity", "none"]
+        },
+        "dedupe_rule": {
+          "type": "string"
+        },
+        "replayable": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "retention": {
+          "type": "string"
+        },
+        "compatibility_policy": {
+          "type": "string",
+          "enum": ["backward", "forward", "full", "none"]
         }
-      }
+      },
+      "additionalProperties": false
+    },
+    "query": {
+      "type": "object",
+      "required": ["name", "consistency_level"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "consistency_level": {
+          "type": "string",
+          "enum": ["strong", "read-your-write", "monotonic-read", "bounded-staleness", "eventual"]
+        },
+        "staleness_budget": {
+          "type": "string"
+        },
+        "cacheability": {
+          "type": "string",
+          "enum": ["cacheable", "private-cacheable", "not-cacheable"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "cross_service_read": {
+      "type": "object",
+      "required": ["target_service", "entity", "read_mode"],
+      "properties": {
+        "target_service": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "entity": {
+          "type": "string"
+        },
+        "read_mode": {
+          "type": "string",
+          "enum": ["query-api", "projection", "forbidden"]
+        },
+        "consistency": {
+          "type": "string",
+          "enum": ["strong", "read-your-write", "monotonic-read", "bounded-staleness", "eventual"]
+        },
+        "staleness_budget": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "spec_completeness": {
+      "type": "object",
+      "required": ["ownership", "consistency", "idempotency", "partitioning", "failure_behavior"],
+      "properties": {
+        "ownership": {
+          "type": "string",
+          "enum": ["declared", "verified", "tested"]
+        },
+        "consistency": {
+          "type": "string",
+          "enum": ["draft", "declared", "verified"]
+        },
+        "idempotency": {
+          "type": "string",
+          "enum": ["declared", "verified"]
+        },
+        "partitioning": {
+          "type": "string",
+          "enum": ["declared", "deferred"]
+        },
+        "failure_behavior": {
+          "type": "string",
+          "enum": ["declared", "deferred"]
+        }
+      },
+      "additionalProperties": false
     }
-  }
+  },
+  "additionalProperties": false
 }

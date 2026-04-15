@@ -1,20 +1,16 @@
-//! Tenant domain service — multi-tenant isolation, member management, tenant lifecycle.
+//! Tenant service reference library.
 //!
-//! ## Architecture
-//! ```text
-//! domain/          → Tenant entity, CreateTenantInput, errors (zero deps)
-//! ports/           → TenantRepository trait (storage abstraction)
-//! application/     → TenantService (orchestrates via ports)
-//! infrastructure/  → LibSqlTenantRepository, SurrealDbTenantRepository
-//! contracts/       → DTO re-exports from packages/contracts/
-//! events/          → Domain events
-//! sync/            → OfflineFirst sync strategies
-//! ```
+//! This is the multi-entity and workflow-oriented reference service.
+//! The target skeleton keeps domain semantics in `model.yaml`, while source code
+//! remains focused on domain/application/ports/contracts/events/policies.
+//!
+//! `infrastructure/` remains temporarily because existing composition roots still
+//! construct repository adapters from this crate.
 
 pub mod application;
 pub mod contracts;
 pub mod domain;
 pub mod events;
 pub mod infrastructure;
+pub mod policies;
 pub mod ports;
-pub mod sync;

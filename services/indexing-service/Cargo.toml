@@ -1,0 +1,12 @@
+[package]
+name = "indexing-service"
+version = "0.1.0"
+edition = "2024"
+description = "Planned indexing capability placeholder"
+license = "MIT"
+
+[lib]
+path = "src/lib.rs"
+
+[features]
+default = []

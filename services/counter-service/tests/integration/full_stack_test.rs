@@ -4,10 +4,10 @@
 
 use chrono::{DateTime, Utc};
 use counter_service::application::{RepositoryBackedCounterService, TenantScopedCounterService};
+use counter_service::contracts::service::CounterService;
 use counter_service::infrastructure::LibSqlCounterRepository;
 use counter_service::ports::{CounterRepository, RepositoryError};
-use domain::ports::lib_sql::{LibSqlError, LibSqlPort};
-use feature_counter::CounterService;
+use data::ports::lib_sql::{LibSqlError, LibSqlPort};
 use kernel::TenantId;
 use rusqlite::Connection;
 use std::sync::Arc;

@@ -11,7 +11,6 @@
 # Stack:
 #   - gateway:3000        — Pingora reverse proxy (entry point)
 #   - web-bff:3010        — Web BFF server (distroless)
-#   - admin-bff:3020      — Admin BFF server (distroless)
 #   - surrealdb:8000      — SurrealDB (dev sidecar, kv-mem)
 #   - web-static:3002     — static-web-server (SvelteKit SPA)
 #
@@ -24,7 +23,7 @@
 services:
   # ── Pingora Gateway (Reverse Proxy) ────────────────────────
   # Single entry point for all HTTP traffic.
-  # Routes /api/* → web-bff:3010, /admin/* → admin-bff:3020, /* → web-static:3002
+# Routes /api/* → web-bff:3010, /* → web-static:3002
   gateway:
     build:
       context: ../../..
@@ -33,13 +32,10 @@ services:
       - "3000:3000"
     environment:
       - API_UPSTREAM=web-bff:3010
-      - ADMIN_UPSTREAM=admin-bff:3020
       - WEB_UPSTREAM=web-static:3002
       - BIND=0.0.0.0:3000
     depends_on:
       web-bff:
-        condition: service_healthy
-      admin-bff:
         condition: service_healthy
       web-static:
         condition: service_started
@@ -66,27 +62,6 @@ services:
       - web-bff-data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3010/healthz"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-
-  # ── Admin BFF Service (Axum) ────────────────────────────────
-  admin-bff:
-    build:
-      context: ../../..
-      dockerfile: infra/docker/Dockerfile.admin-bff
-    expose:
-      - "3020"
-    environment:
-      - ADMIN_BFF_DATABASE__URL=file:/data/admin-bff.db
-      - ADMIN_BFF_SERVER__HOST=0.0.0.0
-      - ADMIN_BFF_SERVER__PORT=3020
-      - RUST_LOG=info,admin-bff=debug
-    volumes:
-      - admin-bff-data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3020/healthz"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -145,4 +120,3 @@ services:
 
 volumes:
   web-bff-data:
-  admin-bff-data:

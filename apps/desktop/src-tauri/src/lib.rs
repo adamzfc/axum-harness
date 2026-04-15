@@ -3,10 +3,20 @@
 mod commands;
 mod sync;
 
-use runtime_tauri::commands::{admin, agent, auth, config, counter, settings};
-use runtime_tauri::schema::{AGENT_MIGRATIONS, COUNTER_MIGRATION};
+/// Client-local schema bootstrapping for the embedded desktop runtime.
+pub mod schema {
+    /// SQL migration for the local counter table used by desktop runtime.
+    pub const COUNTER_MIGRATION: &str = "CREATE TABLE IF NOT EXISTS counter (\
+        tenant_id TEXT PRIMARY KEY,\
+        value INTEGER NOT NULL DEFAULT 0,\
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))\
+    )";
+}
 
-use domain::ports::lib_sql::LibSqlPort;
+use commands::{auth, config, counter};
+use schema::COUNTER_MIGRATION;
+
+use data::ports::lib_sql::LibSqlPort;
 use std::path::{Path, PathBuf};
 use storage_turso::{EmbeddedTurso, embedded::run_tenant_migrations};
 use sync::SyncEngine;
@@ -150,13 +160,6 @@ pub fn run() {
             counter::counter_decrement,
             counter::counter_reset,
             counter::counter_get_value,
-            settings::settings_get,
-            settings::settings_update,
-            admin::admin_get_dashboard_stats,
-            agent::agent_create_conversation,
-            agent::agent_list_conversations,
-            agent::agent_get_messages,
-            agent::agent_chat,
             commands::sync::sync_start,
             commands::sync::sync_stop,
             commands::sync::sync_once,
@@ -233,12 +236,6 @@ pub fn run() {
                 db.execute(COUNTER_MIGRATION, vec![])
                     .await
                     .expect("Failed to run counter migration");
-
-                for migration in AGENT_MIGRATIONS {
-                    db.execute(migration, vec![])
-                        .await
-                        .expect("Failed to run agent migration");
-                }
 
                 db
             });

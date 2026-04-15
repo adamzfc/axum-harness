@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Deployable",
-  "description": "A deployable is a runnable process (server, worker, BFF). It may include one or more services.",
+  "description": "A deployable is a runnable process. It declares runtime role, statefulness, identity, storage, resources, and failure domain.",
   "type": "object",
   "required": ["name", "type", "version"],
   "properties": {
@@ -12,7 +12,7 @@
     },
     "type": {
       "type": "string",
-      "enum": ["server", "worker", "bff", "gateway"],
+      "enum": ["server", "worker", "bff", "gateway", "projector", "relay", "reconciler", "runner"],
       "description": "Deployable process type"
     },
     "version": {
@@ -27,6 +27,28 @@
       "type": "array",
       "items": { "type": "string" },
       "description": "Services included in this deployable"
+    },
+    "runtime_profile": {
+      "type": "string"
+    },
+    "statefulness": {
+      "type": "string",
+      "enum": ["stateless", "checkpointed", "stateful"]
+    },
+    "required_identity": {
+      "type": "string",
+      "enum": ["ephemeral", "stable"]
+    },
+    "required_storage": {
+      "type": "string",
+      "enum": ["none", "ephemeral", "persistent"]
+    },
+    "scaling_axis": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "failure_domain": {
+      "type": "string"
     },
     "resources": {
       "type": "array",
@@ -47,7 +69,8 @@
         "path": { "type": "string" },
         "port": { "type": "integer" },
         "interval_seconds": { "type": "integer" }
-      }
+      },
+      "additionalProperties": false
     },
     "environment_variables": {
       "type": "array",
@@ -57,7 +80,8 @@
         "properties": {
           "name": { "type": "string" },
           "sensitive": { "type": "boolean" }
-        }
+        },
+        "additionalProperties": false
       }
     },
     "observability": {
@@ -69,7 +93,8 @@
             "endpoint": { "type": "string" },
             "interval": { "type": "string" },
             "timeout": { "type": "string" }
-          }
+          },
+          "additionalProperties": false
         },
         "readiness_check": {
           "type": "object",
@@ -77,14 +102,17 @@
             "endpoint": { "type": "string" },
             "interval": { "type": "string" },
             "timeout": { "type": "string" }
-          }
+          },
+          "additionalProperties": false
         }
-      }
+      },
+      "additionalProperties": false
     },
     "ports": {
       "type": "array",
       "items": { "type": "integer" },
       "description": "Network ports exposed by this deployable"
     }
-  }
+  },
+  "additionalProperties": false
 }

@@ -8,8 +8,8 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
-use domain::ports::TenantId;
-use feature_counter::CounterService;
+use counter_service::contracts::service::CounterService;
+use kernel::TenantId;
 use utoipa::OpenApi;
 
 use crate::state::BffState;

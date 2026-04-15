@@ -3,7 +3,7 @@ type: cache
 description: >
   In-memory cache layer for frequently accessed data.
   Supports multiple backends (Moka for in-process, Valkey/Dragonfly
-  for distributed). Used for settings, session data, and hot paths.
+  for distributed). Used for session data and hot paths.
 
 technology: moka/valkey
 version: "0.12"
@@ -25,6 +25,4 @@ access_control:
   abac: false
 
 required_by:
-  - settings
   - web-bff
-  - admin-bff

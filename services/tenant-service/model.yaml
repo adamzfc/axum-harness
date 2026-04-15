@@ -1,0 +1,81 @@
+apiVersion: platform/v1
+kind: ServiceSemantics
+metadata:
+  name: tenant-service
+spec:
+  owns_entities:
+    - name: tenant
+      aggregate_root: tenant
+      authoritative_store: libsql-primary
+      write_authority: single-writer
+      versioning:
+        mode: monotonic-version
+        field: version
+      partition_key: tenant_id
+      delete_semantics: soft
+      rebuild_source: tenant-event-stream
+
+    - name: tenant-member
+      aggregate_root: tenant
+      authoritative_store: libsql-primary
+      write_authority: single-writer
+      partition_key: tenant_id
+      delete_semantics: hard
+      rebuild_source: tenant-member-event-stream
+
+  accepted_commands:
+    - name: create-tenant
+      idempotency_key: owner_sub
+      timeout: PT10S
+      consistency_requirement: strong
+      compensation: delete-tenant-record
+      audit: true
+
+    - name: invite-member
+      idempotency_key: tenant_id + invitee_email
+      timeout: PT15S
+      consistency_requirement: read-your-write
+      compensation: revoke-member-invitation
+      audit: true
+
+  published_events:
+    - name: tenant-created
+      ordering_scope: per-tenant
+      dedupe_rule: tenant_id
+      replayable: true
+      schema_version: 1.0.0
+      retention: P90D
+      compatibility_policy: backward
+
+    - name: member-invited
+      ordering_scope: per-tenant
+      dedupe_rule: tenant_id + invitee_email
+      replayable: true
+      schema_version: 1.0.0
+      retention: P90D
+      compatibility_policy: backward
+
+  served_queries:
+    - name: get-tenant
+      consistency_level: read-your-write
+      staleness_budget: PT0S
+      cacheability: private-cacheable
+
+    - name: list-tenant-members
+      consistency_level: eventual
+      staleness_budget: PT5S
+      cacheability: private-cacheable
+
+  cross_service_reads:
+    - target_service: authz
+      entity: permission-tuple
+      read_mode: projection
+      consistency: read-your-write
+      staleness_budget: PT0S
+
+  spec_completeness:
+    ownership: declared
+    consistency: declared
+    idempotency: declared
+    partitioning: declared
+    failure_behavior: deferred

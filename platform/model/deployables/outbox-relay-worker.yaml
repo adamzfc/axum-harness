@@ -1,14 +1,20 @@
 name: outbox-relay-worker
-type: worker
+type: relay
 version: 1.0.0
 description: >
-  Outbox pattern consumer. Polls the outbox table for pending events,
-  publishes them to the external message broker (NATS), and marks them
-  as delivered. Provides reliable event delivery with deduplication
-  and checkpoint tracking.
+  Reference outbox relay worker. Polls pending outbox records,
+  publishes them to the message backbone, and records delivery progress.
 
-services:
-  - event-bus
+services: []
+
+runtime_profile: async-delivery
+statefulness: checkpointed
+required_identity: ephemeral
+required_storage: ephemeral
+scaling_axis:
+  - queue_depth
+  - publish_latency
+failure_domain: async-relay
 
 resources:
   - turso

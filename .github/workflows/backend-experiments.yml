@@ -23,7 +23,7 @@ env:
     -p contracts_auth
     -p contracts_events
     -p contracts_errors
-    -p shared-utils
+    # shared-utils removed — contents merged into kernel
     -p adapter-telemetry-otel
     -p adapter-telemetry-tracing
     -p storage_turso
@@ -33,18 +33,12 @@ env:
     -p feature-admin
     -p feature-agent
     -p feature-chat
-    -p feature-settings
     -p user-service
     -p tenant-service
     -p auth-service
     -p counter-service
-    -p chat-service
-    -p agent-service
     -p event-bus
-    -p admin-service
-    -p settings-service
     -p web-bff
-    -p admin-bff
   SECONDARY_PACKAGES: >-
     -p pingora-gateway
     -p outbox-relay-worker

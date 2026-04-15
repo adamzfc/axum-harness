@@ -9,7 +9,7 @@ use axum::{
     http::StatusCode,
     routing::get,
 };
-use domain::ports::TenantId;
+use kernel::TenantId;
 use user_service::infrastructure::{LibSqlUserRepository, LibSqlUserTenantRepository};
 use user_service::ports::{TenantRepository, UserRepository, UserTenantRepository};
 use utoipa::OpenApi;

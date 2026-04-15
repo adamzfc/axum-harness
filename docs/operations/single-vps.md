@@ -74,7 +74,6 @@ services:
       - caddy_config:/config
     depends_on:
       - web-bff
-      - admin-bff
 
   # === Applications ===
   web-bff:
@@ -92,18 +91,6 @@ services:
       - nats
       - valkey
       - minio
-
-  admin-bff:
-    image: your-registry/admin-bff:${TAG:-latest}
-    environment:
-      - DATABASE_URL=libsql://file:/data/app.db
-      - NATS_URL=nats://nats:4222
-      - VALKEY_URL=redis://valkey:6379
-    volumes:
-      - app_data:/data
-    depends_on:
-      - nats
-      - valkey
 
   # === Workers ===
   indexer-worker:
@@ -169,9 +156,6 @@ your-domain.com {
     reverse_proxy /* web-bff:3000
 }
 
-admin.your-domain.com {
-    reverse_proxy admin-bff:3001
-}
 ```
 
 ### Create .env
@@ -220,7 +204,6 @@ docker compose ps
 
 # Check health endpoints
 curl https://your-domain.com/healthz
-curl https://admin.your-domain.com/healthz
 
 # Check logs
 docker compose logs -f web-bff
@@ -260,7 +243,6 @@ docker compose pull
 
 # Restart services (rolling)
 docker compose up -d --no-deps web-bff
-docker compose up -d --no-deps admin-bff
 docker compose up -d --no-deps indexer-worker
 # ... repeat for other services
 

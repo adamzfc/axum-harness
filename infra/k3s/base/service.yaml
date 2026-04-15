@@ -1,4 +1,4 @@
-# Service — Web BFF, Admin BFF, and Web services (ClusterIP)
+# Service — Web BFF and Web services (ClusterIP)
 ---
 apiVersion: v1
 kind: Service
@@ -15,24 +15,6 @@ spec:
   ports:
     - name: http
       port: 3010
-      targetPort: http
-      protocol: TCP
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: admin-bff
-  namespace: app
-  labels:
-    app.kubernetes.io/name: admin-bff
-    app.kubernetes.io/component: backend
-spec:
-  type: ClusterIP
-  selector:
-    app.kubernetes.io/name: admin-bff
-  ports:
-    - name: http
-      port: 3020
       targetPort: http
       protocol: TCP
 ---

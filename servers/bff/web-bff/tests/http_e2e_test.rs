@@ -29,20 +29,13 @@ async fn build_test_state() -> BffState {
         .expect("Failed to run tenant migrations");
 
     // Run counter migration
-    domain::ports::lib_sql::LibSqlPort::execute(
+    data::ports::lib_sql::LibSqlPort::execute(
         &db,
         counter_service::application::COUNTER_MIGRATION,
         vec![],
     )
     .await
     .expect("Failed to run counter migration");
-
-    // Run agent migrations
-    for migration in agent_service::application::migrations::AGENT_MIGRATIONS {
-        domain::ports::lib_sql::LibSqlPort::execute(&db, migration, vec![])
-            .await
-            .expect("Failed to run agent migration");
-    }
 
     BffState::new_with_db(db).await
 }

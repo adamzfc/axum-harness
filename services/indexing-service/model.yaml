@@ -1,0 +1,36 @@
+apiVersion: platform/v1
+kind: ServiceSemantics
+metadata:
+  name: indexing-service
+spec:
+  owns_entities:
+    - name: search-index-snapshot
+      aggregate_root: search-index
+      authoritative_store: derived-index-store
+      write_authority: partitioned-single-writer
+      partition_key: tenant_id
+      delete_semantics: tombstone
+
+  accepted_commands: []
+
+  published_events: []
+
+  served_queries:
+    - name: search-index-health
+      consistency_level: eventual
+      staleness_budget: PT30S
+      cacheability: not-cacheable
+
+  cross_service_reads:
+    - target_service: tenant-service
+      entity: tenant
+      read_mode: projection
+      consistency: eventual
+      staleness_budget: PT30S
+
+  spec_completeness:
+    ownership: declared
+    consistency: draft
+    idempotency: declared
+    partitioning: deferred
+    failure_behavior: deferred

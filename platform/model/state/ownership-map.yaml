@@ -1,0 +1,33 @@
+version: 1
+description: >
+  Global entity-to-owner mapping used for platform-wide validation.
+  Fine-grained distributed semantics remain in services/<name>/model.yaml.
+
+entities:
+  - entity: counter
+    owner_service: counter
+    source: services/counter-service/model.yaml
+
+  - entity: tenant
+    owner_service: tenant
+    source: services/tenant-service/model.yaml
+
+  - entity: tenant-member
+    owner_service: tenant
+    source: services/tenant-service/model.yaml
+
+  - entity: auth-session
+    owner_service: auth
+    source: services/auth-service/model.yaml
+
+  - entity: user-profile
+    owner_service: user
+    source: services/user-service/model.yaml
+
+  - entity: search-index-snapshot
+    owner_service: indexing
+    source: services/indexing-service/model.yaml
+
+  - entity: relay-envelope
+    owner_service: event-bus
+    source: services/event-bus/model.yaml

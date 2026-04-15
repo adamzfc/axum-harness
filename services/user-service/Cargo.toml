@@ -8,7 +8,7 @@ rust-version.workspace = true
 
 [dependencies]
 # Internal — core domain, contracts
-domain = { workspace = true }
+data = { workspace = true }
 kernel = { workspace = true }
 
 # Serialization & validation

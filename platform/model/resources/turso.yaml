@@ -30,6 +30,4 @@ required_by:
   - counter
   - user
   - tenant
-  - settings
-  - agent
-  - chat
+  - auth

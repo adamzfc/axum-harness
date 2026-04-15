@@ -281,26 +281,6 @@ The global `AppEvent` enum uses `serde(tag = "type", content = "payload")` for p
 
 ---
 
-### Chat Events
-
-#### `chat.message_sent`
-
-**Source Service**: `chat-service`
-**Topic Pattern**: `chat.*.messages`
-
-```json
-{
-  "type": "chat.message_sent",
-  "payload": {
-    "conversation_id": "conv_01hxyz...",
-    "message_id": "msg_01hxyz...",
-    "sender_id": "user_01hxyz..."
-  }
-}
-```
-
----
-
 ## Event Lifecycle
 
 ```mermaid

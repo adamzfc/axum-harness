@@ -46,28 +46,19 @@ env:
     -p contracts_auth
     -p contracts_events
     -p contracts_errors
-    -p shared-utils
+    # shared-utils removed — contents merged into kernel
     -p adapter-telemetry-otel
     -p adapter-telemetry-tracing
     -p storage_turso
     -p adapter-google-backend
     -p feature-auth
     -p feature-counter
-    -p feature-admin
-    -p feature-agent
-    -p feature-chat
-    -p feature-settings
     -p user-service
     -p tenant-service
     -p auth-service
     -p counter-service
-    -p chat-service
-    -p agent-service
     -p event-bus
-    -p admin-service
-    -p settings-service
     -p web-bff
-    -p admin-bff
 
 jobs:
   coverage:
@@ -78,7 +69,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Install Rust toolchain
+      - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools

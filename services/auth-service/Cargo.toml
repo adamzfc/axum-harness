@@ -12,6 +12,7 @@ kernel = { workspace = true }
 
 # Contracts
 contracts_api = { workspace = true }
+contracts_auth = { workspace = true }
 
 # Serialization & validation
 serde = { workspace = true }

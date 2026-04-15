@@ -1,0 +1,53 @@
+apiVersion: platform/v1
+kind: ServiceSemantics
+metadata:
+  name: counter-service
+spec:
+  owns_entities:
+    - name: counter
+      aggregate_root: counter
+      authoritative_store: libsql-primary
+      write_authority: single-writer
+      versioning:
+        mode: cas
+        field: version
+      partition_key: tenant_id
+      delete_semantics: soft
+      rebuild_source: counter-changed-event-stream
+
+  accepted_commands:
+    - name: increment-counter
+      idempotency_key: tenant_id + counter_key + request_hash
+      timeout: PT5S
+      consistency_requirement: eventual
+      audit: false
+
+    - name: reset-counter
+      idempotency_key: tenant_id + counter_key + reset_token
+      timeout: PT5S
+      consistency_requirement: read-your-write
+      audit: true
+
+  published_events:
+    - name: counter-changed
+      ordering_scope: per-tenant
+      dedupe_rule: tenant_id + counter_key + version
+      replayable: true
+      schema_version: 1.0.0
+      retention: P30D
+      compatibility_policy: backward
+
+  served_queries:
+    - name: get-counter
+      consistency_level: eventual
+      staleness_budget: PT10S
+      cacheability: cacheable
+
+  cross_service_reads: []
+
+  spec_completeness:
+    ownership: declared
+    consistency: declared
+    idempotency: declared
+    partitioning: declared
+    failure_behavior: deferred

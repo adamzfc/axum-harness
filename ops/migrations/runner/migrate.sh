@@ -4,7 +4,7 @@
 # Usage:
 #   bash ops/migrations/runner/migrate.sh [up|down|status|reset] [environment]
 #
-# Manages database migrations for all services.
+# Manages database migrations for all services. Migrations live under services/<name>/migrations/.
 # Supports: libSQL/Turso, SurrealDB
 # Environments: local, dev, staging, prod
 
@@ -34,7 +34,7 @@ log_error() {
 }
 
 # Configuration
-MIGRATIONS_DIR="ops/migrations"
+SERVICES_DIR="services"
 ENVIRONMENT="${2:-local}"
 
 # Service migration directories
@@ -76,7 +76,7 @@ get_db_url() {
 # Run migrations for a single service
 migrate_service() {
     local service=$1
-    local migration_dir="$MIGRATIONS_DIR/$service"
+    local migration_dir="$SERVICES_DIR/$service/migrations"
     
     if [ ! -d "$migration_dir" ]; then
         log_warning "No migration directory for $service, skipping..."
@@ -137,7 +137,7 @@ migrate_status() {
     echo ""
     
     for service in "${SERVICES[@]}"; do
-        local migration_dir="$MIGRATIONS_DIR/$service"
+        local migration_dir="$SERVICES_DIR/$service/migrations"
         
         if [ -d "$migration_dir" ]; then
             local count=$(ls -1 "$migration_dir"/*.sql 2>/dev/null | wc -l)

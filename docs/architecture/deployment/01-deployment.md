@@ -90,7 +90,6 @@ graph TB
 
     User -->|HTTPS| Caddy
     Caddy -->|web-bff:3000| WebBFF
-    Caddy -->|admin-bff:3001| AdminBFF
     Caddy -->|minio:9000| MinIO
     Caddy -->|openobserve:5080| OpenObserve
     

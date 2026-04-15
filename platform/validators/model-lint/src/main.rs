@@ -74,7 +74,7 @@ fn main() -> Result<()> {
 
     // Define model type to schema file mapping
     let model_schema_map = [
-        ("services", "service.schema.json"),
+        ("services", "service-metadata.schema.json"),
         ("deployables", "deployable.schema.json"),
         ("resources", "resource.schema.json"),
         ("workflows", "workflow.schema.json"),

@@ -1,6 +1,6 @@
 //! Web BFF — Backend For Frontend (Web 端)
 //!
-//! Phase 0: 路由和中间件已就位，admin/agent/tenant/counter 已迁移。
+//! Phase 0: 路由和中间件已就位，tenant/counter 为当前活跃 reference。
 
 pub mod config;
 pub mod error;
@@ -29,12 +29,6 @@ use utoipa_scalar::{Scalar, Servable};
     handlers::counter::get_value,
     handlers::user::get_user_profile,
     handlers::user::get_user_tenants,
-    handlers::agent::list_conversations,
-    handlers::agent::create_conversation,
-    handlers::agent::get_messages,
-    handlers::agent::chat_handler,
-    handlers::settings::get_settings,
-    handlers::settings::update_settings,
     handlers::tenant::init_tenant,
     handlers::health::healthz,
     handlers::health::readyz,
@@ -63,9 +57,6 @@ pub fn create_router(state: BffState) -> Router {
     let api_routes = Router::new()
         .merge(handlers::tenant::router())
         .merge(handlers::counter::router())
-        .merge(handlers::admin::router())
-        .merge(handlers::agent::router())
-        .merge(handlers::settings::router())
         .merge(handlers::user::router())
         .route_layer(axum::middleware::from_fn(
             middleware::tenant::tenant_middleware,

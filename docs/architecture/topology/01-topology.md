@@ -57,7 +57,7 @@ graph TB
 ### Characteristics
 | Aspect | Detail |
 |--------|--------|
-| Processes | 2 (web-bff, admin-bff) + docker services |
+| Processes | 1 (web-bff) + docker services |
 | Database | Embedded (no separate process) |
 | Workers | Optional, in-process or separate |
 | Auth | MockOAuthProvider |

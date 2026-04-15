@@ -1,7 +1,6 @@
 # Ingress — Traefik routing rules
 # Routes:
 #   api.example.com/*  → web-bff:3010
-#   admin.example.com/* → admin-bff:3020
 #   app.example.com/*  → web-server:80
 #   example.com/*      → web-server:80 (redirect from www)
 apiVersion: networking.k8s.io/v1
@@ -26,17 +25,6 @@ spec:
             backend:
               service:
                 name: web-bff
-                port:
-                  name: http
-    # ── Admin routes (Admin BFF) ──────────────────────────────
-    - host: admin.example.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: admin-bff
                 port:
                   name: http
     # ── Web app routes ─────────────────────────────────────────

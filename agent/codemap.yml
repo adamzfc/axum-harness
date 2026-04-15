@@ -1,28 +1,41 @@
-version: 1
-repo: boilerplate
-purpose: >
-  平台模型优先、契约优先、服务是库不是进程、拓扑切换不靠重构的 monorepo 约束图。
+version: 2
+repo:
+  name: boilerplate
+  mode: agent-first-distributed-harness
+  purpose: >
+    以完全体分布式要求为基线，构建可由多个专职 agent 并行开发、
+    且不会因隐性上下文缺失而写偏的 monorepo harness。
 
 notes: >
-  本文档描述的是目标态模块结构。
-  部分模块尚未实现，对应目录以 .gitkeep 占位。
-  新增模块时，必须先更新本文档，再创建目录和代码。
+  本文档描述的是重建后的目标态规则。
+  service 的细粒度分布式语义归属 services/<name>/model.yaml，
+  platform/model/* 只保留平台级元数据、全局规则、deployable、workflow、topology、resource、environment。
 
 principles:
+  - id: schema-before-model
+    rule: 需要新增语义表达时，先扩展 platform/schema，再修改 model。
   - id: platform-model-first
-    rule: 所有服务、部署单元、资源、工作流、策略、拓扑、环境变化先修改 platform/model
+    rule: 平台级能力先修改 platform/model，再考虑 infra 与生成物。
+  - id: service-local-semantics
+    rule: service 的 owns_entities、commands、events、queries、consistency 等细粒度语义写在 services/<name>/model.yaml。
   - id: contracts-first
-    rule: HTTP/Event/RPC/DTO/ErrorCode 变化先修改 packages/contracts
+    rule: HTTP/Event/RPC/DTO/ErrorCode 变化先修改 packages/contracts。
   - id: services-are-libraries
-    rule: services 仅承载业务能力，不承载进程入口
+    rule: services 是能力边界与状态边界，不承载进程入口。
   - id: workers-are-first-class
-    rule: 所有异步执行逻辑必须进入 workers
+    rule: 所有异步执行逻辑必须进入 workers，并显式声明幂等、重试、checkpoint/replay。
   - id: vendor-in-adapters-only
-    rule: 具体中间件 SDK 只能出现在 packages/*/adapters 或等价 vendor 适配目录
+    rule: vendor 依赖只能出现在 adapters 或 *-adapters 目录。
   - id: generated-readonly
-    rule: 所有生成物目录只读，不允许手工维护
-  - id: topology-not-refactor
-    rule: 拓扑切换只能通过 platform/model/topologies 完成
+    rule: 所有生成物目录只读，不允许手工维护。
+  - id: topology-no-semantic-change
+    rule: topology 只能改变承载形态，不得改变状态语义。
+  - id: single-owner-per-entity
+    rule: 每个核心实体必须存在唯一 owner service。
+  - id: projection-must-rebuild
+    rule: projection 必须可删可重建。
+  - id: workflow-for-long-transactions
+    rule: 跨 service 多步状态变更必须 workflow 化。
 
 layers:
   - name: root
@@ -38,7 +51,7 @@ layers:
   - name: agent
     paths:
       - "agent/**"
-    role: Agent 约束、模板、操作清单
+    role: agent 规则、模板、决策树、反模式、交接协议
 
   - name: platform-model
     paths:
@@ -47,7 +60,9 @@ layers:
       - "platform/generators/**"
       - "platform/validators/**"
       - "platform/catalog/**"
-    role: 平台模型与生成/校验层
+    role: 平台控制面、schema、validator、generator、catalog
+    notes: >
+      platform/model/* 只保留平台级元数据、全局规则、deployable、workflow、topology、resource、environment。
 
   - name: apps
     paths:
@@ -62,14 +77,16 @@ layers:
   - name: services
     paths:
       - "services/**"
-    role: 纯业务能力层
+    role: 业务能力与状态边界层
+    notes: >
+      每个 service 目录必须包含 model.yaml，由 service-agent 负责维护 service-local distributed semantics。
 
   - name: workers
     paths:
       - "workers/**"
-    role: 异步执行层
+    role: 异步执行、projection、replay、恢复层
 
-  - name: packages-core
+  - name: packages
     paths:
       - "packages/kernel/**"
       - "packages/platform/**"
@@ -79,16 +96,21 @@ layers:
       - "packages/authn/**"
       - "packages/authz/**"
       - "packages/data/**"
+      - "packages/data-traits/**"
+      - "packages/data-adapters/**"
       - "packages/messaging/**"
       - "packages/cache/**"
+      - "packages/cache-traits/**"
+      - "packages/cache-adapters/**"
       - "packages/storage/**"
+      - "packages/storage-traits/**"
+      - "packages/storage-adapters/**"
       - "packages/observability/**"
       - "packages/security/**"
-      - "packages/web3/**"
-      - "packages/wasm/**"
       - "packages/ui/**"
       - "packages/devx/**"
-    role: 共享抽象与适配层
+      - "packages/workspace-hack/**"
+    role: 共享抽象、traits、adapters、sdk、tooling
 
   - name: infra
     paths:
@@ -103,7 +125,7 @@ layers:
   - name: verification
     paths:
       - "verification/**"
-    role: 跨模块验证层
+    role: 跨层验证、compatibility、replay、golden 层
 
   - name: docs
     paths:
@@ -113,367 +135,40 @@ layers:
   - name: fixtures
     paths:
       - "fixtures/**"
-    role: 测试数据与种子
+    role: 测试数据、事件样例、authz tuples、demo 数据
 
   - name: tools
     paths:
       - "tools/**"
     role: 本地工具与诊断层
 
-modules:
+reference_modules:
   services:
-    user:
-      path: services/user-service
-      kind: domain-service
-      owns:
-        - 用户身份资料
-        - 会话相关业务规则
-        - 用户级领域事件
-      depends_on:
-        - packages/kernel
-        - packages/platform
-        - packages/contracts
-        - packages/runtime/ports
-        - packages/authn
-        - packages/authz
-      forbidden:
-        - services/*
-        - servers/*
-        - workers/*
-        - infra/**
-        - packages/**/adapters/**
-
-    tenant:
-      path: services/tenant-service
-      kind: domain-service
-      owns:
-        - 多租户隔离与成员关系
-        - tenant 级领域规则
-      depends_on:
-        - packages/kernel
-        - packages/platform
-        - packages/contracts
-        - packages/runtime/ports
-        - packages/authz
-      forbidden:
-        - services/*
-        - packages/**/adapters/**
-
-    settings:
-      path: services/settings-service
-      status: partial
-      kind: domain-service
-      owns:
-        - 用户或租户设置
-        - 设置相关规则和变更事件
-      depends_on:
-        - packages/kernel
-        - packages/platform
-        - packages/contracts
-        - packages/runtime/ports
-      forbidden:
-        - services/*
-        - packages/**/adapters/**
-
-    counter:
+    - name: counter
       path: services/counter-service
-      status: partial
-      kind: demo-service
-      owns:
-        - 最小完整业务链路示例
-        - 模块模板参考实现
-      depends_on:
-        - packages/kernel
-        - packages/platform
-        - packages/contracts
-        - packages/runtime/ports
-      forbidden:
-        - services/*
-        - packages/**/adapters/**
-
-    admin:
-      path: services/admin-service
-      status: partial
-      kind: domain-service
-      owns:
-        - 平台级管理动作
-        - 审计与平台治理业务规则
-      depends_on:
-        - packages/kernel
-        - packages/platform
-        - packages/contracts
-        - packages/runtime/ports
-        - packages/authz
-      forbidden:
-        - services/*
-        - packages/**/adapters/**
-
-    indexing:
-      path: services/indexing-service
-      status: planned
-      kind: domain-service
-      owns:
-        - 索引域规则
-        - 索引事件标准化约束
-      depends_on:
-        - packages/kernel
-        - packages/platform
-        - packages/contracts
-        - packages/runtime/ports
-        - packages/web3
-      forbidden:
-        - services/*
-        - packages/**/adapters/**
-      notes: >
-        目标态模块，尚未实现。对应目录以 .gitkeep 占位。
-
-    auth:
-      path: services/auth-service
-      status: partial
-      kind: domain-service
-      owns:
-        - OAuth 登录流程
-        - 会话与 token 生命周期
-      depends_on:
-        - packages/kernel
-        - packages/contracts
-        - packages/runtime/ports
-        - packages/authn
-      forbidden:
-        - services/*
-        - packages/**/adapters/**
-
-    chat:
-      path: services/chat-service
-      status: partial
-      kind: domain-service
-      owns:
-        - 对话与消息业务规则
-        - 参与者与消息流转约束
-      depends_on:
-        - packages/kernel
-        - packages/contracts
-        - packages/runtime/ports
-      forbidden:
-        - services/*
-        - packages/**/adapters/**
-
-    agent:
-      path: services/agent-service
-      status: partial
-      kind: domain-service
-      owns:
-        - agent 会话管理
-        - 工具调用与流式回复约束
-      depends_on:
-        - packages/kernel
-        - packages/contracts
-        - packages/runtime/ports
-      forbidden:
-        - services/*
-        - packages/**/adapters/**
-
-    event-bus:
-      path: services/event-bus
-      status: partial
-      kind: domain-service
-      owns:
-        - 事件包络与发布语义
-        - outbox 协调能力
-      depends_on:
-        - packages/kernel
-        - packages/contracts
-        - packages/runtime/ports
-      forbidden:
-        - services/*
-        - packages/**/adapters/**
-
-  servers:
-    web-bff:
-      path: servers/bff/web-bff
-      status: partial
-      kind: server
-      owns:
-        - Web 端视图聚合
-        - HTTP 协议适配
-      may_depend_on:
-        - services/user
-        - services/tenant
-        - services/settings
-        - services/counter
-        - packages/*
-      forbidden:
-        - infra/**
-
-    admin-bff:
-      path: servers/bff/admin-bff
-      status: partial
-      kind: server
-      owns:
-        - 管理端视图聚合
-        - 平台/租户管理 API 出口
-      may_depend_on:
-        - services/admin
-        - services/tenant
-        - services/user
-        - packages/*
-      forbidden:
-        - infra/**
-
-    edge-gateway:
-      path: servers/gateway
-      status: partial
-      kind: server
-      owns:
-        - 应用级入口路由与限流
-        - 应用级鉴权接入
-      may_depend_on:
-        - packages/*
-        - services/*
-      forbidden:
-        - infra/**
-      notes: >
-        目标态模块，当前为占位目录。
-
-    internal-rpc:
-      path: servers/internal-rpc
-      status: planned
-      kind: server
-      owns:
-        - 内部 RPC 入口
-      may_depend_on:
-        - services/*
-        - packages/*
-      forbidden:
-        - infra/**
-      notes: >
-        目标态模块，尚未实现。对应目录以 .gitkeep 占位。
+      role: 最小完整链路、CAS、event、projection 样例
+      status: reference
+    - name: tenant
+      path: services/tenant-service
+      role: 多租户、多实体、workflow、补偿样例
+      status: reference
 
   workers:
-    indexer:
-      path: workers/indexer
-      status: partial
-      kind: worker
-      owns:
-        - 协议源抓取
-        - 标准化转换
-        - 写入与 checkpoint
-      may_depend_on:
-        - services/indexing
-        - packages/*
-      must_have:
-        - checkpoint
-        - dedupe_or_resume_strategy
-
-    outbox-relay:
+    - name: outbox-relay
       path: workers/outbox-relay
-      status: partial
-      kind: worker
-      owns:
-        - outbox 轮询
-        - 事件投递
-        - 去重与重试
-      may_depend_on:
-        - packages/data
-        - packages/messaging
-        - packages/runtime
-      must_have:
-        - idempotency
-        - retry_policy
-
-    projector:
+      role: 至少一次投递、去重、checkpoint、retry 样例
+      status: reference
+    - name: projector
       path: workers/projector
-      status: partial
-      kind: worker
-      owns:
-        - 读模型构建
-        - 事件消费到 projection
-      may_depend_on:
-        - services/*
-        - packages/*
-      must_have:
-        - replay_strategy
+      role: projection、rebuild、replay、lag SLO 样例
+      status: reference
 
-    scheduler:
-      path: workers/scheduler
-      status: partial
-      kind: worker
-      owns:
-        - 定时作业调度与分发
-      may_depend_on:
-        - services/*
-        - packages/*
-      must_have:
-        - dedupe
-
-    sync-reconciler:
-      path: workers/sync-reconciler
-      status: partial
-      kind: worker
-      owns:
-        - 同步计划执行
-        - 冲突检测与修复
-      may_depend_on:
-        - services/*
-        - packages/*
-      must_have:
-        - conflict_strategy
-        - checkpoint
-
-    workflow-runner:
-      path: workers/workflow-runner
-      status: planned
-      kind: worker
-      owns:
-        - 业务工作流/Saga 执行
-      may_depend_on:
-        - services/*
-        - packages/runtime
-      must_have:
-        - compensation_strategy
-      notes: >
-        目标态模块，尚未实现。对应目录以 .gitkeep 占位。
-
-  apps:
-    web:
-      path: apps/web
-      status: partial
-      kind: client-app
-      depends_on:
-        - packages/sdk/typescript
-        - packages/ui
-        - packages/authn
-      forbidden:
-        - services/*
-        - workers/*
-        - infra/**
-
-    desktop:
-      path: apps/desktop
-      status: partial
-      kind: client-app
-      depends_on:
-        - packages/sdk/typescript
-        - packages/ui
-        - packages/authn
-      forbidden:
-        - services/*
-        - workers/*
-        - infra/**
-
-    mobile:
-      path: apps/mobile
-      status: planned
-      kind: client-app
-      depends_on:
-        - packages/sdk/typescript
-        - packages/ui
-      forbidden:
-        - services/*
-        - workers/*
-        - infra/**
-      notes: >
-        目标态模块，尚未实现。对应目录以 .gitkeep 占位。
+planned_or_stub_domains:
+  services:
+    - auth
+    - indexing
+  note: >
+    这些域可以存在为 stub 或 planned，但不作为第一批 reference module。
 
 ownership:
   generated_readonly:
@@ -484,16 +179,19 @@ ownership:
 
   human_authored:
     - agent/**
+    - platform/schema/**
     - platform/model/**
     - packages/contracts/**
     - services/**
     - servers/**
     - workers/**
+    - verification/**
+    - docs/architecture/**
+    - docs/operations/**
     - docs/adr/**
-    - docs/platform-model/**
 
 write_boundaries:
-  - area: agent
+  - area: planner
     may_modify:
       - agent/**
       - docs/**
@@ -507,10 +205,13 @@ write_boundaries:
       - platform/model/**
       - platform/generators/**
       - platform/validators/**
+      - docs/operations/**
+      - docs/platform-model/**
     must_not_modify:
-      - services/**
+      - services/*/src/**
       - apps/**
-    notes: 模型层不直接承载业务实现
+    notes: >
+      platform-ops-agent 负责平台级元数据与全局规则，不直接承载 service 细粒度语义实现。
 
   - area: services
     may_modify:
@@ -521,7 +222,9 @@ write_boundaries:
     must_not_modify:
       - infra/**
       - platform/catalog/**
-    notes: 新增业务能力时，若涉及协议变更，必须先或同时修改 contracts
+      - platform/model/**
+    notes: >
+      service-agent 必须在 services/<name>/model.yaml 中维护该 service 的 distributed semantics。
 
   - area: servers
     may_modify:
@@ -531,16 +234,18 @@ write_boundaries:
     must_not_modify:
       - services/*/domain/**
       - infra/**
-    notes: server 只能做协议适配与聚合
+    notes: server 只能做协议适配与聚合。
 
   - area: workers
     may_modify:
       - workers/**
       - verification/resilience/**
       - verification/topology/**
+      - verification/replay/**
     must_not_modify:
       - apps/**
-    notes: worker 变更必须声明幂等、重试或 checkpoint 策略
+      - infra/**
+    notes: worker 必须声明幂等、重试、checkpoint/replay、恢复顺序。
 
   - area: infra
     may_modify:
@@ -550,16 +255,10 @@ write_boundaries:
       - infra/gitops/**
       - infra/security/**
       - infra/images/**
+      - ops/**
     must_not_modify:
       - infra/kubernetes/rendered/**
-    notes: rendered 为生成目录，只能通过生成器刷新
-
-  - area: docs
-    may_modify:
-      - docs/**
-    must_not_modify:
-      - packages/sdk/**
-    notes: ADR 与 repo-layout 必须随重大结构变更同步更新
+    notes: rendered 为生成目录，只能通过生成器刷新。
 
 rules:
   imports:
@@ -582,7 +281,12 @@ rules:
     - name: services-cannot-import-concrete-adapters
       from: services/**
       disallow:
-        - packages/**/adapters/**
+        - packages/data-adapters/**
+        - packages/cache-adapters/**
+        - packages/storage-adapters/**
+        - packages/authz-adapters/**
+        - packages/authn/adapters/**
+        - packages/observability/adapters/**
         - infra/**
         - ops/**
 
@@ -606,79 +310,258 @@ rules:
         - workers/**
         - apps/**
 
-    - name: docs-are-not-runtime-deps
-      from:
-        - services/**
-        - servers/**
-        - workers/**
-        - apps/**
-      disallow:
-        - docs/**
+state_rules:
+  owner_service:
+    description: 每个核心实体必须存在唯一 owner service
+    required: true
 
-  readonly:
-    - path: packages/sdk/**
-      reason: generated
-    - path: infra/kubernetes/rendered/**
-      reason: generated
-    - path: docs/generated/**
-      reason: generated
-    - path: platform/catalog/**
-      reason: generated
+  cross_service_writes:
+    description: 非 owner service 禁止直接写主状态
+    default: forbidden
+    escape_hatch: 仅允许通过 command 或 workflow 间接变更
 
-  required_files:
-    service:
-      - Cargo.toml
-      - src/lib.rs
-      - src/domain/
-      - src/application/
-      - src/policies/
-      - src/ports/
-      - src/events/
-      - src/contracts/
-      - tests/
-      - migrations/
-      - README.md
+  consistency:
+    description: query、authz check、workflow dependent read 必须声明 consistency level
+    allowed_values:
+      - strong
+      - read-your-write
+      - monotonic-read
+      - bounded-staleness
+      - eventual
 
-    server:
-      - Cargo.toml
-      - openapi.yaml
-      - src/main.rs
-      - src/handlers/
-      - src/middleware/
-      - src/routes/
-      - README.md
+  projection:
+    description: projection 必须可删可重建
+    required_fields:
+      - source
+      - checkpoint_key
+      - rebuildable
+      - replayable
 
-    worker:
-      - Cargo.toml
-      - src/main.rs
-      - README.md
+  idempotency:
+    description: 跨进程副作用必须声明 idempotency key 与 dedupe 语义
+    required_for:
+      - commands_with_side_effects
+      - workers
+      - workflows
+      - relays
 
-    topology:
-      - platform/model/topologies/<name>.yaml
-      - verification/topology/<name>/
-      - docs/operations/<name>.md
+messaging_rules:
+  delivery_assumption: 默认至少一次；消费逻辑必须默认接受重复、重试、延迟与重放
+  forbidden_assumptions:
+    - 默认 exactly-once
+    - 默认全局顺序
+    - 默认永不重复
+    - 默认消息必达且准时
+  event_required_fields:
+    - producer
+    - ordering_scope
+    - dedupe_rule
+    - replayable
+    - schema_version
+    - compatibility_policy
+
+workflow_rules:
+  use_workflow_when:
+    - 跨 service 多步状态变更
+    - 有重试与补偿需求
+    - 需要 durable execution
+    - 需要人工介入恢复点
+  required_fields:
+    - trigger
+    - idempotency_key
+    - timeout
+    - checkpoint_policy
+    - compensation
+    - recovery
+  forbidden_patterns:
+    - HTTP handler 串多个 service 并 try/catch 回滚
+    - worker 中手写隐式长事务但没有模型
+    - 运维脚本充当长期恢复逻辑
+
+deployable_rules:
+  statefulness:
+    allowed_values:
+      - stateless
+      - checkpointed
+      - stateful
+  stable_identity_required_when:
+    - 拥有持久本地状态
+    - 需要唯一实例持有语义
+    - checkpoint 与实例身份绑定
+    - 运行分区或 shard owner
+  required_fields:
+    - kind
+    - hosts_services
+    - runtime_profile
+    - statefulness
+    - required_identity
+    - required_storage
+    - resource_bindings
+    - failure_domain
+
+decision_tree:
+  add_new_logic:
+    ask_in_order:
+      - 这是新业务能力，还是现有 service 的扩展？
+      - 核心实体归哪个 owner service？
+      - 这是 command、event、query，还是 workflow？
+      - 是否跨 service 多步状态变更？若是，必须 workflow 化。
+      - 是否需要 projection？若是，必须声明可重建。
+      - 是否涉及外部副作用？若是，必须声明 idempotency key。
+      - 是否需要稳定身份、持久存储、checkpoint？
+      - 是否引入新的 consistency requirement？
+
+  add_new_service:
+    must_create:
+      - services/<name>/model.yaml
+      - services/<name>/Cargo.toml
+      - services/<name>/src/domain/
+      - services/<name>/src/application/
+      - services/<name>/src/policies/
+      - services/<name>/src/ports/
+      - services/<name>/src/events/
+      - services/<name>/src/contracts/
+      - services/<name>/src/lib.rs
+      - services/<name>/tests/
+      - services/<name>/migrations/
+      - services/<name>/README.md
+    must_update:
+      - platform/model/services/<name>.yaml
+      - platform/model/state/ownership-map.yaml
+      - agent/codemap.yml
+
+  add_new_worker:
+    must_create:
+      - workers/<name>/Cargo.toml
+      - workers/<name>/src/main.rs
+      - workers/<name>/src/config.rs
+      - workers/<name>/src/job_or_consumer/
+      - workers/<name>/src/checkpoint/
+      - workers/<name>/src/dedupe/
+      - workers/<name>/src/retry/
+      - workers/<name>/src/metrics/
+      - workers/<name>/README.md
+    must_update:
+      - platform/model/deployables/<name>.yaml
+      - platform/model/workflows/ 或 services/*/model.yaml
+      - verification/replay/ 或 verification/resilience/
+
+change_playbooks:
+  change_contract:
+    steps:
+      - 先修改 packages/contracts
+      - 同步修改 services/<name>/model.yaml 中的 commands/events/queries
+      - 运行 contract compatibility validator
+      - 再修改 servers/workers/services 实现
+      - 最后生成 sdk
+
+  change_state_owner:
+    steps:
+      - 修改 services/<name>/model.yaml 的 owns_entities
+      - 更新 platform/model/state/ownership-map.yaml
+      - 检查 workflow 与 projection 影响
+      - 更新 replay/compatibility tests
+    risk: high
+
+  change_topology:
+    steps:
+      - 修改 platform/model/topologies
+      - 检查 deployables 与 failures
+      - 验证 topology 不改变状态语义
+      - 更新 verification/topology
+      - 再生成 infra rendered
+    risk: medium
+
+anti_patterns:
+  - id: direct-db-from-server
+    description: server 直接操作数据库
+    severity: error
+  - id: cross-service-import
+    description: service 直接依赖其他 service
+    severity: error
+  - id: cross-service-direct-write
+    description: 非 owner service 直接写主状态
+    severity: error
+  - id: handler-long-transaction
+    description: 在 handler 里串多个 service 形成长事务
+    severity: error
+  - id: projection-as-source-of-truth
+    description: 把 projection 当真相源
+    severity: error
+  - id: hidden-idempotency
+    description: 幂等逻辑只存在代码中，没有模型声明
+    severity: warn
+  - id: topology-changing-semantics
+    description: 通过 topology 改变状态语义
+    severity: error
+  - id: generated-manual-edit
+    description: 手改 generated 目录
+    severity: error
+  - id: event-bus-as-domain-service
+    description: 把纯基础设施能力伪装成业务 service
+    severity: warn
+
+required_files:
+  service:
+    - model.yaml
+    - Cargo.toml
+    - src/lib.rs
+    - src/domain/
+    - src/application/
+    - src/policies/
+    - src/ports/
+    - src/events/
+    - src/contracts/
+    - tests/
+    - migrations/
+    - README.md
+
+  server:
+    - Cargo.toml
+    - openapi.yaml
+    - src/main.rs
+    - src/handlers/
+    - src/middleware/
+    - src/routes/
+    - src/composition/
+    - README.md
+
+  worker:
+    - Cargo.toml
+    - src/main.rs
+    - src/config.rs
+    - src/job_or_consumer/
+    - src/checkpoint/
+    - src/dedupe/
+    - src/retry/
+    - src/metrics/
+    - README.md
 
 validation:
   commands:
     - just doctor
     - just lint
     - just test
-    - just gen-contracts
-    - just gen-sdk
-    - just gen-platform
     - just validate-platform
-    - just validate-deps
+    - just validate-state
+    - just validate-workflows
     - just validate-contracts
     - just validate-topology
     - just verify-generated
-    - just verify-single-vps
-    - just verify-k3s
+    - just verify-replay
+    - just verify-compat
+    - just verify-resilience
 
 entry_rules:
-  - 先改 platform/model，再改 infra
-  - 先改 packages/contracts，再改 servers/handlers
-  - services 是库，不是进程
+  - 先改 platform/schema，再改 platform/model 与 services/*/model.yaml
+  - 先改 packages/contracts，再改 servers/* 与 workers/*
+  - services 是能力边界，不是进程
   - workers 是一等公民，不是附属脚本
-  - vendor 只能进 adapters
+  - services/<name>/model.yaml 是 service-local distributed semantics 真理源
+  - platform/model/* 只保留平台级元数据与全局规则
+  - vendor 只能进 adapters 或 *-adapters
   - generated 目录禁止手改
-  - 拓扑变化通过 topology model 完成
+  - topology 变化通过 topology model 完成，且不得改变状态语义
+  - 任何核心实体必须声明唯一 owner service
+  - 任何跨进程副作用必须声明幂等、重试、去重、回放语义
+  - 任何跨 service 长事务必须通过 workflow model 定义

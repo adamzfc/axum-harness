@@ -84,60 +84,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 
 [[package]]
-name = "admin-bff"
-version = "0.1.0"
-dependencies = [
- "admin-service",
- "agent-service",
- "async-trait",
- "axum 0.8.8",
- "axum-extra",
- "base64 0.22.1",
- "contracts_api",
- "contracts_errors",
- "counter-service",
- "domain",
- "feature-admin",
- "feature-agent",
- "feature-counter",
- "feature-settings",
- "figment",
- "http-body-util",
- "hyper",
- "kernel",
- "reqwest 0.13.2",
- "serde",
- "serde_json",
- "settings-service",
- "storage_turso",
- "tenant-service",
- "thiserror 2.0.18",
- "tokio",
- "tower 0.5.3",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "user-service",
- "utoipa",
- "utoipa-scalar",
- "uuid",
-]
-
-[[package]]
-name = "admin-service"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "feature-admin",
- "kernel",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "aead"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -195,27 +141,6 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "winapi",
-]
-
-[[package]]
-name = "agent-service"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "bytes",
- "chrono",
- "contracts_api",
- "domain",
- "feature-agent",
- "futures-util",
- "kernel",
- "reqwest 0.13.2",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "uuid",
 ]
 
 [[package]]
@@ -653,6 +578,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "contracts_api",
+ "contracts_auth",
  "jsonwebtoken",
  "kernel",
  "rand 0.8.5",
@@ -1002,15 +928,6 @@ name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
-dependencies = [
- "generic-array 0.14.7",
-]
-
-[[package]]
-name = "block-padding"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8894febbff9f758034a5b8e12d87918f56dfc64a8e1fe757d65e29041538d93"
 dependencies = [
  "generic-array 0.14.7",
 ]
@@ -1414,25 +1331,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "chat-service"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "contracts_api",
- "domain",
- "feature-chat",
- "futures-util",
- "kernel",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
 name = "chrono"
 version = "0.4.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1785,8 +1683,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "contracts_api",
- "domain",
- "feature-counter",
+ "data",
  "kernel",
  "rusqlite",
  "serde",
@@ -2145,10 +2042,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "data"
+version = "0.1.0"
+dependencies = [
+ "data-traits",
+ "workspace-hack",
+]
+
+[[package]]
 name = "data-encoding"
 version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7a1e2f27636f116493b8b860f5546edb47c8d8f8ea73e1d2a20be88e28d1fea"
+
+[[package]]
+name = "data-traits"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "kernel",
+ "serde",
+ "serde_json",
+ "workspace-hack",
+]
 
 [[package]]
 name = "dbus"
@@ -2396,17 +2312,6 @@ dependencies = [
  "precomputed-hash",
  "selectors 0.36.1",
  "tendril 0.5.0",
-]
-
-[[package]]
-name = "domain"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "kernel",
- "serde",
- "serde_json",
- "workspace-hack",
 ]
 
 [[package]]
@@ -2784,79 +2689,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "feature-admin"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "contracts_api",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tracing",
- "workspace-hack",
-]
-
-[[package]]
-name = "feature-agent"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "contracts_api",
- "futures-util",
- "serde",
- "thiserror 2.0.18",
- "workspace-hack",
-]
-
-[[package]]
-name = "feature-auth"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "contracts_auth",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tracing",
- "workspace-hack",
-]
-
-[[package]]
-name = "feature-chat"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "futures-util",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "feature-counter"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tracing",
- "workspace-hack",
-]
-
-[[package]]
-name = "feature-settings"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
-]
-
-[[package]]
 name = "fern"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2938,7 +2770,6 @@ dependencies = [
  "crc32fast",
  "libz-ng-sys",
  "miniz_oxide",
- "zlib-rs",
 ]
 
 [[package]]
@@ -3736,7 +3567,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
 dependencies = [
  "ahash 0.8.12",
- "allocator-api2",
 ]
 
 [[package]]
@@ -4284,7 +4114,7 @@ dependencies = [
  "axum 0.8.8",
  "chrono",
  "contracts_events",
- "domain",
+ "data",
  "runtime",
  "serde",
  "serde_json",
@@ -4339,7 +4169,6 @@ version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "879f10e63c20629ecabbb64a8010319738c66a5cd0c29b02d63d272b03751d01"
 dependencies = [
- "block-padding",
  "generic-array 0.14.7",
 ]
 
@@ -4658,8 +4487,12 @@ dependencies = [
 name = "kernel"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "chrono",
+ "hex",
+ "rand 0.8.5",
  "serde",
+ "sha2",
  "thiserror 2.0.18",
  "uuid",
 ]
@@ -5183,15 +5016,20 @@ dependencies = [
 name = "native-tauri"
 version = "0.1.0"
 dependencies = [
+ "adapter-google",
  "async-trait",
+ "auth-service",
  "base64 0.22.1",
  "chrono",
- "domain",
+ "contracts_api",
+ "contracts_auth",
+ "counter-service",
+ "data",
  "dotenvy",
+ "kernel",
  "log",
  "rand 0.8.5",
  "reqwest 0.13.2",
- "runtime_tauri",
  "serde",
  "serde_json",
  "sha2",
@@ -6304,7 +6142,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67eabc2ef2a60eb7faa00097bd1ffdb5bd28e62bf39990626a582201b7a754e5"
 dependencies = [
  "siphasher 1.0.2",
- "uncased",
 ]
 
 [[package]]
@@ -7805,46 +7642,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "runtime_tauri"
-version = "0.1.0"
-dependencies = [
- "adapter-google",
- "admin-service",
- "agent-service",
- "async-trait",
- "base64 0.22.1",
- "chrono",
- "contracts_api",
- "contracts_auth",
- "counter-service",
- "domain",
- "dotenvy",
- "event-bus",
- "feature-admin",
- "feature-agent",
- "feature-auth",
- "feature-counter",
- "feature-settings",
- "futures-util",
- "kernel",
- "rand 0.8.5",
- "reqwest 0.13.2",
- "serde",
- "serde_json",
- "settings-service",
- "sha2",
- "storage_turso",
- "tauri",
- "tauri-plugin-opener",
- "tauri-plugin-store",
- "tenant-service",
- "tokio",
- "tracing",
- "url",
- "workspace-hack",
-]
-
-[[package]]
 name = "rusqlite"
 version = "0.32.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8489,23 +8286,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "settings-service"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "contracts_api",
- "domain",
- "feature-settings",
- "kernel",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "sfv"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8551,19 +8331,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
 dependencies = [
  "lazy_static",
-]
-
-[[package]]
-name = "shared-utils"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "chrono",
- "hex",
- "rand 0.8.5",
- "serde",
- "sha2",
- "uuid",
 ]
 
 [[package]]
@@ -8794,7 +8561,8 @@ name = "storage_surrealdb"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "domain",
+ "data-traits",
+ "kernel",
  "serde",
  "serde_json",
  "surrealdb",
@@ -8809,7 +8577,7 @@ dependencies = [
  "async-trait",
  "base64 0.22.1",
  "chrono",
- "domain",
+ "data-traits",
  "serde",
  "serde_json",
  "tempfile",
@@ -9770,7 +9538,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "contracts_api",
- "domain",
+ "data",
  "kernel",
  "serde",
  "serde_json",
@@ -10924,7 +10692,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
- "domain",
+ "data",
  "http-body-util",
  "kernel",
  "rand 0.8.5",
@@ -11288,8 +11056,6 @@ dependencies = [
 name = "web-bff"
 version = "0.1.0"
 dependencies = [
- "admin-service",
- "agent-service",
  "anyhow",
  "async-trait",
  "axum 0.8.8",
@@ -11299,12 +11065,8 @@ dependencies = [
  "contracts_api",
  "contracts_events",
  "counter-service",
- "domain",
+ "data",
  "event-bus",
- "feature-admin",
- "feature-agent",
- "feature-counter",
- "feature-settings",
  "figment",
  "futures-util",
  "http-body-util",
@@ -11314,7 +11076,6 @@ dependencies = [
  "reqwest 0.13.2",
  "serde",
  "serde_json",
- "settings-service",
  "storage_turso",
  "tenant-service",
  "thiserror 2.0.18",
@@ -12170,40 +11931,40 @@ name = "workspace-hack"
 version = "0.1.0"
 dependencies = [
  "ahash 0.8.12",
- "bitflags 2.11.0",
- "bumpalo",
+ "anstream",
+ "arrayvec",
+ "blake2",
  "bytemuck",
- "byteorder",
  "bytes",
+ "cc",
  "chrono",
- "cipher",
  "cookie",
  "crossbeam-channel",
- "crossbeam-epoch",
  "crossbeam-utils",
  "crypto-common",
- "deranged",
  "digest",
  "either",
- "event-listener",
+ "env_filter 1.0.1",
+ "env_logger",
  "fastrand",
  "flate2",
  "form_urlencoded",
  "futures-channel",
  "futures-core",
+ "futures-executor",
  "futures-io",
+ "futures-sink",
  "futures-task",
  "futures-util",
- "getrandom 0.2.17",
  "getrandom 0.3.4",
+ "half",
  "hashbrown 0.14.5",
  "hashbrown 0.16.1",
  "hyper",
  "hyper-util",
+ "idna",
  "indexmap 1.9.3",
  "indexmap 2.13.1",
- "inout",
- "libc",
  "lock_api",
  "log",
  "memchr",
@@ -12214,8 +11975,7 @@ dependencies = [
  "num-traits",
  "parking_lot",
  "percent-encoding",
- "phf 0.11.3",
- "phf_shared 0.10.0",
+ "petgraph",
  "phf_shared 0.11.3",
  "phf_shared 0.13.1",
  "proc-macro2",
@@ -12226,7 +11986,6 @@ dependencies = [
  "regex-syntax",
  "roaring",
  "rust_decimal",
- "rustls",
  "schemars 0.8.22",
  "semver",
  "serde",
@@ -12240,20 +11999,19 @@ dependencies = [
  "syn 1.0.109",
  "syn 2.0.117",
  "sync_wrapper",
+ "tauri",
  "tauri-build",
+ "tauri-runtime-wry",
  "tauri-utils",
  "time",
- "time-macros",
  "tokio",
  "tokio-stream",
  "tokio-util",
- "toml_datetime 1.1.1+spec-1.1.0",
  "toml_parser",
  "tower 0.5.3",
  "tracing",
  "tracing-core",
  "tracing-log",
- "uncased",
  "url",
  "utoipa",
  "utoipa-gen",
@@ -12540,12 +12298,6 @@ dependencies = [
  "quote",
  "syn 2.0.117",
 ]
-
-[[package]]
-name = "zlib-rs"
-version = "0.6.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3be3d40e40a133f9c916ee3f9f4fa2d9d63435b5fbe1bfc6d9dae0aa0ada1513"
 
 [[package]]
 name = "zmij"

@@ -1,12 +1,11 @@
-//! User Service — Clean Architecture implementation.
+//! User service stub library.
 //!
-//! Manages user lifecycle, tenant initialization, and authentication bindings.
+//! This crate remains as a planned capability placeholder. It is not a reference
+//! service and should not define the repository's target skeleton.
 
 pub mod application;
 pub mod contracts;
 pub mod domain;
 pub mod events;
 pub mod infrastructure;
-pub mod interfaces;
 pub mod ports;
-pub mod sync;

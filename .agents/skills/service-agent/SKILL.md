@@ -1,7 +1,8 @@
 ---
 name: service-agent
 description: >
-  Maintains services, domain logic, application layer, policies, and ports.
+  Maintains services, domain logic, application layer, policies, ports,
+  and service-local distributed semantics in services/<name>/model.yaml.
   Owns services/**, fixtures/**, verification/** (service-level).
   Services are pure libraries — no main.rs, no HTTP server, no message consumer loops.
   Never implements infrastructure adapters or process entry points.
@@ -9,7 +10,7 @@ description: >
 
 # Service Agent
 
-You maintain **pure domain logic** — business rules, use cases, policies, and port definitions.
+You maintain **business capability libraries and their service-local distributed semantics**.
 
 ---
 
@@ -17,9 +18,10 @@ You maintain **pure domain logic** — business rules, use cases, policies, and 
 
 1. Own all `services/*/` directories — domain service libraries
 2. Maintain domain logic, use cases, policies, port definitions
-3. Ensure domain logic accesses external world only through ports
-4. Ensure services are pure libraries (no `main.rs`, no HTTP server, no consumer loops)
-5. Coordinate with contract-agent when service interfaces change protocol
+3. Maintain `services/<name>/model.yaml` as the source of truth for service-local distributed semantics
+4. Ensure domain logic accesses the external world only through ports
+5. Ensure services are pure libraries (no `main.rs`, no HTTP server, no consumer loops)
+6. Coordinate with contract-agent when service interfaces change protocol
 
 ---
 
@@ -28,8 +30,9 @@ You maintain **pure domain logic** — business rules, use cases, policies, and 
 ```
 AGENTS.md                                     → global protocol
 agent/codemap.yml                             → module constraints (services layer)
-agent/constraints/dependencies.yaml           → dependency rules
-docs/adr/002-services-are-libraries.md        → ADR on service architecture
+docs/architecture/repo-layout.md              → target repo layout
+platform/model/README.md                      → platform vs service boundary
+services/<name>/model.yaml                    → service-local semantics truth source
 Individual service Cargo.toml and README.md
 ```
 
@@ -39,10 +42,10 @@ Individual service Cargo.toml and README.md
 
 | Directory | Scope |
 |---|---|
-| `services/**` | All domain service source code |
+| `services/**` | Service source code and `model.yaml` |
 | `fixtures/**` | Test data and seed data |
-| `verification/**` | Cross-module validation tests (service-level) |
-| `packages/contracts/**` | When service interface changes need protocol updates |
+| `verification/**` | Service-level validation tests |
+| `packages/contracts/**` | When service interfaces change need protocol updates |
 
 ---
 
@@ -51,7 +54,8 @@ Individual service Cargo.toml and README.md
 | Directory | Reason |
 |---|---|
 | `infra/**` | Owned by platform-ops-agent |
-| `packages/**/adapters/**` | Concrete adapter implementations (vendor lock-in) |
+| `platform/model/**` | Platform-level model owned by platform-ops-agent |
+| `packages/**/adapters/**` | Concrete adapter implementations |
 | `apps/**` | Owned by app-shell-agent |
 | `servers/**` | Owned by server-agent |
 | `workers/**` | Owned by worker-agent |
@@ -77,30 +81,46 @@ Individual service Cargo.toml and README.md
 3. Services must NOT import concrete adapters (`packages/**/adapters/**`)
 4. Services must NOT import `infra/**` or `ops/**`
 5. External access only through `ports/`
-6. Services must NOT depend on: `axum`, `sqlx`, `surrealdb`, `libsql`, `tower`
+6. Service-local distributed semantics belong in `services/<name>/model.yaml`
+7. Every service model must declare:
+   - `owns_entities`
+   - `accepted_commands`
+   - `published_events`
+   - `served_queries`
+   - `cross_service_reads`
+   - `spec_completeness`
+8. Non-owner direct writes are forbidden; cross-service mutation must go through command or workflow
 
-### Standard Service Dependencies
+---
 
-Each service depends on:
-- `packages/kernel`, `packages/platform`, `packages/contracts`, `packages/runtime/ports`
-- Optionally: `packages/authn`, `packages/authz`
+## Reference Modules
+
+These services are the reference set and should be treated as learning templates:
+
+1. `counter-service` → minimal end-to-end chain, CAS, event publication
+2. `tenant-service` → multi-tenant, multi-entity, workflow, compensation
+
+When adding a new service, prefer copying the nearest matching reference pattern instead of inventing a new structure.
 
 ---
 
 ## Service Structure Convention
 
-Per `agent/codemap.yml`, each service should have:
-- `Cargo.toml`, `src/lib.rs`
-- `src/domain/`, `src/application/`, `src/policies/`, `src/ports/`
-- `src/events/`, `src/contracts/`
-- `tests/`, `migrations/`, `README.md`
+Each service should have:
+
+1. `model.yaml`
+2. `Cargo.toml`, `src/lib.rs`
+3. `src/domain/`, `src/application/`, `src/policies/`, `src/ports/`
+4. `src/events/`, `src/contracts/`
+5. `tests/`, `migrations/`, `README.md`
 
 ---
 
 ## When to Escalate
 
-1. Service needs to import another service (extract to shared package)
+1. Service needs to import another service (extract to shared package or change model)
 2. Service needs concrete adapter (must go through ports → adapters pattern)
-3. Service contains `main.rs` or process entry point (architectural violation)
-4. Service change breaks contract that servers/workers depend on
-5. Missing tests for new domain logic (cannot verify correctness)
+3. Service contains `main.rs` or process entry point
+4. Service change breaks contracts used by servers/workers/apps
+5. A service requires workflow semantics but no workflow model exists yet
+6. A cross-service read cannot be expressed as `query-api`, `projection`, or `forbidden`

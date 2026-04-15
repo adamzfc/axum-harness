@@ -9,7 +9,6 @@ infra/gitops/flux/
 ├── apps/                  # Application definitions
 │   ├── api.yaml           # API service deployment
 │   ├── web.yaml           # Web BFF deployment
-│   ├── admin-bff.yaml     # Admin BFF deployment
 │   └── gateway.yaml       # Edge gateway deployment
 ├── infrastructure/        # Infrastructure components
 │   ├── nats.yaml          # NATS message broker

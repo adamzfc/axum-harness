@@ -1,0 +1,36 @@
+apiVersion: platform/v1
+kind: ServiceSemantics
+metadata:
+  name: event-bus
+spec:
+  owns_entities:
+    - name: relay-envelope
+      aggregate_root: relay-envelope
+      authoritative_store: outbox-store
+      write_authority: lease-writer
+      partition_key: producer_service
+      delete_semantics: hard
+
+  accepted_commands:
+    - name: publish-envelope
+      idempotency_key: producer_service + event_id
+      timeout: PT10S
+      consistency_requirement: eventual
+      audit: false
+
+  published_events: []
+
+  served_queries:
+    - name: get-relay-health
+      consistency_level: eventual
+      staleness_budget: PT30S
+      cacheability: not-cacheable
+
+  cross_service_reads: []
+
+  spec_completeness:
+    ownership: declared
+    consistency: draft
+    idempotency: declared
+    partitioning: deferred
+    failure_behavior: deferred

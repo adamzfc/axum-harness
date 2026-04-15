@@ -10,7 +10,6 @@
 |--------------------|-----------------|--------|
 | `api-server` | `infra/gitops/flux/apps/api.yaml` | ✅ |
 | `web-bff` | `infra/gitops/flux/apps/web.yaml` | ✅ |
-| `admin-bff` | `infra/gitops/flux/apps/admin-bff.yaml` | ✅ |
 | `edge-gateway` | `infra/gitops/flux/apps/gateway.yaml` | ✅ |
 | `outbox-relay-worker` | *(pending)* | ⚠️ TODO |
 | `indexer-worker` | *(pending)* | ⚠️ TODO |
@@ -35,7 +34,6 @@
 |--------------------|----------------|--------|
 | `api-server` | `infra/local/dockerfile.api` | ✅ |
 | `web-bff` | `infra/local/docker-compose.yml` | ✅ |
-| `admin-bff` | `infra/local/docker-compose.yml` | ✅ |
 | `edge-gateway` | `infra/local/docker-compose.yml` | ✅ |
 | Workers | `infra/local/docker-compose.yml` | ✅ |
 

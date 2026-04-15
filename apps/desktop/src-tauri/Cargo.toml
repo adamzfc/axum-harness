@@ -48,9 +48,14 @@ chrono = { workspace = true }
 thiserror = { workspace = true }
 
 # Internal crates
-domain = { workspace = true }
-runtime_tauri = { workspace = true }
-workspace-hack = { version = "0.1", path = "../../../packages/core/workspace-hack" }
+data = { workspace = true }
+kernel = { workspace = true }
+counter-service = { workspace = true }
+auth-service = { workspace = true }
+adapter-google = { workspace = true }
+contracts_auth = { workspace = true }
+contracts_api = { workspace = true }
+workspace-hack = { version = "0.1", path = "../../../packages/workspace-hack" }
 
 [features]
 e2e-testing = []

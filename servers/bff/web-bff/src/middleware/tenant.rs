@@ -8,8 +8,8 @@
 //! Extracts the JWT `sub` claim and injects it as `TenantId` into request extensions.
 
 use axum::{extract::Request, http::StatusCode, middleware::Next, response::Response};
-use domain::ports::TenantId;
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, dangerous::insecure_decode, decode};
+use kernel::TenantId;
 use serde::Deserialize;
 
 /// JWT claims we need — only `sub` matters for user identification.

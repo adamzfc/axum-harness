@@ -7,12 +7,9 @@ license = "MIT"
 rust-version.workspace = true
 
 [dependencies]
-# Feature trait (we implement it)
-feature-counter = { workspace = true }
-
 # Core abstractions (TenantId, LibSqlPort)
 kernel = { workspace = true }
-domain = { workspace = true }
+data = { workspace = true }
 
 # Contracts (DTOs)
 contracts_api = { workspace = true }

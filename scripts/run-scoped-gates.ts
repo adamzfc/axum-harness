@@ -61,6 +61,7 @@ const SUBAGENT_GATES: Record<string, SubagentGates> = {
   },
   'service-agent': {
     required: [
+      { label: 'State validation', cmd: 'just', args: ['validate-state', 'strict'] },
       { label: 'Typecheck', cmd: 'just', args: ['typecheck'] },
       { label: 'Boundary check', cmd: 'just', args: ['boundary-check'] },
     ],
@@ -68,6 +69,7 @@ const SUBAGENT_GATES: Record<string, SubagentGates> = {
   },
   'worker-agent': {
     required: [
+      { label: 'Replay verification', cmd: 'just', args: ['verify-replay', 'strict'] },
       { label: 'Typecheck', cmd: 'just', args: ['typecheck'] },
       { label: 'Boundary check', cmd: 'just', args: ['boundary-check'] },
       { label: 'Resilience checks', cmd: 'bun', args: ['run', 'scripts/validate-resilience.ts', '--mode', 'warn'] },
@@ -77,6 +79,8 @@ const SUBAGENT_GATES: Record<string, SubagentGates> = {
   'platform-ops-agent': {
     required: [
       { label: 'Platform validation', cmd: 'just', args: ['validate-platform'] },
+      { label: 'State validation', cmd: 'just', args: ['validate-state', 'strict'] },
+      { label: 'Workflow validation', cmd: 'just', args: ['validate-workflows', 'strict'] },
       { label: 'Topology validation', cmd: 'just', args: ['validate-topology'] },
       { label: 'Generated drift checks', cmd: 'just', args: ['verify-generated'] },
       { label: 'Boundary check', cmd: 'just', args: ['boundary-check'] },

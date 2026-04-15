@@ -8,7 +8,6 @@ resources:
   - network-policy.yaml
   - configmap.yaml
   - deployment-web-bff.yaml
-  - deployment-admin-bff.yaml
   - deployment-web.yaml
   - service.yaml
   - ingress.yaml

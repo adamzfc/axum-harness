@@ -1,6 +1,5 @@
 //! Infrastructure layer — LibSQL implementations of repository ports.
 
-use ::domain::ports::lib_sql::LibSqlPort;
 use async_trait::async_trait;
 use chrono::Utc;
 use serde::Deserialize;
@@ -9,6 +8,7 @@ use crate::domain;
 use crate::domain::UserTenantBinding;
 use crate::domain::error::UserError;
 use crate::ports::{TenantRepository, UserRepository, UserTenantRepository};
+use data::ports::lib_sql::LibSqlPort;
 
 /// LibSQL implementation of UserRepository.
 pub struct LibSqlUserRepository<P> {

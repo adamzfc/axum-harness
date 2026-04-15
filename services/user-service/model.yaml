@@ -1,0 +1,48 @@
+apiVersion: platform/v1
+kind: ServiceSemantics
+metadata:
+  name: user-service
+spec:
+  owns_entities:
+    - name: user-profile
+      aggregate_root: user-profile
+      authoritative_store: libsql-primary
+      write_authority: single-writer
+      partition_key: user_sub
+      delete_semantics: soft
+
+  accepted_commands:
+    - name: ensure-user-profile
+      idempotency_key: user_sub
+      timeout: PT10S
+      consistency_requirement: read-your-write
+      audit: true
+
+  published_events:
+    - name: user-profile-created
+      ordering_scope: per-entity
+      dedupe_rule: user_sub
+      replayable: true
+      schema_version: 0.1.0
+      retention: P30D
+      compatibility_policy: backward
+
+  served_queries:
+    - name: get-user-profile
+      consistency_level: read-your-write
+      staleness_budget: PT0S
+      cacheability: private-cacheable
+
+  cross_service_reads:
+    - target_service: tenant-service
+      entity: tenant-membership
+      read_mode: projection
+      consistency: eventual
+      staleness_budget: PT10S
+
+  spec_completeness:
+    ownership: declared
+    consistency: draft
+    idempotency: declared
+    partitioning: deferred
+    failure_behavior: deferred

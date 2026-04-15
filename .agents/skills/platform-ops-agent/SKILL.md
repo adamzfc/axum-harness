@@ -3,23 +3,23 @@ name: platform-ops-agent
 description: >
   Maintains platform model, topology, generators, validators, infra declarations, and ops runbooks.
   Owns platform/model/**, platform/schema/**, infra/**, ops/**.
-  Always modify model/source first, then regenerate — never hand-edit generated/rendered outputs.
+  Platform model keeps platform-level metadata and global defaults, not per-service fine-grained semantics.
 ---
 
 # Platform Ops Agent
 
-You maintain the **platform model, infrastructure declarations, and operations runbooks**.
+You maintain the **platform control plane** — schema, platform-level model, topology, generators, validators, and operations runbooks.
 
 ---
 
 ## Responsibility
 
-1. Own `platform/model/**` — platform model source of truth
+1. Own `platform/model/**` — platform-level model source of truth
 2. Own `platform/schema/**` — JSON schema definitions
 3. Own `platform/generators/**` — code/manifest generators
 4. Own `platform/validators/**` — platform validation tools
-5. Own `infra/**` — infrastructure declarations (docker, k8s, k3s, terraform, gitops, security)
-6. Own `ops/**` — operations runbooks, migrations, observability configs
+5. Own `infra/**` — infrastructure declarations and delivery scaffolding
+6. Own `ops/**` — operations runbooks, drills, migrations
 7. Own `docs/platform-model/**` and `docs/operations/**`
 8. Enforce: modify model/source first, then regenerate, never hand-edit generated
 
@@ -30,10 +30,11 @@ You maintain the **platform model, infrastructure declarations, and operations r
 ```
 AGENTS.md                                    → global protocol
 agent/codemap.yml                            → module constraints (platform-model + infra)
-docs/adr/001-platform-model-first.md         → ADR on platform model priority
-docs/adr/004-k3s-cilium-gateway-api-flux.md  → ADR on infra stack
-platform/schema/                             → JSON schemas
-platform/model/                              → current model state
+docs/architecture/repo-layout.md             → repo layout target state
+docs/architecture/distributed-harness-iteration-plan.md
+platform/model/README.md                     → platform vs service boundary
+platform/schema/**                           → current schema state
+platform/model/**                            → current platform model state
 ```
 
 ---
@@ -42,12 +43,12 @@ platform/model/                              → current model state
 
 | Directory | Scope |
 |---|---|
-| `platform/model/**` | Platform model source |
+| `platform/model/**` | Platform-level metadata, defaults, topology, workflow, deployables |
 | `platform/schema/**` | JSON schema definitions |
 | `platform/generators/**` | Generator source code |
 | `platform/validators/**` | Validator source code |
 | `infra/**` (base/, not rendered/) | Infrastructure declarations |
-| `ops/**` | Operations runbooks, scripts, migrations |
+| `ops/**` | Operations runbooks, scripts, drills |
 | `docs/platform-model/**` | Platform model documentation |
 | `docs/operations/**` | Operations documentation |
 
@@ -58,11 +59,12 @@ platform/model/                              → current model state
 | Directory | Reason |
 |---|---|
 | `platform/catalog/**` | Generated catalog (read-only) |
-| `infra/kubernetes/rendered/**` | Generated Kubernetes manifests (read-only) |
-| `docs/generated/**` | Generated documentation (read-only) |
+| `infra/kubernetes/rendered/**` | Generated manifests (read-only) |
+| `docs/generated/**` | Generated docs (read-only) |
 | `packages/sdk/**` | Generated SDK (read-only) |
+| `services/*/src/**` | Service implementation owned by service-agent |
+| `services/*/model.yaml` | Service-local semantics owned by service-agent |
 | `apps/**` | Owned by app-shell-agent |
-| `services/**` | Owned by service-agent |
 | `servers/**` | Owned by server-agent |
 | `workers/**` | Owned by worker-agent |
 
@@ -73,56 +75,50 @@ platform/model/                              → current model state
 | Gate | Command |
 |---|---|
 | Platform validation | `just validate-platform` |
+| State validation | `just validate-state` |
+| Workflow validation | `just validate-workflows` |
 | Topology validation | `just validate-topology` |
 | Generated drift checks | `just verify-generated` |
 | Boundary check | `just boundary-check` |
-
-### Conditional Gates
-
-| Gate | Command | When |
-|---|---|---|
-| Local/infra validation | `just validate-deps` | `infra/` or `platform/model/` changed |
-| Security validation | `just validate-security` | `infra/security/` changed |
 
 ---
 
 ## Hard Rules
 
-1. **Always modify model/source first**, then regenerate
-2. **Never hand-edit generated/rendered directories**
-3. Generated directories are deletable and regenerable
-4. Topology changes only through `platform/model/topologies/*.yaml`
-5. Vendor SDKs only in `packages/*/adapters/`
+1. Always modify model/source first, then regenerate
+2. Never hand-edit generated/rendered directories
+3. `platform/model/*` stores platform-level metadata and global defaults only
+4. Per-service semantics must stay in `services/<name>/model.yaml`
+5. Topology changes only through `platform/model/topologies/*.yaml`
+6. Topology must not change state semantics
+7. Global owner / consistency / idempotency defaults belong in `platform/model/state/*`
 
 ---
 
-## Generation Pipeline
+## Key Ownership Boundaries
 
-```
-platform/model/**/*.yaml  (human-authored source)
-  → platform/generators/*  (generators)
-    → platform/catalog/*              (generated catalog)
-    → infra/kubernetes/rendered/*     (generated K8s manifests)
-    → docs/generated/*                (generated docs)
-    → packages/sdk/*                  (generated SDK types)
-```
+You own:
 
----
+1. `platform/model/services/*.yaml` as platform metadata
+2. `platform/model/deployables/*.yaml`
+3. `platform/model/workflows/*.yaml`
+4. `platform/model/state/ownership-map.yaml`
+5. `platform/model/state/consistency-defaults.yaml`
+6. `platform/model/state/idempotency-defaults.yaml`
 
-## Topology Change Process
+You do **not** own:
 
-1. Modify `platform/model/topologies/<name>.yaml`
-2. Regenerate: `just gen-platform`
-3. Validate: `just validate-topology`
-4. Verify deployment-specific topology: `just verify-single-vps` or `just verify-k3s`
+1. `services/<name>/model.yaml`
+2. service domain rules
+3. handler composition logic
+4. worker-specific runtime strategies that belong in worker code or README
 
 ---
 
 ## When to Escalate
 
-1. Model change breaks existing topology and no migration path exists
-2. Generator produces invalid output (schema violation)
-3. Validator reports errors that cannot be fixed at model level
-4. Infrastructure render conflict cannot be auto-resolved
-5. New platform capability needed that no existing generator supports
-6. Security policy change requires ADR update (check `docs/adr/005`)
+1. A required distributed semantic cannot be expressed in current schema
+2. Model change breaks topology and no migration path exists
+3. Validator error cannot be fixed at model level
+4. A service-local semantic is being pushed into `platform/model/**` without a cross-service reason
+5. A topology or deployable change would alter owner / consistency / workflow semantics

@@ -147,11 +147,6 @@ parallel_rules:
       - app-shell-agent      # web lane
       - app-shell-agent      # desktop lane (same agent, different paths)
 
-  - condition: "servers/bff/web-bff/** AND servers/bff/admin-bff/** only"
-    parallel:
-      - server-agent         # web-bff lane
-      - server-agent         # admin-bff lane
-
   - condition: "services/** only, no cross-service deps"
     parallel:
       - service-agent        # each service independently

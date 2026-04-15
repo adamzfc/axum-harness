@@ -102,17 +102,9 @@ tasks:
     inputs:
       - 'servers/bff/web-bff/**/*'
 
-  dev-admin-bff:
-    command: 'cargo run -p admin-bff'
-    deps:
-      - 'check'
-    inputs:
-      - 'servers/bff/admin-bff/**/*'
-
   dev-fullstack:
     deps:
       - 'dev-api'
-      - 'dev-admin-bff'
       - 'dev-web'
 
   # ==========================================================================
@@ -226,7 +218,7 @@ tasks:
     inputs:
       - 'apps/desktop/**/*'
       - 'packages/contracts/**/*'
-      - 'packages/core/domain/**/*'
+      - 'packages/kernel/**/*'
       - 'servers/bff/web-bff/**/*'
       - 'Cargo.toml'
       - 'Cargo.lock'

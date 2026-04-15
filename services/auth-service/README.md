@@ -1,16 +1,18 @@
 # Auth Service
 
-Auth domain service for OAuth login, session lifecycle, and token handling.
+> Planned auth capability placeholder.
 
-## Structure
+## Status
 
-- `src/domain/`: auth entities and domain errors
-- `src/application/`: auth use cases and orchestration
-- `src/policies/`: auth policy placeholders for timeout/retry/idempotency rules
-- `src/ports/`: repository and provider abstractions
-- `src/events/`: auth-related domain event placeholders
-- `src/contracts/`: DTO re-exports and contract glue
-- `migrations/`: schema migration placeholders and SQL files
+1. This crate is a stub, not a reference module.
+2. `model.yaml` reserves auth-session ownership and login/session semantics.
+3. Existing source code is legacy scaffold and should not be copied into new services.
+
+## Current Scope
+
+1. OAuth login/session lifecycle experiments
+2. Session/token persistence adapters
+3. Future auth capability reservation for the harness
 
 ## Verification
 

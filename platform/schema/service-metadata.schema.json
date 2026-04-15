@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Platform Service Metadata",
+  "description": "Platform-level metadata for a service entry in platform/model/services.",
+  "type": "object",
+  "required": [
+    "name",
+    "kind",
+    "criticality",
+    "tenant_scope",
+    "logical_dependencies",
+    "status",
+    "description"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "criticality": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"]
+    },
+    "tenant_scope": {
+      "type": "string",
+      "enum": ["global", "tenant", "user"]
+    },
+    "logical_dependencies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["reference", "stub", "planned", "deprecated"]
+    },
+    "description": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

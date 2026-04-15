@@ -1,0 +1,19 @@
+version: 1
+description: >
+  Global consistency defaults. Services may override these defaults in
+  services/<name>/model.yaml when a domain requires stricter or looser guarantees.
+
+defaults:
+  command_write:
+    consistency_level: strong
+    note: Owner-service writes should be treated as authoritative writes.
+
+  query_read:
+    consistency_level: eventual
+    staleness_budget: PT5S
+    note: Default query path assumes eventual consistency unless explicitly upgraded.
+
+  post_write_query:
+    consistency_level: read-your-write
+    staleness_budget: PT0S
+    note: Use for UX paths where immediate read-after-write semantics are required.

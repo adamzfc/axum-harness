@@ -24,6 +24,13 @@ Reliable event delivery worker that polls the outbox table, publishes events to 
 3. **Publish** to the event bus
 4. **Checkpoint** the last processed sequence number
 
+## Required Strategies
+
+1. Idempotency: dedupe by event identity before publish
+2. Retry: tolerate at-least-once delivery and transient publish failures
+3. Checkpoint: persist relay progress so restart resumes from last safe offset
+4. Recovery order: restore checkpoint, then resume polling, then continue publish attempts
+
 ## Health Checks
 
 - `GET /healthz` — Liveness probe (always returns ok unless panicked)

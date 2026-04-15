@@ -1,0 +1,18 @@
+[package]
+license = "MIT"
+name = "storage_surrealdb"
+version = "0.1.0"
+edition = "2024"
+rust-version.workspace = true
+
+[dependencies]
+kernel = { workspace = true }
+data-traits = { workspace = true }
+surrealdb = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+workspace-hack = { version = "0.1", path = "../../workspace-hack" }
+
+[lints]
+workspace = true

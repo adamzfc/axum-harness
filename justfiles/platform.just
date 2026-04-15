@@ -11,6 +11,14 @@ validate-platform:
 validate-platform-json:
     cargo run -p platform-validator -- --platform-dir platform --format json
 
+# Validate service ownership and state semantics alignment
+validate-state MODE='warn':
+    bun run scripts/validate-state.ts --mode {{MODE}}
+
+# Validate workflow completeness beyond schema shape
+validate-workflows MODE='warn':
+    bun run scripts/validate-workflows.ts --mode {{MODE}}
+
 # Generate platform catalog from models
 gen-platform:
     @echo "Generating platform catalog..."
@@ -48,6 +56,10 @@ validate-contracts:
 validate-topology:
     @echo "Checking deployment topology..."
     cargo run -p topology-validator -- --platform-dir platform
+
+# Verify replay/rebuild reference hooks remain available
+verify-replay MODE='warn':
+    bun run scripts/verify-replay.ts --mode {{MODE}}
 
 # ── Security Validation ──────────────────────────────────────
 
@@ -101,22 +113,31 @@ platform-doctor:
     @echo "2. Checking dependencies..."
     just validate-deps || (echo "Dependency check failed"; exit 1)
     @echo ""
-    @echo "3. Checking contract drift..."
+    @echo "3. Checking state semantics..."
+    just validate-state strict || (echo "State validation failed"; exit 1)
+    @echo ""
+    @echo "4. Checking workflows..."
+    just validate-workflows strict || (echo "Workflow validation failed"; exit 1)
+    @echo ""
+    @echo "5. Checking contract drift..."
     just validate-contracts || true
     @echo ""
-    @echo "4. Checking topology..."
+    @echo "6. Checking topology..."
     just validate-topology || (echo "Topology check failed"; exit 1)
     @echo ""
-    @echo "5. Checking security..."
+    @echo "7. Checking security..."
     just validate-security || (echo "Security check failed"; exit 1)
     @echo ""
-    @echo "6. Checking observability..."
+    @echo "8. Checking observability..."
     just validate-observability || (echo "Observability check failed"; exit 1)
     @echo ""
-    @echo "7. Generating catalog..."
+    @echo "9. Verifying replay hooks..."
+    just verify-replay strict || (echo "Replay verification failed"; exit 1)
+    @echo ""
+    @echo "10. Generating catalog..."
     just gen-platform || (echo "Catalog generation failed"; exit 1)
     @echo ""
-    @echo "8. Verifying golden baseline..."
+    @echo "11. Verifying golden baseline..."
     just verify-generated || true
     @echo ""
     @echo "Platform health check passed"

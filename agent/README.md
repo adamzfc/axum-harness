@@ -45,6 +45,7 @@
 | 契约变更 | `checklists/schema-change.md` |
 | 数据库迁移 | `checklists/migration.md` |
 | 同步冲突处理 | `checklists/sync-conflict.md` |
+| 多 agent 交接 | `checklists/handoff.md` |
 | 发版 | `checklists/release.md` |
 
 ## 验证

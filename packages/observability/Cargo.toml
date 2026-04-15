@@ -1,0 +1,13 @@
+[package]
+name = "observability"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Observability layer — aggregation crate for telemetry adapters"
+
+[dependencies]
+# This is an aggregation crate — it re-exports from its adapter subcrates
+# No direct dependencies needed here
+
+[lints]
+workspace = true

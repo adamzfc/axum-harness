@@ -67,10 +67,24 @@ gates:
     scope: contract
 
   resilience_check:
-    command: ["echo", "TODO: implement resilience checks"]
+    command: ["bun", "run", "scripts/validate-resilience.ts", "--mode", "warn"]
     label: "Resilience checks"
     scope: worker
-    todo: "Script not yet implemented — see scripts/run-scoped-gates.ts"
+
+  validate_state:
+    command: ["just", "validate-state", "strict"]
+    label: "State validation"
+    scope: platform
+
+  validate_workflows:
+    command: ["just", "validate-workflows", "strict"]
+    label: "Workflow validation"
+    scope: platform
+
+  verify_replay:
+    command: ["just", "verify-replay", "strict"]
+    label: "Replay verification"
+    scope: worker
 
   validate_platform:
     command: ["just", "validate-platform"]
@@ -132,6 +146,7 @@ subagent_gates:
     required:
       - cargo_check
       - cargo_test
+      - validate_state
       - typecheck
       - boundary_check
     conditional: []
@@ -140,6 +155,7 @@ subagent_gates:
     required:
       - cargo_check
       - cargo_test
+      - verify_replay
       - resilience_check
       - boundary_check
     conditional: []
@@ -147,6 +163,8 @@ subagent_gates:
   platform-ops-agent:
     required:
       - validate_platform
+      - validate_state
+      - validate_workflows
       - validate_topology
       - verify_generated
       - validate_deps

@@ -1,11 +1,28 @@
-# Tenant — 多租户域
+# Tenant Service
 
-> 租户实体、成员管理、隔离策略。
-> 与 user-service 协作完成 OAuth 回调后的租户初始化流程。
+> Reference module for multi-tenant ownership, multi-entity boundaries,
+> onboarding workflow, member invitation, and compensation-aware mutation flows.
+
+## Why This Module Exists
+
+Use `tenant-service` as the reference when a feature includes:
+
+1. tenant isolation
+2. multiple entities under one aggregate boundary
+3. workflow-driven state progression
+4. compensation or long-running mutation semantics
+
+## Key Files
+
+1. `model.yaml` — service-local distributed semantics
+2. `src/domain/` — tenant and membership rules
+3. `src/application/` — commands and workflows entrypoints
+4. `src/ports/` — persistence and external dependency traits
+5. `platform/model/workflows/tenant-onboarding.yaml` — reference durable workflow
+
+## Validation
 
 ```bash
 cargo build -p tenant-service
 cargo test -p tenant-service
 ```
-
-当前状态：✅ 已迁移完成。业务逻辑完整实现在本目录的 domain/application/infrastructure/ports 中。

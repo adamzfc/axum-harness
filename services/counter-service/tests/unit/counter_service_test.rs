@@ -6,9 +6,9 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use counter_service::application::{RepositoryBackedCounterService, TenantScopedCounterService};
+use counter_service::contracts::service::CounterService;
 use counter_service::domain::{Counter, CounterId};
 use counter_service::ports::{CounterRepository, RepositoryError};
-use feature_counter::CounterService;
 use kernel::TenantId;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -175,8 +175,8 @@ async fn repository_backed_service_implements_feature_trait() {
     let service: RepositoryBackedCounterService<MockCounterRepository> =
         RepositoryBackedCounterService::new(repo);
 
-    // Verify it implements feature_counter::CounterService
-    let _: &dyn feature_counter::CounterService = &service;
+    // Verify it implements the contracts CounterService trait
+    let _: &dyn counter_service::contracts::service::CounterService = &service;
 
     let v = service.increment().await.unwrap();
     assert_eq!(v, 1);

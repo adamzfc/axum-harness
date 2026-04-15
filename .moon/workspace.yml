@@ -4,9 +4,8 @@ projects:
   # Active projects (have moon.yml or package.json)
   desktop-tauri: 'apps/desktop/src-tauri'
   web: 'apps/web'
-  core-domain: 'packages/core/domain'
+  kernel: 'packages/kernel'
   contracts-api: 'packages/contracts/api'
-  adapters-tauri: 'packages/adapters/hosts/tauri'
 
 vcs:
   client: 'git'

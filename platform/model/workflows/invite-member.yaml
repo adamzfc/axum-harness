@@ -1,30 +1,58 @@
 name: invite-member
 version: 1.0.0
 description: >
-  Workflow for inviting a new member to a tenant. Validates permissions,
-  creates invitation record, sends invitation email, and handles
-  acceptance flow.
+  Durable workflow for inviting a new member into a tenant.
+  Validates permission, creates invitation state, and emits the invitation event.
+  Serves as the compact reference workflow for command-driven tenant mutation.
 
 trigger:
-  type: http_request
-  source: POST /api/tenants/{tenant_id}/members/invite
+  type: command
+  ref: invite-member
+
+idempotency_key: tenant_id + invitee_email
+timeout: PT1M
+checkpoint_policy: per-step
+retry_policy: retry.default
 
 steps:
-  - name: validate_permissions
+  - name: validate-permissions
     action: tenant-service/validate_invite_permission
-    next:
-      - create_invitation
+    idempotency_key: tenant_id + invitee_email + validate
+    timeout: PT10S
+    max_retries: 2
+    checkpoint: true
+    on_success:
+      - create-invitation
 
-  - name: create_invitation
+  - name: create-invitation
     action: tenant-service/create_member_invitation
-    next:
-      - send_invitation_email
+    idempotency_key: tenant_id + invitee_email
+    timeout: PT10S
+    max_retries: 3
+    checkpoint: true
+    depends_on:
+      - validate-permissions
+    compensation_ref: revoke-invitation
+    on_success:
+      - publish-member-invited
 
-  - name: send_invitation_email
-    action: event-bus/publish
+  - name: publish-member-invited
+    action: packages/messaging/publish
+    idempotency_key: tenant_id + invitee_email + published
+    timeout: PT10S
+    max_retries: 3
+    checkpoint: true
     parameters:
-      event: MemberInvited
-    next: []
+      event: member-invited
+    depends_on:
+      - create-invitation
 
-timeout: PT15S
-retry_policy: retry.default
+compensation:
+  - for_step: create-invitation
+    action: tenant-service/revoke_member_invitation
+    idempotency_key: tenant_id + invitee_email + revoke
+
+recovery:
+  resume_from: last_checkpoint
+  operator_intervention_on: exhausted_retries
+  data_risk: low

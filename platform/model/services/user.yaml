@@ -1,58 +1,10 @@
 name: user
-domain: user
-version: 1.0.0
+kind: planned-service
+criticality: high
+tenant_scope: user
+logical_dependencies:
+  - auth
+status: stub
 description: >
-  User domain service — user lifecycle management, OAuth integration,
-  and tenant binding. Handles user registration, profile management,
-  and authentication logic.
-
-ports:
-  - name: user_repository
-    type: repository
-    description: User state persistence
-  - name: oauth_client
-    type: external_api
-    description: OAuth provider integration (Google, etc.)
-  - name: event_publisher
-    type: publisher
-    description: Publish user lifecycle events
-
-events:
-  - name: UserCreated
-    schema: packages/contracts/events/user_created.json
-  - name: UserUpdated
-    schema: packages/contracts/events/user_updated.json
-  - name: UserDeleted
-    schema: packages/contracts/events/user_deleted.json
-
-dependencies:
-  - packages/core/kernel
-  - packages/core/domain
-  - packages/contracts/api
-  - packages/contracts/auth
-  - services/event-bus
-
-authentication:
-  required: true
-  methods:
-    - jwt
-    - session
-
-authorization:
-  required: true
-  model: openfga
-
-observability:
-  tracing:
-    enabled: true
-    sampler: always_on
-  metrics:
-    enabled: true
-  logging:
-    level: info
-    format: json
-
-deployable: web-bff
-tests: services/user-service/tests/
-migrations: services/user-service/migrations/
-status: active
+  Planned user profile and identity-related capability placeholder.
+  Not part of the first-wave reference modules.

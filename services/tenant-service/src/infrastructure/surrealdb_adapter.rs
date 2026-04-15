@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 
 use async_trait::async_trait;
-use domain::ports::surreal_db::SurrealDbPort;
+use data::ports::surreal_db::SurrealDbPort;
 use serde::Deserialize;
 
 use crate::domain::{CreateTenantInput, Tenant};

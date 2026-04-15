@@ -32,23 +32,6 @@ patches:
 
   - target:
       kind: Deployment
-      name: admin-bff
-    patch: |
-      - op: replace
-        path: /spec/template/spec/containers/0/resources/limits
-        value:
-          cpu: "1"
-          memory: 1Gi
-      - op: replace
-        path: /spec/template/spec/containers/0/env
-        value:
-          - name: RUST_LOG
-            value: "debug,admin-bff=trace"
-          - name: ADMIN_BFF_DATABASE__URL
-            value: "file:/data/admin-bff.db"
-
-  - target:
-      kind: Deployment
       name: web-server
     patch: |
       - op: replace
@@ -67,10 +50,7 @@ patches:
         value: api.dev.local
       - op: replace
         path: /spec/rules/1/host
-        value: admin.dev.local
-      - op: replace
-        path: /spec/rules/2/host
         value: app.dev.local
       - op: replace
-        path: /spec/rules/3/host
+        path: /spec/rules/2/host
         value: dev.local
