@@ -15,4 +15,11 @@ pub enum CounterDomainError {
 
     #[error("counter operation failed: {reason}")]
     OperationFailed { reason: String },
+
+    /// CAS conflict — another writer modified the counter between load and update.
+    /// The application layer should retry with the latest version.
+    #[error(
+        "CAS conflict: counter was modified concurrently (expected version {expected}, actual {actual})"
+    )]
+    CasConflict { expected: i64, actual: i64 },
 }

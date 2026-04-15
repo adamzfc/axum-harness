@@ -61,4 +61,16 @@ pub trait CounterRepository: Send + Sync {
         payload: &str,
         source_service: &str,
     ) -> Result<(), RepositoryError>;
+
+    /// Check if an idempotency key was already processed.
+    /// Returns Some((value, version)) if the key exists, None otherwise.
+    async fn check_idempotency(&self, key: &str) -> Result<Option<(i64, i64)>, RepositoryError>;
+
+    /// Cache an idempotency result for future deduplication.
+    async fn cache_idempotency(
+        &self,
+        key: &str,
+        value: i64,
+        version: i64,
+    ) -> Result<(), RepositoryError>;
 }

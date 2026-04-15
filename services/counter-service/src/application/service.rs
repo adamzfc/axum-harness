@@ -11,7 +11,8 @@
 //! ## CAS (Compare-And-Swap)
 //! Every mutation passes the current `version` to the repository. If another
 //! writer has changed the counter between load and update, the CAS check fails
-//! and the repository returns stale data — the application layer retries.
+//! and the repository returns a CAS conflict error — the application layer retries
+//! with the latest version.
 //!
 //! ## Event Publishing
 //! After a successful mutation, a `counter.changed` event is written to the
@@ -21,22 +22,11 @@
 use crate::contracts::service::{CounterError, CounterService};
 use async_trait::async_trait;
 use chrono::Utc;
-use contracts_events::{AppEvent, CounterChanged};
-use serde::Serialize;
+use contracts_events::CounterChanged;
 use tracing::debug;
 
-use crate::domain::{Counter, CounterId};
+use crate::domain::CounterId;
 use crate::ports::CounterRepository;
-
-/// SQL migration for the counter table.
-///
-/// This is exported so the composition root (server binary) can
-/// run migrations at startup without depending on a specific adapter.
-pub const COUNTER_MIGRATION: &str = "CREATE TABLE IF NOT EXISTS counter (\
-        tenant_id TEXT PRIMARY KEY,\
-        value INTEGER NOT NULL DEFAULT 0,\
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))\
-    )";
 
 /// `CounterService` backed by any `CounterRepository` implementation.
 ///
@@ -55,42 +45,58 @@ impl<R: CounterRepository> RepositoryBackedCounterService<R> {
 
 #[async_trait]
 impl<R: CounterRepository> CounterService for RepositoryBackedCounterService<R> {
-    async fn get_value(&self) -> Result<i64, CounterError> {
-        let id = CounterId::new("default");
-        let counter = self.repo.load(&id).await.map_err(CounterError::Database)?;
+    async fn get_value(&self, tenant_id: &CounterId) -> Result<i64, CounterError> {
+        let counter = self
+            .repo
+            .load(tenant_id)
+            .await
+            .map_err(CounterError::Database)?;
 
         let value = counter.map(|c| c.value).unwrap_or(0);
-        debug!(counter_id = %id, value, "counter.get_value");
+        debug!(counter_id = %tenant_id, value, "counter.get_value");
         Ok(value)
     }
 
-    async fn increment(&self, idempotency_key: Option<&str>) -> Result<i64, CounterError> {
-        let id = CounterId::new("default");
+    async fn increment(
+        &self,
+        tenant_id: &CounterId,
+        idempotency_key: Option<&str>,
+    ) -> Result<i64, CounterError> {
         let now = Utc::now();
 
         // Idempotency check
         if let Some(key) = idempotency_key
             && let Some(cached) = self.check_idempotency(key).await?
         {
-            debug!(counter_id = %id, key, "counter.increment idempotent hit");
+            debug!(counter_id = %tenant_id, key, "counter.increment idempotent hit");
             return Ok(cached);
         }
 
-        // Load current version for CAS
-        let current = self.repo.load(&id).await.map_err(CounterError::Database)?;
-        let expected_version = current.as_ref().map(|c| c.version).unwrap_or(0);
+        // CAS mutation with retry
+        let mut retries = 0;
+        let (value, version) = loop {
+            let current = self
+                .repo
+                .load(tenant_id)
+                .await
+                .map_err(CounterError::Database)?;
+            let expected_version = current.as_ref().map(|c| c.version).unwrap_or(0);
 
-        // CAS increment
-        let (value, version) = self
-            .repo
-            .increment(&id, expected_version, now)
-            .await
-            .map_err(CounterError::Database)?;
+            match self.repo.increment(tenant_id, expected_version, now).await {
+                Ok(result) => break Ok(result),
+                Err(_) if retries < 3 => {
+                    retries += 1;
+                    debug!(counter_id = %tenant_id, retries, "CAS conflict, retrying");
+                    continue;
+                }
+                Err(_) => break Err(CounterError::CasConflict),
+            }
+        }?;
 
         // Write outbox event
         let event = CounterChanged {
-            tenant_id: id.as_str().to_string(),
-            counter_key: "default".to_string(),
+            tenant_id: tenant_id.as_str().to_string(),
+            counter_key: tenant_id.as_str().to_string(),
             operation: "increment".to_string(),
             new_value: value,
             delta: 1,
@@ -103,33 +109,47 @@ impl<R: CounterRepository> CounterService for RepositoryBackedCounterService<R> 
             self.cache_idempotency(key, value, version).await?;
         }
 
-        debug!(counter_id = %id, value, version, "counter.increment");
+        debug!(counter_id = %tenant_id, value, version, "counter.increment");
         Ok(value)
     }
 
-    async fn decrement(&self, idempotency_key: Option<&str>) -> Result<i64, CounterError> {
-        let id = CounterId::new("default");
+    async fn decrement(
+        &self,
+        tenant_id: &CounterId,
+        idempotency_key: Option<&str>,
+    ) -> Result<i64, CounterError> {
         let now = Utc::now();
 
         if let Some(key) = idempotency_key
             && let Some(cached) = self.check_idempotency(key).await?
         {
-            debug!(counter_id = %id, key, "counter.decrement idempotent hit");
+            debug!(counter_id = %tenant_id, key, "counter.decrement idempotent hit");
             return Ok(cached);
         }
 
-        let current = self.repo.load(&id).await.map_err(CounterError::Database)?;
-        let expected_version = current.as_ref().map(|c| c.version).unwrap_or(0);
+        let mut retries = 0;
+        let (value, version) = loop {
+            let current = self
+                .repo
+                .load(tenant_id)
+                .await
+                .map_err(CounterError::Database)?;
+            let expected_version = current.as_ref().map(|c| c.version).unwrap_or(0);
 
-        let (value, version) = self
-            .repo
-            .decrement(&id, expected_version, now)
-            .await
-            .map_err(CounterError::Database)?;
+            match self.repo.decrement(tenant_id, expected_version, now).await {
+                Ok(result) => break Ok(result),
+                Err(_) if retries < 3 => {
+                    retries += 1;
+                    debug!(counter_id = %tenant_id, retries, "CAS conflict, retrying");
+                    continue;
+                }
+                Err(_) => break Err(CounterError::CasConflict),
+            }
+        }?;
 
         let event = CounterChanged {
-            tenant_id: id.as_str().to_string(),
-            counter_key: "default".to_string(),
+            tenant_id: tenant_id.as_str().to_string(),
+            counter_key: tenant_id.as_str().to_string(),
             operation: "decrement".to_string(),
             new_value: value,
             delta: -1,
@@ -141,37 +161,50 @@ impl<R: CounterRepository> CounterService for RepositoryBackedCounterService<R> 
             self.cache_idempotency(key, value, version).await?;
         }
 
-        debug!(counter_id = %id, value, version, "counter.decrement");
+        debug!(counter_id = %tenant_id, value, version, "counter.decrement");
         Ok(value)
     }
 
-    async fn reset(&self, idempotency_key: Option<&str>) -> Result<i64, CounterError> {
-        let id = CounterId::new("default");
+    async fn reset(
+        &self,
+        tenant_id: &CounterId,
+        idempotency_key: Option<&str>,
+    ) -> Result<i64, CounterError> {
         let now = Utc::now();
 
         if let Some(key) = idempotency_key
             && let Some(cached) = self.check_idempotency(key).await?
         {
-            debug!(counter_id = %id, key, "counter.reset idempotent hit");
+            debug!(counter_id = %tenant_id, key, "counter.reset idempotent hit");
             return Ok(cached);
         }
 
-        let current = self.repo.load(&id).await.map_err(CounterError::Database)?;
-        let expected_version = current.as_ref().map(|c| c.version).unwrap_or(0);
-        let old_value = current.as_ref().map(|c| c.value).unwrap_or(0);
+        let mut retries = 0;
+        let (value, version) = loop {
+            let current = self
+                .repo
+                .load(tenant_id)
+                .await
+                .map_err(CounterError::Database)?;
+            let expected_version = current.as_ref().map(|c| c.version).unwrap_or(0);
 
-        let version = self
-            .repo
-            .reset(&id, expected_version, now)
-            .await
-            .map_err(CounterError::Database)?;
+            match self.repo.reset(tenant_id, expected_version, now).await {
+                Ok(v) => break Ok((0, v)),
+                Err(_) if retries < 3 => {
+                    retries += 1;
+                    debug!(counter_id = %tenant_id, retries, "CAS conflict, retrying");
+                    continue;
+                }
+                Err(_) => break Err(CounterError::CasConflict),
+            }
+        }?;
 
         let event = CounterChanged {
-            tenant_id: id.as_str().to_string(),
-            counter_key: "default".to_string(),
+            tenant_id: tenant_id.as_str().to_string(),
+            counter_key: tenant_id.as_str().to_string(),
             operation: "reset".to_string(),
             new_value: 0,
-            delta: -old_value,
+            delta: -value,
             version,
         };
         self.write_outbox_event(&event).await?;
@@ -180,7 +213,7 @@ impl<R: CounterRepository> CounterService for RepositoryBackedCounterService<R> 
             self.cache_idempotency(key, 0, version).await?;
         }
 
-        debug!(counter_id = %id, version, "counter.reset");
+        debug!(counter_id = %tenant_id, version, "counter.reset");
         Ok(0)
     }
 }
@@ -199,22 +232,25 @@ impl<R: CounterRepository> RepositoryBackedCounterService<R> {
 
     /// Check if an idempotency key was already processed.
     /// Returns Some(value) if the key exists, None otherwise.
-    async fn check_idempotency(&self, _key: &str) -> Result<Option<i64>, CounterError> {
-        // Idempotency check is delegated to the repository implementation.
-        // For the in-memory test adapter, this is a no-op.
-        // For the libsql adapter, it queries the counter_idempotency table.
-        Ok(None)
+    async fn check_idempotency(&self, key: &str) -> Result<Option<i64>, CounterError> {
+        match self.repo.check_idempotency(key).await {
+            Ok(Some((value, _version))) => Ok(Some(value)),
+            Ok(None) => Ok(None),
+            Err(e) => Err(CounterError::Database(e)),
+        }
     }
 
     /// Cache an idempotency result.
     async fn cache_idempotency(
         &self,
-        _key: &str,
-        _value: i64,
-        _version: i64,
+        key: &str,
+        value: i64,
+        version: i64,
     ) -> Result<(), CounterError> {
-        // Idempotency caching is delegated to the repository implementation.
-        Ok(())
+        self.repo
+            .cache_idempotency(key, value, version)
+            .await
+            .map_err(CounterError::Database)
     }
 }
 
@@ -250,31 +286,46 @@ impl<R: CounterRepository> TenantScopedCounterService<R> {
         let id = CounterId::new(tenant_id.as_str());
         let now = Utc::now();
 
-        // Idempotency check (simplified — full impl would query idempotency table)
-        let current = self.repo.load(&id).await.map_err(CounterError::Database)?;
-        let expected_version = current.as_ref().map(|c| c.version).unwrap_or(0);
+        // Idempotency check
+        if let Some(key) = idempotency_key
+            && let Some(cached) = self.check_idempotency(key).await?
+        {
+            debug!(tenant_id = %tenant_id, key, "counter.increment_for_tenant idempotent hit");
+            return Ok(cached);
+        }
 
-        let (value, version) = self
-            .repo
-            .increment(&id, expected_version, now)
-            .await
-            .map_err(CounterError::Database)?;
+        // CAS mutation with retry
+        let mut retries = 0;
+        let (value, version) = loop {
+            let current = self.repo.load(&id).await.map_err(CounterError::Database)?;
+            let expected_version = current.as_ref().map(|c| c.version).unwrap_or(0);
+
+            match self.repo.increment(&id, expected_version, now).await {
+                Ok(result) => break Ok(result),
+                Err(_) if retries < 3 => {
+                    retries += 1;
+                    debug!(tenant_id = %tenant_id, retries, "CAS conflict, retrying");
+                    continue;
+                }
+                Err(_) => break Err(CounterError::CasConflict),
+            }
+        }?;
 
         // Write outbox event
         let event = CounterChanged {
             tenant_id: tenant_id.as_str().to_string(),
-            counter_key: "default".to_string(),
+            counter_key: tenant_id.as_str().to_string(),
             operation: "increment".to_string(),
             new_value: value,
             delta: 1,
             version,
         };
-        let payload =
-            serde_json::to_string(&event).map_err(|e| CounterError::Database(Box::new(e)))?;
-        self.repo
-            .write_outbox("counter.changed", &payload, "counter-service")
-            .await
-            .map_err(CounterError::Database)?;
+        self.write_outbox_event(&event).await?;
+
+        // Cache idempotency result
+        if let Some(key) = idempotency_key {
+            self.cache_idempotency(key, value, version).await?;
+        }
 
         debug!(tenant_id = %tenant_id, value, "counter.increment_for_tenant");
         Ok(value)
@@ -284,34 +335,47 @@ impl<R: CounterRepository> TenantScopedCounterService<R> {
     pub async fn decrement(
         &self,
         tenant_id: &kernel::TenantId,
-        _idempotency_key: Option<&str>,
+        idempotency_key: Option<&str>,
     ) -> Result<i64, CounterError> {
         let id = CounterId::new(tenant_id.as_str());
         let now = Utc::now();
 
-        let current = self.repo.load(&id).await.map_err(CounterError::Database)?;
-        let expected_version = current.as_ref().map(|c| c.version).unwrap_or(0);
+        if let Some(key) = idempotency_key
+            && let Some(cached) = self.check_idempotency(key).await?
+        {
+            debug!(tenant_id = %tenant_id, key, "counter.decrement_for_tenant idempotent hit");
+            return Ok(cached);
+        }
 
-        let (value, version) = self
-            .repo
-            .decrement(&id, expected_version, now)
-            .await
-            .map_err(CounterError::Database)?;
+        let mut retries = 0;
+        let (value, version) = loop {
+            let current = self.repo.load(&id).await.map_err(CounterError::Database)?;
+            let expected_version = current.as_ref().map(|c| c.version).unwrap_or(0);
+
+            match self.repo.decrement(&id, expected_version, now).await {
+                Ok(result) => break Ok(result),
+                Err(_) if retries < 3 => {
+                    retries += 1;
+                    debug!(tenant_id = %tenant_id, retries, "CAS conflict, retrying");
+                    continue;
+                }
+                Err(_) => break Err(CounterError::CasConflict),
+            }
+        }?;
 
         let event = CounterChanged {
             tenant_id: tenant_id.as_str().to_string(),
-            counter_key: "default".to_string(),
+            counter_key: tenant_id.as_str().to_string(),
             operation: "decrement".to_string(),
             new_value: value,
             delta: -1,
             version,
         };
-        let payload =
-            serde_json::to_string(&event).map_err(|e| CounterError::Database(Box::new(e)))?;
-        self.repo
-            .write_outbox("counter.changed", &payload, "counter-service")
-            .await
-            .map_err(CounterError::Database)?;
+        self.write_outbox_event(&event).await?;
+
+        if let Some(key) = idempotency_key {
+            self.cache_idempotency(key, value, version).await?;
+        }
 
         debug!(tenant_id = %tenant_id, value, "counter.decrement_for_tenant");
         Ok(value)
@@ -321,37 +385,82 @@ impl<R: CounterRepository> TenantScopedCounterService<R> {
     pub async fn reset(
         &self,
         tenant_id: &kernel::TenantId,
-        _idempotency_key: Option<&str>,
+        idempotency_key: Option<&str>,
     ) -> Result<i64, CounterError> {
         let id = CounterId::new(tenant_id.as_str());
         let now = Utc::now();
 
-        let current = self.repo.load(&id).await.map_err(CounterError::Database)?;
-        let expected_version = current.as_ref().map(|c| c.version).unwrap_or(0);
-        let old_value = current.as_ref().map(|c| c.value).unwrap_or(0);
+        if let Some(key) = idempotency_key
+            && let Some(cached) = self.check_idempotency(key).await?
+        {
+            debug!(tenant_id = %tenant_id, key, "counter.reset_for_tenant idempotent hit");
+            return Ok(cached);
+        }
 
-        let version = self
-            .repo
-            .reset(&id, expected_version, now)
-            .await
-            .map_err(CounterError::Database)?;
+        let mut retries = 0;
+        let (value, version) = loop {
+            let current = self.repo.load(&id).await.map_err(CounterError::Database)?;
+            let expected_version = current.as_ref().map(|c| c.version).unwrap_or(0);
+
+            match self.repo.reset(&id, expected_version, now).await {
+                Ok(v) => break Ok((0, v)),
+                Err(_) if retries < 3 => {
+                    retries += 1;
+                    debug!(tenant_id = %tenant_id, retries, "CAS conflict, retrying");
+                    continue;
+                }
+                Err(_) => break Err(CounterError::CasConflict),
+            }
+        }?;
 
         let event = CounterChanged {
             tenant_id: tenant_id.as_str().to_string(),
-            counter_key: "default".to_string(),
+            counter_key: tenant_id.as_str().to_string(),
             operation: "reset".to_string(),
             new_value: 0,
-            delta: -old_value,
+            delta: -value,
             version,
         };
-        let payload =
-            serde_json::to_string(&event).map_err(|e| CounterError::Database(Box::new(e)))?;
-        self.repo
-            .write_outbox("counter.changed", &payload, "counter-service")
-            .await
-            .map_err(CounterError::Database)?;
+        self.write_outbox_event(&event).await?;
+
+        if let Some(key) = idempotency_key {
+            self.cache_idempotency(key, 0, version).await?;
+        }
 
         debug!(tenant_id = %tenant_id, "counter.reset_for_tenant");
         Ok(0)
+    }
+
+    /// Check if an idempotency key was already processed.
+    async fn check_idempotency(&self, key: &str) -> Result<Option<i64>, CounterError> {
+        match self.repo.check_idempotency(key).await {
+            Ok(Some((value, _version))) => Ok(Some(value)),
+            Ok(None) => Ok(None),
+            Err(e) => Err(CounterError::Database(e)),
+        }
+    }
+
+    /// Cache an idempotency result.
+    async fn cache_idempotency(
+        &self,
+        key: &str,
+        value: i64,
+        version: i64,
+    ) -> Result<(), CounterError> {
+        self.repo
+            .cache_idempotency(key, value, version)
+            .await
+            .map_err(CounterError::Database)
+    }
+
+    /// Write a counter-changed event to the outbox table.
+    async fn write_outbox_event(&self, event: &CounterChanged) -> Result<(), CounterError> {
+        let payload =
+            serde_json::to_string(event).map_err(|e| CounterError::Database(Box::new(e)))?;
+
+        self.repo
+            .write_outbox("counter.changed", &payload, "counter-service")
+            .await
+            .map_err(CounterError::Database)
     }
 }

@@ -1,11 +1,39 @@
 # Counter Service — Events
 
-> 事件定义：counter 域产生的业务事件。
+> Event definitions for the counter domain.
 >
-> ⚠️ 占位目录。事件 schema 将按 `packages/contracts/events/` 定义。
+> **Single Source of Truth**: Event schemas are defined in `packages/contracts/events/`.
+> This module re-exports them for local discoverability.
 
-## 预期事件
+## Published Events
 
-| 事件 | Schema | 状态 |
-|-----|--------|------|
-| CounterIncremented | `packages/contracts/events/counter/` | 待定义 |
+| Event | Schema | Status |
+|-----|--------|--------|
+| CounterChanged | `packages/contracts/events/src/lib.rs::CounterChanged` | ✅ Implemented |
+
+## Event: `counter.changed`
+
+Emitted after any successful counter mutation (increment, decrement, or reset).
+
+### Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `tenant_id` | `String` | Tenant scope identifier |
+| `counter_key` | `String` | Counter identifier within the tenant |
+| `operation` | `String` | Operation type: `increment`, `decrement`, `reset` |
+| `new_value` | `i64` | Counter value after the operation |
+| `delta` | `i64` | Change amount (positive for increment, negative for decrement/reset) |
+| `version` | `i64` | CAS version number after the operation |
+
+### Dedupe Rule
+
+`tenant_id + counter_key + version`
+
+### Ordering Scope
+
+per-tenant
+
+### Replay
+
+✅ Replayable, 30-day retention, backward-compatible schema policy.

@@ -24,11 +24,18 @@ struct CounterRow {
     updated_at: String,
 }
 
-/// Minimal row shape for value-only queries.
+/// Minimal row shape for value-only queries from counter table.
 #[derive(Debug, Deserialize)]
 struct ValueRow {
     value: i64,
     version: i64,
+}
+
+/// Row shape from the counter_idempotency table.
+#[derive(Debug, Deserialize)]
+struct IdempotencyRow {
+    result_value: i64,
+    result_version: i64,
 }
 
 /// CounterRepository backed by a libsql port.
@@ -36,7 +43,7 @@ struct ValueRow {
 /// This is the **primary** repository implementation used in Phase 0
 /// where the monolith uses embedded Turso (libsql) for storage.
 pub struct LibSqlCounterRepository<P: LibSqlPort> {
-    port: P,
+    pub port: P,
 }
 
 impl<P: LibSqlPort> LibSqlCounterRepository<P> {
@@ -44,55 +51,28 @@ impl<P: LibSqlPort> LibSqlCounterRepository<P> {
         Self { port }
     }
 
-    /// Run the counter table migration (idempotent).
+    /// Run the counter table migrations (idempotent).
     ///
     /// This should be called at application startup by the composition root.
+    /// SQL schema is loaded from the migration file at `migrations/001_create_counter.sql`
+    /// to maintain a single source of truth for the database schema.
     pub async fn migrate(&self) -> Result<(), RepositoryError> {
-        self.port
-            .execute(
-                "CREATE TABLE IF NOT EXISTS counter (\
-                     tenant_id TEXT PRIMARY KEY,\
-                     value INTEGER NOT NULL DEFAULT 0,\
-                     version INTEGER NOT NULL DEFAULT 0,\
-                     updated_at TEXT NOT NULL DEFAULT (datetime('now'))\
-                 )",
-                vec![],
-            )
-            .await?;
+        let migration_sql = include_str!("../../migrations/001_create_counter.sql");
 
-        self.port
-            .execute(
-                "CREATE TABLE IF NOT EXISTS counter_outbox (\
-                     id INTEGER PRIMARY KEY AUTOINCREMENT,\
-                     event_type TEXT NOT NULL,\
-                     payload TEXT NOT NULL,\
-                     source_service TEXT NOT NULL DEFAULT 'counter-service',\
-                     created_at TEXT NOT NULL DEFAULT (datetime('now')),\
-                     published INTEGER NOT NULL DEFAULT 0\
-                 )",
-                vec![],
-            )
-            .await?;
-
-        self.port
-            .execute(
-                "CREATE INDEX IF NOT EXISTS idx_counter_outbox_pending \
-                 ON counter_outbox(published, id)",
-                vec![],
-            )
-            .await?;
-
-        self.port
-            .execute(
-                "CREATE TABLE IF NOT EXISTS counter_idempotency (\
-                     idempotency_key TEXT PRIMARY KEY,\
-                     result_value INTEGER NOT NULL,\
-                     result_version INTEGER NOT NULL,\
-                     created_at TEXT NOT NULL DEFAULT (datetime('now'))\
-                 )",
-                vec![],
-            )
-            .await?;
+        // Split by semicolons and execute each statement
+        for statement in migration_sql.split(';') {
+            // Remove comment lines and whitespace
+            let cleaned: String = statement
+                .lines()
+                .filter(|line| !line.trim().starts_with("--"))
+                .collect::<Vec<_>>()
+                .join("\n");
+            let trimmed = cleaned.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+            self.port.execute(trimmed, vec![]).await?;
+        }
 
         Ok(())
     }
@@ -133,20 +113,10 @@ impl<P: LibSqlPort> CounterRepository for LibSqlCounterRepository<P> {
         expected_version: i64,
         _now: DateTime<Utc>,
     ) -> Result<(i64, i64), RepositoryError> {
-        // First, try CAS update if the counter already exists
-        self.port
-            .execute(
-                "UPDATE counter SET value = value + 1, version = version + 1, \
-                 updated_at = datetime('now') \
-                 WHERE tenant_id = ? AND version = ?",
-                vec![id.as_str().to_string(), expected_version.to_string()],
-            )
-            .await?;
-
-        // If no rows were affected, either it's a new counter or version mismatch
-        // For new counters (expected_version == 0), insert with initial values
         if expected_version == 0 {
-            self.port
+            // New counter: insert with initial values
+            let rows_affected = self
+                .port
                 .execute(
                     "INSERT INTO counter (tenant_id, value, version, updated_at) \
                      VALUES (?, 1, 1, datetime('now')) \
@@ -157,6 +127,26 @@ impl<P: LibSqlPort> CounterRepository for LibSqlCounterRepository<P> {
                     vec![id.as_str().to_string(), expected_version.to_string()],
                 )
                 .await?;
+
+            if rows_affected == 0 {
+                // Conflict: counter exists but version mismatch
+                return Err("CAS conflict on increment".into());
+            }
+        } else {
+            // Existing counter: CAS update
+            let rows_affected = self
+                .port
+                .execute(
+                    "UPDATE counter SET value = value + 1, version = version + 1, \
+                     updated_at = datetime('now') \
+                     WHERE tenant_id = ? AND version = ?",
+                    vec![id.as_str().to_string(), expected_version.to_string()],
+                )
+                .await?;
+
+            if rows_affected == 0 {
+                return Err("CAS conflict on increment".into());
+            }
         }
 
         // Read back the new value and version
@@ -178,7 +168,8 @@ impl<P: LibSqlPort> CounterRepository for LibSqlCounterRepository<P> {
         expected_version: i64,
         _now: DateTime<Utc>,
     ) -> Result<(i64, i64), RepositoryError> {
-        self.port
+        let rows_affected = self
+            .port
             .execute(
                 "UPDATE counter SET value = value - 1, version = version + 1, \
                  updated_at = datetime('now') \
@@ -186,6 +177,10 @@ impl<P: LibSqlPort> CounterRepository for LibSqlCounterRepository<P> {
                 vec![id.as_str().to_string(), expected_version.to_string()],
             )
             .await?;
+
+        if rows_affected == 0 {
+            return Err("CAS conflict on decrement".into());
+        }
 
         let rows: Vec<ValueRow> = self
             .port
@@ -205,7 +200,8 @@ impl<P: LibSqlPort> CounterRepository for LibSqlCounterRepository<P> {
         expected_version: i64,
         _now: DateTime<Utc>,
     ) -> Result<i64, RepositoryError> {
-        self.port
+        let rows_affected = self
+            .port
             .execute(
                 "UPDATE counter SET value = 0, version = version + 1, \
                  updated_at = datetime('now') \
@@ -213,6 +209,10 @@ impl<P: LibSqlPort> CounterRepository for LibSqlCounterRepository<P> {
                 vec![id.as_str().to_string(), expected_version.to_string()],
             )
             .await?;
+
+        if rows_affected == 0 {
+            return Err("CAS conflict on reset".into());
+        }
 
         let rows: Vec<ValueRow> = self
             .port
@@ -261,6 +261,39 @@ impl<P: LibSqlPort> CounterRepository for LibSqlCounterRepository<P> {
                     payload.to_string(),
                     source_service.to_string(),
                 ],
+            )
+            .await?;
+        Ok(())
+    }
+
+    async fn check_idempotency(&self, key: &str) -> Result<Option<(i64, i64)>, RepositoryError> {
+        let rows: Vec<IdempotencyRow> = self
+            .port
+            .query(
+                "SELECT result_value, result_version FROM counter_idempotency \
+                 WHERE idempotency_key = ?",
+                vec![key.to_string()],
+            )
+            .await?;
+
+        match rows.first() {
+            Some(r) => Ok(Some((r.result_value, r.result_version))),
+            None => Ok(None),
+        }
+    }
+
+    async fn cache_idempotency(
+        &self,
+        key: &str,
+        value: i64,
+        version: i64,
+    ) -> Result<(), RepositoryError> {
+        self.port
+            .execute(
+                "INSERT INTO counter_idempotency (idempotency_key, result_value, result_version) \
+                 VALUES (?, ?, ?) \
+                 ON CONFLICT(idempotency_key) DO NOTHING",
+                vec![key.to_string(), value.to_string(), version.to_string()],
             )
             .await?;
         Ok(())
