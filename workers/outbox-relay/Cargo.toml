@@ -31,6 +31,9 @@ anyhow = { workspace = true }
 # HTTP server for health checks
 axum = { workspace = true }
 
+# Configuration
+figment = { version = "0.10", features = ["env"] }
+
 [dev-dependencies]
 
 [lints]

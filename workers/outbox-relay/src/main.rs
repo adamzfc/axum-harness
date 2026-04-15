@@ -2,8 +2,10 @@
 //!
 //! This worker polls the outbox table, publishes events to the event bus,
 //! and tracks checkpoints and deduplication.
+//!
+//! Configuration is loaded via SOPS-encrypted secrets, never from `.env` files.
+//! For local development: `just sops-run outbox-relay-worker`
 
-use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -17,11 +19,13 @@ use tokio::sync::RwLock;
 use tracing::{info, warn};
 
 mod checkpoint;
+mod config;
 mod dedupe;
 mod idempotency;
 mod polling;
 mod publish;
 
+use config::Config;
 use polling::{MemoryOutboxReader, OutboxPoller, OutboxReader, PendingOutboxEntry, PollerConfig};
 use publish::OutboxPublisher;
 
@@ -90,20 +94,26 @@ async fn start_health_server(state: Arc<WorkerState>, addr: SocketAddr) -> anyho
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Initialize tracing
+    // Load configuration from SOPS-encrypted environment variables
+    let config = Config::from_env()?;
+
+    // Initialize tracing with config
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
+            tracing_subscriber::EnvFilter::try_new(&config.rust_log)
                 .unwrap_or_else(|_| "outbox_relay_worker=info".into()),
         )
         .init();
 
     info!("Outbox relay worker starting");
+    info!("Database: {}", config.database_url);
+    info!("NATS URL: {}", config.nats_url);
+    info!("Poll interval: {:?}", config.poll_interval());
 
     let state = Arc::new(WorkerState::new());
 
-    // Start health check server
-    let health_addr: SocketAddr = "0.0.0.0:3030".parse()?;
+    // Start health check server using config
+    let health_addr = config.health_addr();
     let health_state = state.clone();
     tokio::spawn(async move {
         if let Err(e) = start_health_server(health_state, health_addr).await {
@@ -122,12 +132,16 @@ async fn main() -> anyhow::Result<()> {
 
     // Create outbox reader (stub for now; would be Turso/SQLite in production)
     let reader = MemoryOutboxReader::new(Vec::new());
-    let config = PollerConfig::default();
-    let mut poller = OutboxPoller::new(reader, config.clone());
+    let poller_config = PollerConfig {
+        poll_interval: config.poll_interval(),
+        batch_size: config.batch_size,
+    };
+    let mut poller = OutboxPoller::new(reader, poller_config);
 
     info!(
-        "Outbox relay worker running (poll interval: {:?})",
-        config.poll_interval
+        "Outbox relay worker running (poll interval: {:?}, batch size: {})",
+        config.poll_interval(),
+        config.batch_size
     );
 
     // Main processing loop
@@ -142,6 +156,6 @@ async fn main() -> anyhow::Result<()> {
         }
 
         // Sleep for the poll interval
-        tokio::time::sleep(config.poll_interval).await;
+        tokio::time::sleep(config.poll_interval()).await;
     }
 }
