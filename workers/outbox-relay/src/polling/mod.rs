@@ -275,6 +275,7 @@ mod tests {
 
     #[tokio::test]
     async fn poll_cycle_returns_pending_entries() {
+        let _ = std::fs::remove_file(test_checkpoint_path());
         let entries = vec![PendingOutboxEntry {
             id: "entry-1".to_string(),
             sequence: 1,
@@ -294,6 +295,7 @@ mod tests {
 
     #[tokio::test]
     async fn poll_cycle_skips_duplicates() {
+        let _ = std::fs::remove_file(test_checkpoint_path());
         let entries = vec![PendingOutboxEntry {
             id: "entry-1".to_string(),
             sequence: 1,
