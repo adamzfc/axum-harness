@@ -49,6 +49,61 @@ verify:
 gen-dir-cats:
     bun run scripts/gen-directory-categories.ts
 
+# ── 供应链安全 ─────────────────────────────────────────────
+
+# k6 基线压测（默认连接 localhost:3010，可自定义 BASE_URL）
+k6-baseline BASE_URL='http://localhost:3010' DURATION='30s' VUS='5':
+    k6 run \
+      -e BASE_URL={{BASE_URL}} \
+      -e TEST_DURATION={{DURATION}} \
+      -e TEST_VUS={{VUS}} \
+      {{justfile_directory()}}/scripts/k6-baseline.js
+
+# Trivy 漏洞扫描（默认扫描整个项目文件系统，可指定 IMAGE）
+scan-vuln IMAGE='' EXIT_CODE='0':
+    @if [ -n "{{IMAGE}}" ]; then \
+        echo "=== Trivy image scan: {{IMAGE}} ===" ; \
+        trivy image --severity HIGH,CRITICAL --exit-code {{EXIT_CODE}} {{IMAGE}} ; \
+    else \
+        echo "=== Trivy filesystem scan ===" ; \
+        trivy fs --severity HIGH,CRITICAL --exit-code {{EXIT_CODE}} {{justfile_directory()}} ; \
+    fi
+
+# Syft SBOM 生成（默认生成 JSON 格式，输出到 stdout 或文件）
+gen-sbom IMAGE='' FORMAT='json' OUTPUT='-':
+    @if [ -n "{{IMAGE}}" ]; then \
+        echo "=== Syft SBOM: image {{IMAGE}} ===" ; \
+        if [ "{{OUTPUT}}" = "-" ]; then \
+            syft {{IMAGE}} -o {{FORMAT}} ; \
+        else \
+            syft {{IMAGE}} -o {{FORMAT}}={{OUTPUT}} ; \
+        fi ; \
+    else \
+        echo "=== Syft SBOM: workspace ===" ; \
+        if [ "{{OUTPUT}}" = "-" ]; then \
+            syft dir:{{justfile_directory()}} -o {{FORMAT}} ; \
+        else \
+            syft dir:{{justfile_directory()}} -o {{FORMAT}}={{OUTPUT}} ; \
+        fi ; \
+    fi
+
+# Cosign 镜像签名（需要 COSIGN_EXPERIMENTAL=1 时用 keyless 模式）
+sign-image IMAGE:
+    @echo "=== Cosign sign: {{IMAGE}} ==="
+    cosign sign {{IMAGE}}
+
+# Cosign 镜像验证
+verify-image IMAGE:
+    @echo "=== Cosign verify: {{IMAGE}} ==="
+    cosign verify {{IMAGE}}
+
+# 一键跑全量供应链检查（本地 gate）
+supply-chain:
+    @echo "=== Supply Chain Gate ==="
+    just scan-vuln '' 0
+    just gen-sbom
+    @echo "=== Supply Chain Gate PASSED ==="
+
 # ── 内部工具 ──────────────────────────────────────────────────
 
 _require TOOL CMD:

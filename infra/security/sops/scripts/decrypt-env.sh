@@ -20,7 +20,7 @@ PLAIN=$(sops --decrypt "$ENC_FILE" 2>/dev/null) || {
 
 # Try Kubernetes Secret format first (stringData.*)
 if echo "$PLAIN" | yq -e '.stringData' >/dev/null 2>&1; then
-  echo "$PLAIN" | yq -r 'to_entries[] | select(.value != null and (.value | type) == "string") | "export " + .key + "='"'"'" + .value + "'"'"'"'
+  echo "$PLAIN" | yq -r '.stringData | to_entries[] | select(.value != null and (.value | type) == "string") | "export " + .key + "='"'"'" + .value + "'"'"'"'
 else
   # Flat YAML: all top-level keys are strings
   echo "$PLAIN" | yq -r 'to_entries[] | select(.value != null and (.value | type) == "string") | "export " + .key + "='"'"'" + .value + "'"'"'"'
