@@ -1,12 +1,41 @@
-# Authorization Tuples
+# Authorization Tuples — OpenFGA 种子数据
 
-> OpenFGA 授权元数据种子。
-> 当前授权模型未正式启用 OpenFGA，此处预留。
+> Phase 5: authz 已正式接入，MockAuthzAdapter 使用这些元组作为 dev/test 种子。
+> 当 OpenFGA 实例部署后，这些元组通过 `write_tuple` API 写入 OpenFGA store。
 
-## 预期元组
+## 授权模型
+
+见 `packages/authz/src/model.rs` 中的 `AuthorizationModel::default_counter_model()`。
+
+类型:
+- `user` — 认证身份
+- `tenant` — 多租户边界
+- `counter` — 租户下的计数器资源
+
+## 默认种子元组（dev/test）
 
 | user | relation | object | 用途 |
 |------|---------|--------|------|
-| user:admin | owner | tenant:demo-acme | 租户拥有者 |
-| user:alice | member | tenant:demo-acme | 租户成员 |
-| user:admin | admin | service:admin | 管理员权限 |
+| user:dev-test-user | owner | tenant:dev-tenant-001 | dev 模式租户拥有者 |
+| user:dev-test-user | member | tenant:dev-tenant-001 | dev 模式租户成员 |
+| user:dev-test-user | can_write | counter:dev-tenant-001 | 可以操作 counter |
+| user:dev-test-user | can_read | counter:dev-tenant-001 | 可以读取 counter |
+
+## 使用方式
+
+```rust
+// 在测试或 dev 初始化中
+use authz::{MockAuthzAdapter, AuthzTupleKey};
+
+let authz = MockAuthzAdapter::new();
+authz.seed(vec![
+    AuthzTupleKey::new("user:dev-test-user", "owner", "tenant:dev-tenant-001"),
+    AuthzTupleKey::new("user:dev-test-user", "can_write", "counter:dev-tenant-001"),
+]).await;
+```
+
+## 注意
+
+- MockAuthzAdapter 在 store 为空时默认 **allow-all**（dev 模式便利）。
+- 一旦 seed 了元组，就进入 **strict** 模式，只有显式匹配的元组才通过。
+- 这确保了 dev 和 prod 的行为一致性（prod 的 OpenFGA 不会 allow-all）。

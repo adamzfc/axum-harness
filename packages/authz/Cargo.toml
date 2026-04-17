@@ -1,0 +1,26 @@
+[package]
+name = "authz"
+version = "0.1.0"
+edition = "2024"
+description = "Authorization abstraction — ports, adapters, OpenFGA model DSL"
+license = "MIT"
+rust-version.workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }
+
+[features]
+default = []
+openfga = []  # future: openfga-client dependency
+
+[lints]
+workspace = true
