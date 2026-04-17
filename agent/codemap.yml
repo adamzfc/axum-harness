@@ -144,16 +144,42 @@ layers:
 
 reference_modules:
   services:
+    - name: auth-service
+      path: services/auth-service
+      role: 认证服务占位
+      status: stub
     - name: counter-service
       path: services/counter-service
       role: 默认后端参考锚点，承载业务主链与工程横切链的最小参考样例
       status: reference
+    - name: indexing-service
+      path: services/indexing-service
+      role: 索引服务占位
+      status: stub
     - name: tenant
       path: services/tenant-service
       role: 多租户、多实体、workflow、补偿样例
       status: reference
+    - name: user-service
+      path: services/user-service
+      role: 用户画像服务，跨服务读 tenant-membership 投影
+      status: stub
+
+  servers:
+    - name: web-bff
+      path: servers/bff/web-bff
+      role: BFF 同步请求入口
+      status: reference
+    - name: gateway
+      path: servers/gateway
+      role: 网关入口
+      status: reference
 
   workers:
+    - name: indexer
+      path: workers/indexer
+      role: 索引 worker 占位
+      status: stub
     - name: outbox-relay
       path: workers/outbox-relay
       role: 至少一次投递、去重、checkpoint、retry 样例；当前已具结构参考价值但未完全收敛
@@ -162,11 +188,20 @@ reference_modules:
       path: workers/projector
       role: projection、rebuild、replay、lag SLO 样例骨架；当前仍需继续补齐
       status: reference
+    - name: scheduler
+      path: workers/scheduler
+      role: 调度 worker 占位
+      status: stub
+    - name: sync-reconciler
+      path: workers/sync-reconciler
+      role: 同步协调 worker 占位
+      status: stub
 
 planned_or_stub_domains:
   services:
     - auth
     - indexing
+    - user
   note: >
     这些域可以存在为 stub 或 planned，但默认学习路径仍应优先从 counter-service 开始。
 

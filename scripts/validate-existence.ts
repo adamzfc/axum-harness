@@ -10,6 +10,7 @@ interface CodeMapRuleSet {
     required_files?: Record<string, string[]>;
   };
   modules?: Record<string, Record<string, { path?: string; notes?: string; status?: string }>>;
+  reference_modules?: Record<string, Record<string, { path?: string; notes?: string; status?: string }>>;
 }
 
 interface DeclaredModule {
@@ -73,7 +74,7 @@ function pathExists(relativePath: string): boolean {
 function collectDeclaredModules(codemap: CodeMapRuleSet): Map<string, DeclaredModule> {
   const declared = new Map<string, DeclaredModule>();
 
-  for (const [section, items] of Object.entries(codemap.modules ?? {})) {
+  for (const [section, items] of Object.entries(codemap.modules ?? codemap.reference_modules ?? {})) {
     const kind = section.slice(0, -1) as ModuleKind;
     if (kind !== 'service' && kind !== 'server' && kind !== 'worker') {
       continue;
