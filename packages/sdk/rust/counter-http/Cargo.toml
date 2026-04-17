@@ -1,0 +1,18 @@
+[package]
+name = "sdk-counter-http"
+version = "0.1.0"
+edition = "2024"
+description = "SDK Counter HTTP — HTTP client backend to BFF for web and desktop"
+license = "MIT"
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+sdk-counter = { path = "../counter" }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+
+[lints]
+workspace = true

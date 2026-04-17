@@ -172,13 +172,13 @@ planned_or_stub_domains:
 
 ownership:
   generated_readonly:
-    - packages/sdk/**
     - infra/kubernetes/rendered/**
     - docs/generated/**
     - platform/catalog/**
 
   human_authored:
     - agent/**
+    - packages/sdk/rust/**
     - platform/schema/**
     - platform/model/**
     - packages/contracts/**
@@ -196,7 +196,6 @@ write_boundaries:
       - agent/**
       - docs/**
     must_not_modify:
-      - packages/sdk/**
       - infra/kubernetes/rendered/**
 
   - area: platform-model

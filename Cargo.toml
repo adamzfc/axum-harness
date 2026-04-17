@@ -30,6 +30,7 @@ members = [
     # SDK
     "packages/sdk/rust/counter",
     "packages/sdk/rust/counter-embedded",
+    "packages/sdk/rust/counter-http",
     # Services
     "services/user-service",
     "services/tenant-service",
