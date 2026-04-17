@@ -39,20 +39,33 @@ impl TursoCloud {
     pub fn db(&self) -> &SyncDatabase {
         &self.db
     }
+
+    async fn pull_latest(&self) -> Result<(), LibSqlError> {
+        self.db.pull().await?;
+        Ok(())
+    }
+
+    async fn push_local_changes(&self) -> Result<(), LibSqlError> {
+        self.db.push().await?;
+        Ok(())
+    }
 }
 
 #[async_trait]
 impl LibSqlPort for TursoCloud {
     async fn health_check(&self) -> Result<(), LibSqlError> {
+        self.pull_latest().await?;
         let conn = self.db.connect().await?;
         conn.execute("SELECT 1", ()).await?;
         Ok(())
     }
 
     async fn execute(&self, sql: &str, params: Vec<String>) -> Result<u64, LibSqlError> {
+        self.pull_latest().await?;
         let conn = self.db.connect().await?;
         let values: Vec<Value> = params.into_iter().map(Value::Text).collect();
         let result = conn.execute(sql, values).await?;
+        self.push_local_changes().await?;
         Ok(result)
     }
 
@@ -61,6 +74,7 @@ impl LibSqlPort for TursoCloud {
         sql: &str,
         params: Vec<String>,
     ) -> Result<Vec<T>, LibSqlError> {
+        self.pull_latest().await?;
         let conn = self.db.connect().await?;
         let values: Vec<Value> = params.into_iter().map(Value::Text).collect();
         let mut rows = conn.query(sql, values).await?;
@@ -100,24 +114,35 @@ impl LibSqlPort for TursoCloud {
 /// Safe to call multiple times (uses IF NOT EXISTS).
 pub async fn run_tenant_migrations(db: &TursoCloud) -> Result<(), LibSqlError> {
     db.execute(
-        "
-        CREATE TABLE IF NOT EXISTS tenant (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            created_at TEXT NOT NULL DEFAULT (datetime('now'))
-        );
+        "CREATE TABLE IF NOT EXISTS tenant (\
+         id TEXT PRIMARY KEY,\
+         name TEXT NOT NULL,\
+         created_at TEXT NOT NULL DEFAULT (datetime('now'))\
+         )",
+        vec![],
+    )
+    .await?;
 
-        CREATE TABLE IF NOT EXISTS user_tenant (
-            id TEXT PRIMARY KEY,
-            user_sub TEXT NOT NULL UNIQUE,
-            tenant_id TEXT NOT NULL REFERENCES tenant(id),
-            role TEXT NOT NULL DEFAULT 'member',
-            joined_at TEXT NOT NULL DEFAULT (datetime('now'))
-        );
+    db.execute(
+        "CREATE TABLE IF NOT EXISTS user_tenant (\
+         id TEXT PRIMARY KEY,\
+         user_sub TEXT NOT NULL UNIQUE,\
+         tenant_id TEXT NOT NULL REFERENCES tenant(id),\
+         role TEXT NOT NULL DEFAULT 'member',\
+         joined_at TEXT NOT NULL DEFAULT (datetime('now'))\
+         )",
+        vec![],
+    )
+    .await?;
 
-        CREATE INDEX IF NOT EXISTS idx_user_tenant_tenant_id ON user_tenant(tenant_id);
-        CREATE INDEX IF NOT EXISTS idx_user_tenant_user_sub ON user_tenant(user_sub);
-        ",
+    db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_user_tenant_tenant_id ON user_tenant(tenant_id)",
+        vec![],
+    )
+    .await?;
+
+    db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_user_tenant_user_sub ON user_tenant(user_sub)",
         vec![],
     )
     .await?;
