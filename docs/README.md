@@ -18,22 +18,7 @@
 
 ## 2. 默认阅读顺序
 
-agent 或开发者进入后端任务时，默认按以下顺序阅读：
-
-1. `AGENTS.md`
-2. `agent/codemap.yml`
-3. `agent/manifests/routing-rules.yml`
-4. `agent/manifests/gate-matrix.yml`
-5. `docs/architecture/repo-layout.md`
-6. `docs/operations/counter-service-reference-chain.md`
-
-如果任务是规划、审计、重构，则继续读：
-
-1. `docs/backend-infrastructure-audit-checklist.md`
-2. `docs/counter-service-reference-chain-checklist.md`
-3. `docs/document-pruning-ab-checklist.md`
-4. `docs/gate-ci-decoupling-checklist.md`
-5. `docs/backend-execution-plan.md`
+以 `AGENTS.md` §1 定义的阅读顺序为准，本文不再重复。
 
 ## 3. A 类文档
 

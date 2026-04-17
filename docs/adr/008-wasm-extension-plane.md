@@ -6,6 +6,9 @@
 - [ ] Deprecated
 - [ ] Superseded
 
+> **Implementation Status**: All Wasm components are deferred — WIT definitions, host runtime,
+> and guest SDK are not yet implemented. This ADR describes a future capability, not current reality.
+
 ## Context
 The system needs extensibility mechanisms for:
 - Custom business rules per tenant

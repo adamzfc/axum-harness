@@ -1,19 +1,37 @@
-# Event Bus (Deprecated Service Placeholder)
+# Event Bus — Unified Outbox & Inter-Service Communication
 
-> This directory is a transitional artifact from the previous architecture.
-> Event bus behavior should live in shared runtime/packages and relay workers,
-> not as a long-term business service.
+> `packages/messaging` is the **single event persistence truth source** for all services.
+> Every service writes to the unified `event_outbox` table owned by this crate.
 
-## Current Status
+## Architecture
 
-1. Deprecated as a business service
-2. Kept temporarily to avoid destructive removal during harness rebuild
-3. Target ownership is split between:
-   - `packages/messaging/`
-   - `workers/outbox-relay/`
-4. `model.yaml` exists only so the deprecated state is explicit in the harness
+```text
+┌────────────────────────────────────────────┐
+│  ports/         (EventBus trait)            │  ← Services depend on this
+├────────────────────────────────────────────┤
+│  adapters/      (InMemoryEventBus)         │  ← In-process
+│                 (NatsEventBus)              │  ← Distributed
+├────────────────────────────────────────────┤
+│  outbox/        (event_outbox schema +     │  ← Unified outbox truth source
+│                  OutboxEntry +              │
+│                  OutboxPublisher)           │
+└────────────────────────────────────────────┘
+```
 
-## Rule
+## Key Design
 
-Do not use this directory as the template for new services.
-Do not model new business capabilities after `event-bus`.
+- `event_outbox` is the **only** event persistence table — no per-service private outbox tables
+- Schema: `sequence INTEGER PRIMARY KEY AUTOINCREMENT` + `event_id TEXT UNIQUE` (UUID v7)
+- `status` / `retry_count` / `published_at` track delivery state
+- outbox-relay worker reads from this table and publishes to EventBus + PubSub
+
+## Ownership
+
+- Schema definition: `src/outbox/outbox_entry.rs`
+- Publisher logic: `src/outbox/outbox_publisher.rs`
+- Event types: `packages/contracts/events/`
+
+## Feature Flags
+
+- `memory` (default) — in-memory event bus via tokio broadcast channels
+- `nats` (future) — NATS JetStream implementation for production

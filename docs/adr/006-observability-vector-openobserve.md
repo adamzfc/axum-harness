@@ -6,6 +6,10 @@
 - [ ] Deprecated
 - [ ] Superseded
 
+> **Implementation Status**: Only package structure and OpenTelemetry SDK integration are planned.
+> Vector configuration, OpenObserve deployment, and dashboards are all deferred.
+> Do not assume observability infrastructure is available.
+
 ## Context
 The system needs comprehensive observability across:
 - **Logging**: Structured, searchable, retained appropriately

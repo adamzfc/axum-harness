@@ -446,35 +446,14 @@ decision_tree:
       - 是否引入新的 consistency requirement？
 
   add_new_service:
-    must_create:
-      - services/<name>/model.yaml
-      - services/<name>/Cargo.toml
-      - services/<name>/src/domain/
-      - services/<name>/src/application/
-      - services/<name>/src/policies/
-      - services/<name>/src/ports/
-      - services/<name>/src/events/
-      - services/<name>/src/contracts/
-      - services/<name>/src/lib.rs
-      - services/<name>/tests/
-      - services/<name>/migrations/
-      - services/<name>/README.md
+    must_create: 参见 `required_files.service`
     must_update:
       - platform/model/services/<name>.yaml
       - platform/model/state/ownership-map.yaml
       - agent/codemap.yml
 
   add_new_worker:
-    must_create:
-      - workers/<name>/Cargo.toml
-      - workers/<name>/src/main.rs
-      - workers/<name>/src/config.rs
-      - workers/<name>/src/job_or_consumer/
-      - workers/<name>/src/checkpoint/
-      - workers/<name>/src/dedupe/
-      - workers/<name>/src/retry/
-      - workers/<name>/src/metrics/
-      - workers/<name>/README.md
+    must_create: 参见 `required_files.worker`
     must_update:
       - platform/model/deployables/<name>.yaml
       - platform/model/workflows/ 或 services/*/model.yaml
@@ -587,15 +566,5 @@ validation:
     - just verify-resilience
 
 entry_rules:
-  - 先改 platform/schema，再改 platform/model 与 services/*/model.yaml
-  - 先改 packages/contracts，再改 servers/* 与 workers/*
-  - services 是能力边界，不是进程
-  - workers 是一等公民，不是附属脚本
-  - services/<name>/model.yaml 是 service-local distributed semantics 真理源
-  - platform/model/* 只保留平台级元数据与全局规则
-  - vendor 只能进 adapters 或 *-adapters
-  - generated 目录禁止手改
-  - topology 变化通过 topology model 完成，且不得改变状态语义
-  - 任何核心实体必须声明唯一 owner service
-  - 任何跨进程副作用必须声明幂等、重试、去重、回放语义
-  - 任何跨 service 长事务必须通过 workflow model 定义
+  - 变更顺序：先改 platform/schema，再改 platform/model 与 services/*/model.yaml
+  - 变更顺序：先改 packages/contracts，再改 servers/* 与 workers/*

@@ -3,8 +3,13 @@
 ## Status
 - [x] Proposed
 - [x] Accepted
-- [ ] Deprecated
+- [x] Deprecated
 - [ ] Superseded
+
+> **Note**: This ADR describes an aspirational runtime abstraction layer (Direct + Dapr adapters).
+> In practice, the runtime package is no longer the default backend path. Services interact with
+> infrastructure through their own ports, and the event_outbox + outbox-relay chain handles async
+> communication. The 8-port + 3-adapter matrix was never fully implemented.
 
 ## Context
 The system needs to support multiple deployment topologies:
@@ -73,4 +78,3 @@ We implemented a **dual-mode runtime abstraction** in `packages/runtime/`:
 ## References
 - `packages/runtime/ports/` - Runtime port definitions
 - `packages/runtime/adapters/memory/` - Memory implementations
-- `docs/refactoring/REFACTORING-ROADMAP.md` Phase 3 - Runtime implementation

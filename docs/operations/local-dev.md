@@ -106,34 +106,3 @@ just sops-run DEPLOYABLE=projector-worker ENV=dev CMD='cargo run -p projector-wo
 1. 优先验证默认后端锚点。
 2. 优先对齐后续服务应复用的工程路径。
 3. 避免把还未收敛完成的外围模块当成默认学习入口。
-
-## 5. 当前不应继续传播的旧说法
-
-以下说法不再适合作为默认本地开发文档内容：
-
-1. 要求所有后端开发都先复制 `.env.example` 到 `.env`。
-2. 把前端和桌面启动流程写成后端任务的默认前置步骤。
-3. 把尚未稳定的迁移、验证或运行命令写成已经收敛的统一入口。
-
-例如：
-
-1. `local-dev.md` 旧版里出现的 `.env` 主路径，与 `justfiles/sops.just` 的默认约束不一致。
-2. 旧版中部分命令名称和当前 `justfiles/*.just` 的真实入口也并不完全对齐。
-
-## 6. 验证建议
-
-当前更贴近实际的本地验证入口是：
-
-```bash
-just test
-just test-e2e
-just validate-platform
-just validate-deps
-just gate-scoped service-agent
-```
-
-具体跑哪些验证，仍应按触达目录和 `agent/manifests/gate-matrix.yml` 决定。
-
-## 7. 一句话结论
-
-本仓库当前本地后端开发的默认主线，是围绕 `counter-service` 先跑通 `bootstrap -> web-bff -> relay -> 验证` 这条最小闭环，并尽量保持与 `SOPS/Kustomize/Flux` 工程路径一致，而不是回到 `.env` 驱动的传统教程式入口。

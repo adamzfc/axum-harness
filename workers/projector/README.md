@@ -20,7 +20,7 @@
 1. `src/main.rs`：主进程入口、轮询主循环与健康检查。
 2. `src/consumers/`：事件消费者定义。
 3. `src/readmodels/`：持久化 read model 更新逻辑。
-4. `src/source.rs`：从 `counter_outbox` 读取 replayable event source。
+4. `src/source.rs`：从统一 `event_outbox` 读取 replayable event source。
 5. `src/checkpoint/` 与 `src/replay/`：checkpoint 与 replay 控制。
 6. `../../platform/model/deployables/projector-worker.yaml`：deployable 元数据入口。
 7. `../../infra/k3s/overlays/dev/projector-worker/kustomization.yaml`：独立 dev overlay 入口。

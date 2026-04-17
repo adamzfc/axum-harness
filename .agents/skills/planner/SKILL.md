@@ -31,7 +31,6 @@ AGENTS.md                                                   → global protocol
 agent/codemap.yml                                           → module constraints truth source
 agent/manifests/routing-rules.yml                           → path → subagent mapping
 agent/manifests/gate-matrix.yml                             → subagent → gate mapping
-docs/architecture/distributed-harness-iteration-plan.md     → 10-phase execution plan
 docs/architecture/repo-layout.md                            → target structure
 ```
 

@@ -6,14 +6,7 @@
 
 ## 1. 如何使用这份文档
 
-进入后端任务时，建议按以下顺序阅读：
-
-1. `AGENTS.md`
-2. `agent/codemap.yml`
-3. `agent/manifests/routing-rules.yml`
-4. `agent/manifests/gate-matrix.yml`
-5. 本文档
-6. `docs/operations/counter-service-reference-chain.md`
+进入后端任务时，阅读顺序以 `AGENTS.md` §1 为准。
 
 如果本文档与代码现状冲突，以代码、schema、validator、gate、脚本为准。
 

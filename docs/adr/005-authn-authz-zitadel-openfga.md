@@ -6,6 +6,9 @@
 - [ ] Deprecated
 - [ ] Superseded
 
+> **Implementation Status**: Only mock OAuth provider and JWT/session repositories are implemented.
+> Zitadel integration and OpenFGA adapter are deferred. Do not assume production auth is available.
+
 ## Context
 The system needs robust authentication and authorization capabilities that support:
 - Multi-tenant isolation
