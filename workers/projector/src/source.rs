@@ -1,6 +1,6 @@
 //! Projection source — reads replayable events from the unified event_outbox.
 
-use contracts_events::{AppEvent, CounterChanged, EventEnvelope};
+use contracts_events::EventEnvelope;
 use data::ports::lib_sql::LibSqlPort;
 use serde::Deserialize;
 
@@ -66,18 +66,6 @@ impl<P: LibSqlPort> CounterOutboxSource<P> {
 }
 
 fn deserialize_envelope(payload: &str) -> Result<EventEnvelope, ProjectorError> {
-    match serde_json::from_str::<EventEnvelope>(payload) {
-        Ok(envelope) => Ok(envelope),
-        Err(envelope_error) => match serde_json::from_str::<AppEvent>(payload) {
-            Ok(event) => Ok(EventEnvelope::new(event, "counter-service")),
-            Err(app_event_error) => serde_json::from_str::<CounterChanged>(payload)
-                .map(AppEvent::CounterChanged)
-                .map(|event| EventEnvelope::new(event, "counter-service"))
-                .map_err(|counter_changed_error| {
-                    ProjectorError::Source(format!(
-                        "deserialize event envelope: {envelope_error}; app event: {app_event_error}; counter-changed fallback: {counter_changed_error}"
-                    ))
-                }),
-        },
-    }
+    EventEnvelope::decode(payload, "counter-service")
+        .map_err(|error| ProjectorError::Source(error.to_string()))
 }

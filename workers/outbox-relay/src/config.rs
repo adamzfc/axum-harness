@@ -6,10 +6,6 @@
 use std::time::Duration;
 
 use contracts_events::NATS_EVENT_SUBJECT_PREFIX;
-use figment::{
-    Figment,
-    providers::{Env, Serialized},
-};
 use serde::{Deserialize, Serialize};
 
 /// Outbox relay worker configuration.
@@ -53,11 +49,8 @@ impl Config {
     /// For local development without cluster, use:
     ///   `just sops-run outbox-relay-worker`
     pub fn from_env() -> anyhow::Result<Self> {
-        let config: Config = Figment::new()
-            .merge(Serialized::defaults(Self::default()))
-            .merge(Env::prefixed("OUTBOX_").global())
-            .extract()?;
-        Ok(config)
+        platform::load_config(Self::default(), "OUTBOX_", Some("OUTBOX_CONFIG_FILE"))
+            .map_err(Into::into)
     }
 }
 

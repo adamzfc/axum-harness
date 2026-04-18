@@ -1,10 +1,6 @@
 //! Projector worker configuration.
 
 use contracts_events::{NATS_EVENT_SUBJECT_PREFIX, PROJECTOR_QUEUE_GROUP};
-use figment::{
-    Figment,
-    providers::{Env, Serialized},
-};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -24,11 +20,8 @@ pub struct Config {
 
 impl Config {
     pub fn from_env() -> anyhow::Result<Self> {
-        let config: Config = Figment::new()
-            .merge(Serialized::defaults(Self::default()))
-            .merge(Env::prefixed("PROJECTOR_").global())
-            .extract()?;
-        Ok(config)
+        platform::load_config(Self::default(), "PROJECTOR_", Some("PROJECTOR_CONFIG_FILE"))
+            .map_err(Into::into)
     }
 
     pub fn health_addr(&self) -> std::net::SocketAddr {

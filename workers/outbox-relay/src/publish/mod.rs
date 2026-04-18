@@ -1,8 +1,6 @@
 //! Event publisher — publishes outbox entries to the event bus and runtime pubsub.
 
-use contracts_events::{
-    AppEvent, CounterChanged, EventEnvelope, event_type_name, runtime_outbox_topic_for_type,
-};
+use contracts_events::{EventEnvelope, event_type_name, runtime_outbox_topic_for_type};
 use event_bus::ports::EventBus;
 use runtime::ports::{MessageEnvelope as RuntimeMessageEnvelope, PubSub};
 use tracing::{debug, warn};
@@ -34,20 +32,8 @@ impl<E: EventBus, P: PubSub> OutboxPublisher<E, P> {
     }
 
     fn deserialize_event(payload: &str) -> Result<EventEnvelope, PublishError> {
-        match serde_json::from_str::<EventEnvelope>(payload) {
-            Ok(envelope) => Ok(envelope),
-            Err(envelope_error) => match serde_json::from_str::<AppEvent>(payload) {
-                Ok(event) => Ok(EventEnvelope::new(event, "counter-service")),
-                Err(app_event_error) => serde_json::from_str::<CounterChanged>(payload)
-                    .map(AppEvent::CounterChanged)
-                    .map(|event| EventEnvelope::new(event, "counter-service"))
-                    .map_err(|counter_changed_error| {
-                        PublishError::Deserialize(format!(
-                            "event envelope: {envelope_error}; app event: {app_event_error}; counter-changed fallback: {counter_changed_error}"
-                        ))
-                    }),
-            },
-        }
+        EventEnvelope::decode(payload, "counter-service")
+            .map_err(|error| PublishError::Deserialize(error.to_string()))
     }
 
     /// Publish a single outbox entry to both event bus and pubsub.

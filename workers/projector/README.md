@@ -6,7 +6,7 @@
 
 - status: `reference`
 - 角色：默认 projection、checkpoint、replay 结构参考 worker
-- 说明：当前已补齐真实 outbox replay、持久化 read model、磁盘 checkpoint，并新增可选 NATS live tail；live tail 默认使用 queue group 降低多副本重复消费，但仍不提供 durable broker checkpoint 语义。同时已补到独立的 dev SOPS/Kustomize/Flux 落点，但默认仍保持 replicas=0，待 shared libSQL/Turso secret 经解密核实后再启用
+- 说明：当前已补齐真实 outbox replay、持久化 read model、磁盘 checkpoint，并新增可选 NATS live tail；live tail 默认使用 queue group 降低多副本重复消费，但仍不提供 durable broker checkpoint 语义。同时已补到独立的 dev SOPS/Kustomize/Flux 落点，当前 overlay 中显式保持 `replicas=1`，因此 shared libSQL/Turso secret 与 delivery gate 校验必须前置
 
 ## 责任
 
@@ -39,4 +39,4 @@ cargo test -p projector-worker
 2. 不要把 read model 当成业务真理源。
 3. 不要跳过 replay/rebuild 约束，只保留“实时消费”这一半能力。
 4. 不要把 queue group 误写成 durable consumer；当前可重建能力仍主要来自 outbox replay。
-5. 不要在 shared libSQL/Turso secret 仍指向本地 `file:` 路径，或 `just sops-verify-counter-shared-db ENV=dev` 仍未通过时，把 dev overlay 中的 `projector-worker` 直接扩到 1 个副本。
+5. 不要在 shared libSQL/Turso secret 仍指向本地 `file:` 路径，或 `just sops-verify-counter-shared-db ENV=dev` / `just verify-counter-delivery strict` 仍未通过时，继续依赖 dev overlay 中已启用的 `projector-worker` 作为有效 projection 交付链路。

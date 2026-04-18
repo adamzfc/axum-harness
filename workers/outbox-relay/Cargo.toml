@@ -16,6 +16,7 @@ contracts_events = { path = "../../packages/contracts/events" }
 data = { path = "../../packages/data" }
 storage_turso = { path = "../../packages/data-adapters/turso" }
 observability = { workspace = true }
+platform = { workspace = true }
 
 # Core
 serde = { workspace = true }
@@ -31,9 +32,6 @@ anyhow = { workspace = true }
 
 # HTTP server for health checks
 axum = { workspace = true }
-
-# Configuration
-figment = { version = "0.10", features = ["env"] }
 
 [dev-dependencies]
 

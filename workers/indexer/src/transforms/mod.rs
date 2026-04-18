@@ -39,7 +39,7 @@ impl EventTransform for PassthroughTransform {
     }
 
     async fn transform(&self, raw: &RawEvent) -> Result<Option<TransformedEvent>, IndexerError> {
-        if let Ok(mut envelope) = serde_json::from_str::<EventEnvelope>(&raw.raw_payload) {
+        if let Ok(mut envelope) = EventEnvelope::decode(&raw.raw_payload, raw.source.clone()) {
             if let Some(correlation_id) = raw.metadata.get("correlation_id")
                 && envelope.metadata.correlation_id.is_none()
             {
@@ -58,24 +58,6 @@ impl EventTransform for PassthroughTransform {
             if let Some(span_id) = raw.metadata.get("span_id")
                 && envelope.metadata.span_id.is_none()
             {
-                envelope.metadata.span_id = Some(span_id.clone());
-            }
-            return Ok(Some(TransformedEvent { envelope }));
-        }
-
-        // Backward-compatible fallback: accept bare AppEvent payloads.
-        if let Ok(event) = serde_json::from_str::<AppEvent>(&raw.raw_payload) {
-            let mut envelope = EventEnvelope::new(event, raw.source.clone());
-            if let Some(correlation_id) = raw.metadata.get("correlation_id") {
-                envelope.metadata.correlation_id = Some(correlation_id.clone());
-            }
-            if let Some(causation_id) = raw.metadata.get("causation_id") {
-                envelope.metadata.causation_id = Some(causation_id.clone());
-            }
-            if let Some(trace_id) = raw.metadata.get("trace_id") {
-                envelope.metadata.trace_id = Some(trace_id.clone());
-            }
-            if let Some(span_id) = raw.metadata.get("span_id") {
                 envelope.metadata.span_id = Some(span_id.clone());
             }
             return Ok(Some(TransformedEvent { envelope }));

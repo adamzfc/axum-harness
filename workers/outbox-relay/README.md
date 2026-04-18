@@ -6,7 +6,7 @@
 
 - status: `reference`
 - 角色：默认 outbox -> relay -> publish 链路参考 worker
-- 说明：默认主路径已改为真实数据库 reader，并补上真实 NATS 发布 adapter；独立 dev overlay 现已接入 shared counter DB secret，但在无法解密核实 secret 真实值前，默认仍保持 replicas=0，避免伪造多 Pod 闭环
+- 说明：默认主路径已改为真实数据库 reader，并补上真实 NATS 发布 adapter；独立 dev overlay 现已接入 shared counter DB secret，当前 overlay 中显式保持 `replicas=1`，因此更依赖 shared secret 与 delivery gate 的前置校验
 
 ## 责任
 
@@ -37,4 +37,4 @@ cargo test -p outbox-relay-worker
 1. 不要把当前 NATS 发布 adapter 写成“所有下游都已完成 broker 订阅”的最终形态。
 2. 不要跳过 checkpoint、幂等、恢复顺序这些 worker 硬约束。
 3. 不要把本地可运行误写成 NATS 与真实数据库链路已经完全闭环。
-4. 不要在 shared libSQL/Turso secret 仍指向本地 `file:` 路径，或 `just sops-verify-counter-shared-db ENV=dev` 仍未通过时，把 dev overlay 中的 `outbox-relay-worker` 直接扩到 1 个副本。
+4. 不要在 shared libSQL/Turso secret 仍指向本地 `file:` 路径，或 `just sops-verify-counter-shared-db ENV=dev` / `just verify-counter-delivery strict` 仍未通过时，继续依赖 dev overlay 中已启用的 `outbox-relay-worker` 作为有效交付链路。
