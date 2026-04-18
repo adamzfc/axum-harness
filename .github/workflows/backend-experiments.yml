@@ -59,6 +59,7 @@ jobs:
   compile-drift:
     name: Compile Drift (${{ matrix.toolchain }})
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     continue-on-error: ${{ matrix.allow_failure }}
     strategy:
       fail-fast: false

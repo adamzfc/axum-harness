@@ -89,6 +89,7 @@ jobs:
   security:
     name: Security Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v5
@@ -122,6 +123,7 @@ jobs:
   governance-static:
     name: Governance Static Checks
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v5
@@ -151,6 +153,7 @@ jobs:
   secondary-runtime:
     name: Secondary Runtime Validation
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v5
@@ -182,6 +185,7 @@ jobs:
   platform-drift:
     name: Platform Drift Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v5
@@ -203,6 +207,7 @@ jobs:
   contract-drift:
     name: Contract Drift Check
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
       - uses: actions/checkout@v5
@@ -219,6 +224,7 @@ jobs:
   sdk-drift:
     name: SDK Drift Check
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
       - uses: actions/checkout@v5
@@ -236,12 +242,16 @@ jobs:
   validation-scripts:
     name: Validation Scripts
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v5
 
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Validate state
         run: bun run scripts/validate-state.ts --mode strict
@@ -253,15 +263,12 @@ jobs:
         run: bun run scripts/validate-imports.ts --mode strict
 
       - name: Boundary check
-        run: |
-          # Install Rust for cargo tree
-          rustup toolchain install stable
-          rustup default stable
-          bun run scripts/boundary-check.ts
+        run: bun run scripts/boundary-check.ts
 
   supply-chain:
     name: Supply Chain Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v5
@@ -290,6 +297,7 @@ jobs:
   summary:
     name: Quality Gate Summary
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     needs: [security, governance-static, secondary-runtime, platform-drift, contract-drift, sdk-drift, validation-scripts, supply-chain]
     if: always()
 

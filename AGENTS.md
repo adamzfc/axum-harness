@@ -9,7 +9,7 @@
 Communication defaults to English. To switch, add to your agent configuration:
 
 ```yaml
-communication_language: zh-CN
+communication_language: Chinese
 ```
 
 Code, commands, config keys, logs, and protocol fields always remain in their original language.
@@ -38,6 +38,7 @@ When determining the current state, gather evidence in this order:
 6. `docs/adr/**` and `.agents/skills/*/SKILL.md`
 
 Hard rules:
+
 1. When docs conflict with code, trust code and executable verification.
 2. Never infer a file or module exists solely from target-state documentation.
 3. Conclusions about the current state must point to a real file, directory, or command output.
@@ -51,15 +52,15 @@ Hard rules:
 
 Full mapping lives in `agent/manifests/routing-rules.yml`. Quick reference:
 
-| Path | Subagent |
-|------|----------|
+| Path                                                            | Subagent           |
+| --------------------------------------------------------------- | ------------------ |
 | `platform/model/**`, `platform/schema/**`, `infra/**`, `ops/**` | platform-ops-agent |
-| `packages/contracts/**`, `docs/contracts/**` | contract-agent |
-| `services/**` | service-agent |
-| `servers/**` | server-agent |
-| `workers/**` | worker-agent |
-| `apps/**`, `packages/ui/**` | app-shell-agent |
-| `AGENTS.md`, `agent/**`, root config | planner |
+| `packages/contracts/**`, `docs/contracts/**`                    | contract-agent     |
+| `services/**`                                                   | service-agent      |
+| `servers/**`                                                    | server-agent       |
+| `workers/**`                                                    | worker-agent       |
+| `apps/**`, `packages/ui/**`                                     | app-shell-agent    |
+| `AGENTS.md`, `agent/**`, root config                            | planner            |
 
 Multi-domain dispatch order: platform-ops → contract → service → server/worker → app-shell → final verification.
 Only split when directory, responsibility, or verification boundaries genuinely differ.

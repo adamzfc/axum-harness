@@ -95,6 +95,7 @@ jobs:
   primary-static:
     name: Primary Static Checks
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -125,6 +126,7 @@ jobs:
   primary-tests:
     name: Primary Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -148,6 +150,7 @@ jobs:
   bff-smoke:
     name: BFF Smoke Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [primary-static, primary-tests]
 
     steps:
@@ -188,6 +191,7 @@ jobs:
   load-test:
     name: Baseline Load Test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [primary-static, primary-tests]
     # Non-blocking: load test requires Turso Cloud DB; skip failure in CI without DB
     continue-on-error: true
@@ -240,6 +244,7 @@ jobs:
   summary:
     name: Backend CI
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     needs: [primary-static, primary-tests, bff-smoke, load-test]
     if: always()
 
