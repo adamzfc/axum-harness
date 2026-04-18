@@ -1,7 +1,7 @@
 //! Shared Turso backend selector for local and remote libSQL paths.
 
 use async_trait::async_trait;
-use data_traits::ports::lib_sql::{LibSqlError, LibSqlPort};
+use data_traits::ports::lib_sql::{LibSqlError, LibSqlPort, SqlTransaction};
 use serde::de::DeserializeOwned;
 
 use crate::{EmbeddedTurso, TursoCloud};
@@ -51,6 +51,13 @@ impl LibSqlPort for TursoBackend {
         }
     }
 
+    async fn execute_batch(&self, sql: &str) -> Result<(), LibSqlError> {
+        match self {
+            Self::Embedded(db) => db.execute_batch(sql).await,
+            Self::Remote(db) => db.execute_batch(sql).await,
+        }
+    }
+
     async fn query<T: DeserializeOwned + Send + Sync>(
         &self,
         sql: &str,
@@ -59,6 +66,13 @@ impl LibSqlPort for TursoBackend {
         match self {
             Self::Embedded(db) => db.query(sql, params).await,
             Self::Remote(db) => db.query(sql, params).await,
+        }
+    }
+
+    async fn begin(&self) -> Result<Box<dyn SqlTransaction>, LibSqlError> {
+        match self {
+            Self::Embedded(db) => db.begin().await,
+            Self::Remote(db) => db.begin().await,
         }
     }
 }

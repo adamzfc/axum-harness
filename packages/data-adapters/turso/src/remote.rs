@@ -4,7 +4,7 @@
 //! Implements the LibSqlPort trait for cloud-based SQLite.
 
 use async_trait::async_trait;
-use data_traits::ports::lib_sql::{LibSqlError, LibSqlPort};
+use data_traits::ports::lib_sql::{LibSqlError, LibSqlPort, SqlTransaction};
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
 use turso::Value;
@@ -51,6 +51,81 @@ impl TursoCloud {
     }
 }
 
+/// Transaction guard for Turso cloud (sync::Database).
+///
+/// Holds a dedicated connection from the synced database. All operations
+/// run on the same connection until `commit` or `rollback` is called.
+pub struct CloudTransaction {
+    conn: turso::Connection,
+    finished: bool,
+}
+
+impl CloudTransaction {
+    /// Begin a new transaction on a fresh connection from the given synced database.
+    ///
+    /// Uses `BEGIN IMMEDIATE` to acquire a write lock upfront.
+    pub async fn new(db: &SyncDatabase) -> Result<Self, LibSqlError> {
+        let conn = db.connect().await?;
+        conn.execute("BEGIN IMMEDIATE", ()).await?;
+        Ok(Self {
+            conn,
+            finished: false,
+        })
+    }
+
+    async fn serialize_rows<T: DeserializeOwned>(
+        rows: &mut turso::Rows,
+    ) -> Result<Vec<T>, LibSqlError> {
+        let column_names: Vec<String> = (0..rows.column_count())
+            .map(|i| rows.column_name(i).unwrap_or_default())
+            .collect();
+
+        let mut results = Vec::new();
+        while let Some(row) = rows.next().await? {
+            let mut map = serde_json::Map::new();
+            for (i, name) in column_names.iter().enumerate() {
+                let value: serde_json::Value = match row.get_value(i)? {
+                    Value::Null => serde_json::Value::Null,
+                    Value::Integer(n) => serde_json::json!(n),
+                    Value::Real(f) => serde_json::json!(f),
+                    Value::Text(s) => serde_json::Value::String(s),
+                    Value::Blob(b) => serde_json::Value::String(base64::Engine::encode(
+                        &base64::engine::general_purpose::STANDARD,
+                        b,
+                    )),
+                };
+                map.insert(name.clone(), value);
+            }
+            let json = serde_json::Value::Object(map);
+            let item: T = serde_json::from_value(json)
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+            results.push(item);
+        }
+        Ok(results)
+    }
+}
+
+#[async_trait]
+impl SqlTransaction for CloudTransaction {
+    async fn execute(&self, sql: &str, params: Vec<String>) -> Result<u64, LibSqlError> {
+        let values: Vec<Value> = params.into_iter().map(Value::Text).collect();
+        let result = self.conn.execute(sql, values).await?;
+        Ok(result)
+    }
+
+    async fn commit(mut self: Box<Self>) -> Result<(), LibSqlError> {
+        self.conn.execute("COMMIT", ()).await?;
+        self.finished = true;
+        Ok(())
+    }
+
+    async fn rollback(mut self: Box<Self>) -> Result<(), LibSqlError> {
+        self.conn.execute("ROLLBACK", ()).await?;
+        self.finished = true;
+        Ok(())
+    }
+}
+
 #[async_trait]
 impl LibSqlPort for TursoCloud {
     async fn health_check(&self) -> Result<(), LibSqlError> {
@@ -69,6 +144,14 @@ impl LibSqlPort for TursoCloud {
         Ok(result)
     }
 
+    async fn execute_batch(&self, sql: &str) -> Result<(), LibSqlError> {
+        self.pull_latest().await?;
+        let conn = self.db.connect().await?;
+        conn.execute_batch(sql).await?;
+        self.push_local_changes().await?;
+        Ok(())
+    }
+
     async fn query<T: DeserializeOwned + Send + Sync>(
         &self,
         sql: &str,
@@ -78,33 +161,12 @@ impl LibSqlPort for TursoCloud {
         let conn = self.db.connect().await?;
         let values: Vec<Value> = params.into_iter().map(Value::Text).collect();
         let mut rows = conn.query(sql, values).await?;
+        CloudTransaction::serialize_rows(&mut rows).await
+    }
 
-        let column_names: Vec<String> = (0..rows.column_count())
-            .map(|i| rows.column_name(i).unwrap_or_default())
-            .collect();
-
-        let mut results = Vec::new();
-        while let Some(row) = rows.next().await? {
-            let mut map = serde_json::Map::new();
-            for (i, name) in column_names.iter().enumerate() {
-                let value = match row.get_value(i)? {
-                    Value::Null => serde_json::Value::Null,
-                    Value::Integer(n) => serde_json::json!(n),
-                    Value::Real(f) => serde_json::json!(f),
-                    Value::Text(s) => serde_json::Value::String(s),
-                    Value::Blob(b) => serde_json::Value::String(base64::Engine::encode(
-                        &base64::engine::general_purpose::STANDARD,
-                        b,
-                    )),
-                };
-                map.insert(name.clone(), value);
-            }
-            let json = serde_json::Value::Object(map);
-            let item: T = serde_json::from_value(json)
-                .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
-            results.push(item);
-        }
-        Ok(results)
+    async fn begin(&self) -> Result<Box<dyn SqlTransaction>, LibSqlError> {
+        let tx = CloudTransaction::new(&self.db).await?;
+        Ok(Box::new(tx))
     }
 }
 
