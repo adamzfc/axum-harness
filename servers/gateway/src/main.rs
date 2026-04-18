@@ -21,9 +21,12 @@ use pingora_load_balancing::{
     Backend, LoadBalancer, health_check::TcpHealthCheck, selection::RoundRobin,
 };
 use pingora_proxy::{ProxyHttp, Session, http_proxy_service};
+use serde::{Deserialize, Serialize};
+use std::time::Instant;
 
 // ── Configuration ────────────────────────────────────────────
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct GatewayConfig {
     api_upstream: String,
     web_upstream: String,
@@ -31,13 +34,18 @@ struct GatewayConfig {
 }
 
 impl GatewayConfig {
-    fn from_env() -> Self {
+    fn from_env() -> anyhow::Result<Self> {
+        platform::load_config(Self::default(), "GATEWAY_", Some("GATEWAY_CONFIG_FILE"))
+            .map_err(Into::into)
+    }
+}
+
+impl Default for GatewayConfig {
+    fn default() -> Self {
         Self {
-            api_upstream: std::env::var("API_UPSTREAM")
-                .unwrap_or_else(|_| "127.0.0.1:3010".to_string()),
-            web_upstream: std::env::var("WEB_UPSTREAM")
-                .unwrap_or_else(|_| "127.0.0.1:3002".to_string()),
-            bind: std::env::var("BIND").unwrap_or_else(|_| "0.0.0.0:3000".to_string()),
+            api_upstream: "127.0.0.1:3010".to_string(),
+            web_upstream: "127.0.0.1:3002".to_string(),
+            bind: "0.0.0.0:3000".to_string(),
         }
     }
 }
@@ -47,6 +55,8 @@ impl GatewayConfig {
 struct Gateway {
     api_upstreams: Arc<LoadBalancer<RoundRobin>>,
     web_upstreams: Arc<LoadBalancer<RoundRobin>>,
+    readiness_client: reqwest::Client,
+    config: GatewayConfig,
 }
 
 impl Gateway {
@@ -71,26 +81,40 @@ impl Gateway {
         let web_bg = background_service("web-health-check", web_upstreams);
         let web_upstreams = web_bg.task();
 
+        let readiness_client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(2))
+            .build()
+            .unwrap_or_default();
+
         Self {
             api_upstreams,
             web_upstreams,
+            readiness_client,
+            config: config.clone(),
         }
     }
 }
 
+/// Per-request context — tracks start time for latency logging.
+struct RequestCtx {
+    start: Instant,
+}
+
 #[async_trait]
 impl ProxyHttp for Gateway {
-    type CTX = ();
+    type CTX = RequestCtx;
 
-    fn new_ctx(&self) -> Self::CTX {}
+    fn new_ctx(&self) -> Self::CTX {
+        RequestCtx {
+            start: Instant::now(),
+        }
+    }
 
     /// Handle health check directly (short-circuit, no upstream).
     async fn request_filter(&self, session: &mut Session, _ctx: &mut Self::CTX) -> Result<bool> {
         let path = session.req_header().uri.path();
 
         if path == "/healthz" || path == "/health" {
-            // Gateway is healthy if it's running
-            // Pingora's internal health checks manage upstream status automatically
             let body_str = serde_json::json!({
                 "status": "ok",
                 "upstreams": {
@@ -103,6 +127,44 @@ impl ProxyHttp for Gateway {
             let body = Bytes::from(body_str);
             let len = body.len();
             let mut hdr = ResponseHeader::build(200, Some(len))?;
+            hdr.set_content_length(len)?;
+            hdr.insert_header("content-type", "application/json")?;
+
+            session.write_response_header(Box::new(hdr), false).await?;
+            session.write_response_body(Some(body), true).await?;
+            return Ok(true);
+        }
+
+        if path == "/readyz" {
+            // Check upstream readiness by probing each upstream via TCP.
+            let api_ready = self
+                .readiness_client
+                .get(format!("http://{}/healthz", self.config.api_upstream))
+                .send()
+                .await
+                .is_ok();
+            let web_ready = self
+                .readiness_client
+                .get(format!("http://{}/healthz", self.config.web_upstream))
+                .send()
+                .await
+                .is_ok();
+
+            let overall_ready = api_ready && web_ready;
+            let status_code = if overall_ready { 200 } else { 503 };
+
+            let body_str = serde_json::json!({
+                "status": if overall_ready { "ready" } else { "not_ready" },
+                "upstreams": {
+                    "api": if api_ready { "healthy" } else { "unhealthy" },
+                    "web": if web_ready { "healthy" } else { "unhealthy" },
+                }
+            })
+            .to_string();
+
+            let body = Bytes::from(body_str);
+            let len = body.len();
+            let mut hdr = ResponseHeader::build(status_code, Some(len))?;
             hdr.set_content_length(len)?;
             hdr.insert_header("content-type", "application/json")?;
 
@@ -131,21 +193,62 @@ impl ProxyHttp for Gateway {
         let backend = upstreams.select(b"", 256).unwrap();
         Ok(Box::new(HttpPeer::new(backend, false, sni.to_string())))
     }
+
+    /// Log proxy transaction — method, path, upstream, status, latency.
+    async fn logging(
+        &self,
+        session: &mut Session,
+        error: Option<&pingora_core::Error>,
+        ctx: &mut Self::CTX,
+    ) {
+        let latency = ctx.start.elapsed();
+        let method = session.req_header().method.as_str();
+        let path = session.req_header().uri.path();
+
+        if let Some(resp) = session.response_written() {
+            let status = resp.status.as_u16();
+            if status >= 400 || error.is_some() {
+                tracing::warn!(
+                    method,
+                    path,
+                    status,
+                    latency_ms = latency.as_millis(),
+                    error = ?error.map(|e| e.to_string()),
+                    "proxy_request"
+                );
+            } else {
+                tracing::info!(
+                    method,
+                    path,
+                    status,
+                    latency_ms = latency.as_millis(),
+                    "proxy_request"
+                );
+            }
+        } else if let Some(e) = error {
+            tracing::error!(
+                method,
+                path,
+                latency_ms = latency.as_millis(),
+                error = %e,
+                "proxy_request_failed"
+            );
+        }
+    }
 }
 
 // ── Entry point ──────────────────────────────────────────────
 
 fn main() -> anyhow::Result<()> {
-    env_logger::init_from_env(
-        env_logger::Env::default().default_filter_or("info,pingora_gateway=debug"),
-    );
+    let _observability = observability::init_observability("gateway", "info,gateway=debug")
+        .map_err(std::io::Error::other)?;
 
-    let config = GatewayConfig::from_env();
+    let config = GatewayConfig::from_env()?;
     let bind_addr = config.bind.clone();
 
-    log::info!("Starting Pingora gateway on {}", bind_addr);
-    log::info!("  API upstream (web-bff):    {}", config.api_upstream);
-    log::info!("  Web upstream:              {}", config.web_upstream);
+    tracing::info!("Starting Pingora gateway on {}", bind_addr);
+    tracing::info!("  API upstream (web-bff):    {}", config.api_upstream);
+    tracing::info!("  Web upstream:              {}", config.web_upstream);
 
     let mut server = Server::new(Some(Opt::parse_args()))?;
     server.bootstrap();
