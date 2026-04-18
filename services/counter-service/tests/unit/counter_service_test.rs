@@ -9,7 +9,9 @@ use contracts_events::ActorRef;
 use counter_service::application::{RepositoryBackedCounterService, TenantScopedCounterService};
 use counter_service::contracts::service::{CounterCommandContext, CounterService};
 use counter_service::domain::{Counter, CounterId};
-use counter_service::ports::{CounterRepository, RepositoryError};
+use counter_service::ports::{
+    CommitOutcome, CounterMutation, CounterOperation, CounterRepository, RepositoryError,
+};
 use kernel::TenantId;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -119,6 +121,56 @@ impl CounterRepository for MockCounterRepository {
         let mut map = self.idempotency.lock().await;
         map.insert(key.to_string(), (value, version));
         Ok(())
+    }
+
+    async fn commit_mutation(
+        &self,
+        m: &CounterMutation<'_>,
+        idempotency_key: Option<&str>,
+    ) -> Result<CommitOutcome, RepositoryError> {
+        // Simulate the atomic commit: mutation + outbox + idempotency cache
+        {
+            let mut map = self.counters.lock().await;
+            let counter = map
+                .entry(m.counter_id.as_str().to_string())
+                .or_insert_with(|| Counter::new(m.counter_id.clone(), Utc::now()));
+            let mut updated = counter.clone();
+            match m.operation {
+                CounterOperation::Increment => {
+                    updated.value = m.new_value;
+                    updated.version = m.new_version;
+                }
+                CounterOperation::Decrement => {
+                    updated.value = m.new_value;
+                    updated.version = m.new_version;
+                }
+                CounterOperation::Reset => {
+                    updated.value = 0;
+                    updated.version = m.new_version;
+                }
+            }
+            *map.get_mut(m.counter_id.as_str()).unwrap() = updated;
+        }
+
+        {
+            let mut outbox = self.outbox.lock().await;
+            outbox.push(format!(
+                "{}:{}:{}",
+                m.event_type,
+                m.correlation_id.unwrap_or(""),
+                m.event_payload
+            ));
+        }
+
+        if let Some(key) = idempotency_key {
+            let mut map = self.idempotency.lock().await;
+            map.insert(key.to_string(), (m.new_value, m.new_version));
+        }
+
+        Ok(CommitOutcome::Committed {
+            new_value: m.new_value,
+            new_version: m.new_version,
+        })
     }
 }
 

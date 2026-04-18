@@ -13,7 +13,9 @@ use data::ports::lib_sql::LibSqlPort;
 use serde::Deserialize;
 
 use crate::domain::{Counter, CounterId};
-use crate::ports::{CounterRepository, RepositoryError};
+use crate::ports::{
+    CommitOutcome, CounterMutation, CounterOperation, CounterRepository, RepositoryError,
+};
 
 /// Raw row shape from the counter table.
 #[derive(Debug, Deserialize)]
@@ -27,6 +29,7 @@ struct CounterRow {
 /// Minimal row shape for value-only queries from counter table.
 #[derive(Debug, Deserialize)]
 struct ValueRow {
+    // Reused for CAS mutation results
     value: i64,
     version: i64,
 }
@@ -56,24 +59,15 @@ impl<P: LibSqlPort> LibSqlCounterRepository<P> {
     /// This should be called at application startup by the composition root.
     /// SQL schema is loaded from the migration file at `migrations/001_create_counter.sql`
     /// to maintain a single source of truth for the database schema.
+    ///
+    /// Note: `execute_batch` is currently used here only for startup migration
+    /// batching. It is not yet treated as proof that the libSQL/Turso adapter is
+    /// safe for higher-concurrency mutation paths under load; that still needs a
+    /// dedicated validation pass against the real driver.
     pub async fn migrate(&self) -> Result<(), RepositoryError> {
         let migration_sql = include_str!("../../migrations/001_create_counter.sql");
 
-        // Split by semicolons and execute each statement
-        for statement in migration_sql.split(';') {
-            // Remove comment lines and whitespace
-            let cleaned: String = statement
-                .lines()
-                .filter(|line| !line.trim().starts_with("--"))
-                .collect::<Vec<_>>()
-                .join("\n");
-            let trimmed = cleaned.trim();
-            if trimmed.is_empty() {
-                continue;
-            }
-            self.port.execute(trimmed, vec![]).await?;
-        }
-
+        self.port.execute_batch(migration_sql).await?;
         Ok(())
     }
 }
@@ -301,5 +295,99 @@ impl<P: LibSqlPort> CounterRepository for LibSqlCounterRepository<P> {
             )
             .await?;
         Ok(())
+    }
+
+    async fn commit_mutation(
+        &self,
+        m: &CounterMutation<'_>,
+        idempotency_key: Option<&str>,
+    ) -> Result<CommitOutcome, RepositoryError> {
+        let expected_version = m.new_version - 1;
+
+        // ── Begin typed transaction (compile-time connection guarantee) ──
+        let tx = self.port.begin().await?;
+
+        // ── CAS mutation ──
+        let rows_affected = if expected_version == 0 {
+            let insert_value = match m.operation {
+                CounterOperation::Increment => 1,
+                CounterOperation::Decrement => -1,
+                CounterOperation::Reset => 0,
+            };
+            tx.execute(
+                "INSERT INTO counter (tenant_id, value, version, updated_at) \
+                 VALUES (?, ?, 1, datetime('now')) \
+                 ON CONFLICT(tenant_id) DO NOTHING",
+                vec![m.counter_id.as_str().to_string(), insert_value.to_string()],
+            )
+            .await?
+        } else {
+            let set_clause = match m.operation {
+                CounterOperation::Increment => "value = value + 1",
+                CounterOperation::Decrement => "value = value - 1",
+                CounterOperation::Reset => "value = 0",
+            };
+            let sql = format!(
+                "UPDATE counter SET {set_clause}, version = version + 1, \
+                 updated_at = datetime('now') \
+                 WHERE tenant_id = ? AND version = ?"
+            );
+            tx.execute(
+                &sql,
+                vec![
+                    m.counter_id.as_str().to_string(),
+                    expected_version.to_string(),
+                ],
+            )
+            .await?
+        };
+
+        if rows_affected == 0 {
+            // CAS conflict: version mismatch. Rollback outbox entry too.
+            tx.rollback().await?;
+            return Ok(CommitOutcome::CasConflict);
+        }
+
+        // ── Outbox write (same transaction — either both or neither) ──
+        tx.execute(
+            "INSERT INTO event_outbox \
+             (event_id, event_type, event_payload, source_service, correlation_id, status) \
+             VALUES (?, ?, ?, ?, ?, 'pending')",
+            vec![
+                m.event_id.to_string(),
+                m.event_type.to_string(),
+                m.event_payload.to_string(),
+                m.source_service.to_string(),
+                m.correlation_id.unwrap_or_default().to_string(),
+            ],
+        )
+        .await?;
+
+        // ── Commit ──
+        tx.commit().await?;
+
+        // ── Idempotency cache: best-effort after commit ──
+        // If this fails, the next retry with the same key hits CAS conflict
+        // (counter version already incremented), so the result stays correct.
+        if let Some(key) = idempotency_key {
+            let _ = self
+                .port
+                .execute(
+                    "INSERT INTO counter_idempotency (idempotency_key, result_value, result_version) \
+                     VALUES (?, ?, ?) \
+                     ON CONFLICT(idempotency_key) DO NOTHING",
+                    vec![
+                        key.to_string(),
+                        m.new_value.to_string(),
+                        m.new_version.to_string(),
+                    ],
+                )
+                .await;
+        }
+
+        Ok(CommitOutcome::Committed {
+            new_value: m.new_value,
+            new_version: m.new_version,
+        })
     }
 }

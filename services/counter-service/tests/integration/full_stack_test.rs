@@ -7,9 +7,10 @@ use counter_service::application::{RepositoryBackedCounterService, TenantScopedC
 use counter_service::contracts::service::CounterService;
 use counter_service::infrastructure::LibSqlCounterRepository;
 use counter_service::ports::{CounterRepository, RepositoryError};
-use data::ports::lib_sql::{LibSqlError, LibSqlPort};
+use data::ports::lib_sql::{LibSqlError, LibSqlPort, SqlTransaction};
 use kernel::TenantId;
 use rusqlite::Connection;
+use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -24,6 +25,43 @@ impl InMemoryLibSqlPort {
         Self {
             conn: Arc::new(Mutex::new(conn)),
         }
+    }
+}
+
+/// Transaction guard for in-memory test port.
+///
+/// Shares the same mutex-protected connection. BEGIN/COMMIT/ROLLBACK
+/// executed as raw SQL — sufficient for single-connection tests.
+struct InMemoryTransaction {
+    conn: Arc<Mutex<Connection>>,
+}
+
+#[async_trait::async_trait]
+impl SqlTransaction for InMemoryTransaction {
+    async fn execute(&self, sql: &str, params: Vec<String>) -> Result<u64, LibSqlError> {
+        let conn = self.conn.lock().await;
+        let param_refs: Vec<&dyn rusqlite::types::ToSql> = params
+            .iter()
+            .map(|s| s as &dyn rusqlite::types::ToSql)
+            .collect();
+        let affected = conn
+            .execute(sql, rusqlite::params_from_iter(param_refs.into_iter()))
+            .map_err(|e| Box::new(e) as LibSqlError)?;
+        Ok(affected as u64)
+    }
+
+    async fn commit(self: Box<Self>) -> Result<(), LibSqlError> {
+        let conn = self.conn.lock().await;
+        conn.execute_batch("COMMIT")
+            .map_err(|e| Box::new(e) as LibSqlError)?;
+        Ok(())
+    }
+
+    async fn rollback(self: Box<Self>) -> Result<(), LibSqlError> {
+        let conn = self.conn.lock().await;
+        conn.execute_batch("ROLLBACK")
+            .map_err(|e| Box::new(e) as LibSqlError)?;
+        Ok(())
     }
 }
 
@@ -46,6 +84,13 @@ impl LibSqlPort for InMemoryLibSqlPort {
             .execute(sql, rusqlite::params_from_iter(param_refs.into_iter()))
             .map_err(|e| Box::new(e) as LibSqlError)?;
         Ok(affected as u64)
+    }
+
+    async fn execute_batch(&self, sql: &str) -> Result<(), LibSqlError> {
+        let conn = self.conn.lock().await;
+        conn.execute_batch(sql)
+            .map_err(|e| Box::new(e) as LibSqlError)?;
+        Ok(())
     }
 
     async fn query<T: serde::de::DeserializeOwned + Send + Sync>(
@@ -99,6 +144,17 @@ impl LibSqlPort for InMemoryLibSqlPort {
         let json = serde_json::to_value(&rows).map_err(|e| Box::new(e) as LibSqlError)?;
         let items: Vec<T> = serde_json::from_value(json).map_err(|e| Box::new(e) as LibSqlError)?;
         Ok(items)
+    }
+
+    async fn begin(&self) -> Result<Box<dyn SqlTransaction>, LibSqlError> {
+        {
+            let conn = self.conn.lock().await;
+            conn.execute_batch("BEGIN IMMEDIATE")
+                .map_err(|e| Box::new(e) as LibSqlError)?;
+        }
+        Ok(Box::new(InMemoryTransaction {
+            conn: self.conn.clone(),
+        }))
     }
 }
 
@@ -197,5 +253,200 @@ async fn full_stack_idempotency_prevents_duplicate_outbox() {
     assert_eq!(
         value, 1,
         "counter value should be 1 after idempotent increment"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Concurrency tests with real EmbeddedTurso (multi-connection)
+// ---------------------------------------------------------------------------
+
+/// Count rows in the event_outbox table via raw port query.
+async fn count_outbox(port: &impl LibSqlPort) -> usize {
+    #[derive(Deserialize)]
+    struct CountRow {
+        count: i64,
+    }
+    let rows: Vec<CountRow> = port
+        .query("SELECT COUNT(*) as count FROM event_outbox", vec![])
+        .await
+        .unwrap();
+    rows.first().map(|r| r.count as usize).unwrap_or(0)
+}
+
+/// Count rows in the counter_idempotency table.
+async fn count_idempotency(port: &impl LibSqlPort) -> usize {
+    #[derive(Deserialize)]
+    struct CountRow {
+        count: i64,
+    }
+    let rows: Vec<CountRow> = port
+        .query("SELECT COUNT(*) as count FROM counter_idempotency", vec![])
+        .await
+        .unwrap();
+    rows.first().map(|r| r.count as usize).unwrap_or(0)
+}
+
+#[tokio::test]
+async fn concurrent_increments_on_embedded_turso() {
+    // Use real EmbeddedTurso to validate CAS + outbox under concurrent load.
+    // Each task gets its own connection via db.connect().
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("test.db");
+    let _guard = Box::leak(Box::new(dir)); // keep alive for test lifetime
+    let db = storage_turso::EmbeddedTurso::new(db_path.to_str().unwrap())
+        .await
+        .unwrap();
+    let repo = LibSqlCounterRepository::new(db.clone());
+    repo.migrate().await.unwrap();
+
+    let service = Arc::new(TenantScopedCounterService::new(repo));
+    let tenant = TenantId("concurrent-tenant".into());
+    let num_tasks = 10;
+
+    let mut handles = Vec::new();
+    for i in 0..num_tasks {
+        let svc = service.clone();
+        let tid = tenant.clone();
+        handles.push(tokio::spawn(async move {
+            svc.increment(&tid, Some(&format!("idem-{i}")))
+                .await
+                .unwrap()
+        }));
+    }
+
+    let mut results: Vec<i64> = Vec::new();
+    for h in handles {
+        results.push(h.await.unwrap());
+    }
+    results.sort();
+
+    // Every increment should produce a unique value 1..=num_tasks
+    let expected: Vec<i64> = (1..=num_tasks).collect();
+    assert_eq!(
+        results, expected,
+        "concurrent increments must produce unique sequential values"
+    );
+
+    // Final value must equal num_tasks
+    let final_value = service.get_value(&tenant).await.unwrap();
+    assert_eq!(final_value, num_tasks);
+
+    // Outbox must have exactly num_tasks entries (one per successful mutation)
+    let outbox_count = count_outbox(&db).await;
+    assert_eq!(
+        outbox_count, num_tasks as usize,
+        "outbox must match mutation count"
+    );
+
+    // Idempotency table must have exactly num_tasks entries
+    let idem_count = count_idempotency(&db).await;
+    assert_eq!(
+        idem_count, num_tasks as usize,
+        "idempotency cache must match mutation count"
+    );
+}
+
+#[tokio::test]
+async fn concurrent_increments_without_idempotency() {
+    // Same as above but without idempotency keys — tests pure CAS path.
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("test2.db");
+    let _guard = Box::leak(Box::new(dir));
+    let db = storage_turso::EmbeddedTurso::new(db_path.to_str().unwrap())
+        .await
+        .unwrap();
+    let repo = LibSqlCounterRepository::new(db.clone());
+    repo.migrate().await.unwrap();
+
+    let service = Arc::new(TenantScopedCounterService::new(repo));
+    let tenant = TenantId("no-idem-tenant".into());
+    let num_tasks = 20;
+
+    let mut handles = Vec::new();
+    for _ in 0..num_tasks {
+        let svc = service.clone();
+        let tid = tenant.clone();
+        handles.push(tokio::spawn(async move {
+            svc.increment(&tid, None).await.unwrap()
+        }));
+    }
+
+    let mut results: Vec<i64> = Vec::new();
+    for h in handles {
+        results.push(h.await.unwrap());
+    }
+    results.sort();
+
+    // Each increment produces a unique value since CAS serializes writes.
+    let expected: Vec<i64> = (1..=num_tasks).collect();
+    assert_eq!(results, expected);
+
+    let final_value = service.get_value(&tenant).await.unwrap();
+    assert_eq!(final_value, num_tasks);
+
+    let outbox_count = count_outbox(&db).await;
+    assert_eq!(outbox_count, num_tasks as usize);
+
+    // No idempotency keys used
+    let idem_count = count_idempotency(&db).await;
+    assert_eq!(idem_count, 0);
+}
+
+// ---------------------------------------------------------------------------
+// Atomicity verification — CAS + outbox in single BEGIN/COMMIT transaction
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn atomic_counter_outbox_consistency_under_load() {
+    // Proves that counter mutations and outbox entries are always 1:1.
+    // If the BEGIN/COMMIT transaction failed to be atomic, concurrent tasks
+    // could produce counter mutations without outbox entries (or vice versa).
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("test_atomic.db");
+    let _guard = Box::leak(Box::new(dir));
+    let db = storage_turso::EmbeddedTurso::new(db_path.to_str().unwrap())
+        .await
+        .unwrap();
+    let repo = LibSqlCounterRepository::new(db.clone());
+    repo.migrate().await.unwrap();
+
+    let service = Arc::new(TenantScopedCounterService::new(repo));
+    let tenant = TenantId("atomic-check-tenant".into());
+    let num_tasks = 15;
+
+    let mut handles = Vec::new();
+    for _ in 0..num_tasks {
+        let svc = service.clone();
+        let tid = tenant.clone();
+        handles.push(tokio::spawn(async move {
+            svc.increment(&tid, None).await.unwrap()
+        }));
+    }
+
+    let mut results: Vec<i64> = Vec::new();
+    for h in handles {
+        results.push(h.await.unwrap());
+    }
+    results.sort();
+
+    // Counter must equal number of successful mutations
+    let final_value = service.get_value(&tenant).await.unwrap();
+    assert_eq!(
+        final_value, num_tasks,
+        "counter value must match task count"
+    );
+
+    // Outbox must have EXACTLY num_tasks entries — no orphaned mutations
+    let outbox_count = count_outbox(&db).await;
+    assert_eq!(
+        outbox_count, num_tasks as usize,
+        "outbox count must match counter mutations (transactional consistency)"
+    );
+
+    // Each increment should produce a unique value
+    let expected: Vec<i64> = (1..=num_tasks).collect();
+    assert_eq!(
+        results, expected,
+        "concurrent increments must produce unique sequential values"
     );
 }

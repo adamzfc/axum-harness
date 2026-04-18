@@ -32,6 +32,8 @@ uuid = { workspace = true, features = ["v7"] }
 tokio = { workspace = true, features = ["macros", "rt"] }
 serde_json = { workspace = true }
 rusqlite = { version = "0.32", features = ["bundled"] }
+storage_turso = { workspace = true }
+tempfile = "3"
 
 [features]
 default = []

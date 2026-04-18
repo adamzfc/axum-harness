@@ -14,6 +14,39 @@ use super::super::domain::{Counter, CounterId};
 /// specific errors (SQL, HTTP, etc.) into this type.
 pub type RepositoryError = Box<dyn std::error::Error + Send + Sync>;
 
+/// Specifies a counter mutation operation for atomic commit.
+///
+/// Used by `commit_mutation` to execute CAS mutation + outbox write
+/// + idempotency cache in a single atomic statement.
+#[derive(Debug, Clone)]
+pub enum CounterOperation {
+    Increment,
+    Decrement,
+    Reset,
+}
+
+/// Full specification for an atomic counter mutation commit.
+#[derive(Debug, Clone)]
+pub struct CounterMutation<'a> {
+    pub counter_id: &'a CounterId,
+    pub operation: CounterOperation,
+    pub new_value: i64,
+    pub new_version: i64,
+    pub event_id: &'a str,
+    pub event_type: &'a str,
+    pub event_payload: &'a str,
+    pub source_service: &'a str,
+    pub correlation_id: Option<&'a str>,
+}
+
+/// Result of an atomic counter mutation commit.
+pub enum CommitOutcome {
+    /// Mutation succeeded.
+    Committed { new_value: i64, new_version: i64 },
+    /// CAS conflict: the counter was modified by another writer.
+    CasConflict,
+}
+
 /// Abstract repository for Counter persistence with CAS support.
 ///
 /// ## Responsibilities
@@ -77,4 +110,23 @@ pub trait CounterRepository: Send + Sync {
         value: i64,
         version: i64,
     ) -> Result<(), RepositoryError>;
+
+    /// Atomically commit a counter mutation with CAS + outbox write + idempotency cache.
+    ///
+    /// Executes CAS counter update + event_outbox write in a single BEGIN/COMMIT
+    /// transaction via `execute_batch`. If either the CAS mutation or outbox write
+    /// fails, the entire transaction rolls back — no orphaned events, no phantom
+    /// counter mutations.
+    ///
+    /// Idempotency cache write runs outside the transaction (best-effort). If it
+    /// fails, the next retry with the same key will hit a CAS conflict (counter
+    /// version already incremented), so the result remains correct — just the
+    /// cache entry is missing and the next idempotent request will do a DB round-trip.
+    ///
+    /// Returns `CommitOutcome::CasConflict` when the expected_version doesn't match.
+    async fn commit_mutation(
+        &self,
+        mutation: &CounterMutation<'_>,
+        idempotency_key: Option<&str>,
+    ) -> Result<CommitOutcome, RepositoryError>;
 }
