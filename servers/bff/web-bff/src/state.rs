@@ -126,7 +126,7 @@ impl BffState {
         }
     }
 
-    pub fn counter_service(&self) -> Option<impl CounterService + Send + Sync + 'static> {
+    pub fn counter_service(&self) -> Option<impl CounterService + 'static> {
         let backend = self.turso_backend()?;
         let repo = LibSqlCounterRepository::new(backend);
         Some(RepositoryBackedCounterService::new(repo))

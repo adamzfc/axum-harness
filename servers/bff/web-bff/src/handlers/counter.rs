@@ -255,7 +255,7 @@ async fn check_authz(
 /// Abstracts over embedded and remote database backends.
 fn build_service(
     state: &BffState,
-) -> Result<impl CounterService + Send + Sync + 'static, (StatusCode, Json<ErrorResponse>)> {
+) -> Result<impl CounterService + 'static, (StatusCode, Json<ErrorResponse>)> {
     state.counter_service().ok_or_else(|| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
