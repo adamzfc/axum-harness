@@ -51,8 +51,8 @@
 
 1. counter 的同步主路径嵌在 `web-bff` 中。
 2. `web-bff` 所在 dev overlay 已显式消费 `counter-shared-db` secret，使 cluster 路径优先走 shared remote DB。
-3. counter 的异步发布路径已经有独立 `outbox-relay-worker` Flux app 与 dev overlay，但默认仍保持 replicas=0。
-4. `projector-worker` 已有独立 Flux app 与 dev overlay，但默认仍保持 replicas=0，等待 shared libSQL/Turso secret 的真实值被核实后再启用。
+3. counter 的异步发布路径已经有独立 `outbox-relay-worker` Flux app 与 dev overlay，当前 overlay 中显式保持 replicas=1。
+4. `projector-worker` 已有独立 Flux app 与 dev overlay，当前 overlay 中显式保持 replicas=1。
 5. `counter-shared-db` secret 为 `web-bff` 与这些独立 worker 提供共享数据库入口。
 5. 独立 `counter-service` secrets 已预留，但 overlay 中仍注释掉了对应资源。
 
@@ -75,7 +75,7 @@
 
 1. GitOps 路径已经对 `counter-service` 独立 deployable 完整闭环。
 2. `infra/gitops/flux/apps/api.yaml`、`infra/gitops/flux/apps/web.yaml` 中的所有 health checks、命名和 target resources 都已经与现状完全一致。
-3. `outbox-relay-worker` 与 `projector-worker` 已经默认在集群中启用；当前它们虽然已接入 shared libSQL/Turso secret，但仍需要先通过 `just sops-verify-counter-shared-db ENV=dev` 核实已加密 secret 的真实值，才能把副本数从 0 提到 1。
+3. `outbox-relay-worker` 与 `projector-worker` 当前配置已经默认在 dev overlay 中启用；因此更需要先通过 `just sops-verify-counter-shared-db ENV=dev` 和 `just verify-counter-delivery strict` 核实 shared secret、overlay 和 Flux 路径没有漂移。
 4. promotion、rollback、drift handling 已经通过一条统一且经验证的流水线完成。
 
 因此这份文档的正确定位是：

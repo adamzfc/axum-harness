@@ -14,12 +14,11 @@
 ## 使用顺序
 
 1. 先读根级 `AGENTS.md`。
-2. 再读 `docs/architecture/repo-layout.md`，理解目标态结构与后端分布式边界。
-3. 再读 `agent/codemap.yml`，确认当前任务的边界、禁止事项与 required fields。
-4. 最后根据 `routing-rules.yml` 和 `gate-matrix.yml` 决定派发与验证。
+2. 再读 `agent/codemap.yml`，确认边界、禁止事项与 required fields。
+3. 最后根据 `routing-rules.yml` 和 `gate-matrix.yml` 决定派发与验证。
 
 ## 说明
 
 1. 详细 subagent 行为定义仍在 `.agents/skills/*/SKILL.md`。
-2. 参考实现与真实开发模式应优先从现有 `services/*`、`workers/*`、`servers/*` 和 `packages/contracts/*` 获取，而不是依赖 agent 模板。
+2. 参考实现与真实开发模式优先从现有 `services/*`、`workers/*`、`servers/*` 和 `packages/contracts/*` 获取。
 3. 如果 `agent/` 文档与代码冲突，以代码和可执行验证结果为准。

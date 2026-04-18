@@ -11,9 +11,9 @@
 | `api-server` | `infra/gitops/flux/apps/api.yaml` | ✅ |
 | `web-bff` | `infra/gitops/flux/apps/web.yaml` | ✅ |
 | `edge-gateway` | `infra/gitops/flux/apps/gateway.yaml` | ✅ |
-| `outbox-relay-worker` | `infra/gitops/flux/apps/outbox-relay-worker.yaml` | ⚠️ Defined, replicas=0 until shared libSQL/Turso secret is configured |
+| `outbox-relay-worker` | `infra/gitops/flux/apps/outbox-relay-worker.yaml` | ✅ Defined, overlay currently keeps replicas=1 and is gated by shared DB admission |
 | `indexer-worker` | *(pending)* | ⚠️ TODO |
-| `projector-worker` | `infra/gitops/flux/apps/projector-worker.yaml` | ⚠️ Defined, replicas=0 until shared libSQL/Turso secret is configured |
+| `projector-worker` | `infra/gitops/flux/apps/projector-worker.yaml` | ✅ Defined, overlay currently keeps replicas=1 and is gated by shared DB admission |
 | `scheduler-worker` | *(pending)* | ⚠️ TODO |
 | `sync-reconciler-worker` | *(pending)* | ⚠️ TODO |
 

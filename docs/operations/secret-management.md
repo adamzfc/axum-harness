@@ -53,7 +53,7 @@
 
 1. `web-bff` secrets 对应当前 counter 的同步主路径。
 2. `outbox-relay-worker` secrets 对应当前异步 relay 主路径。
-3. `projector-worker` secrets 已有 dev 模板与加密产物，但默认 overlay 仍保持 replicas=0，只有在 shared secret 的真实值被核实后才应启用独立 Pod。
+3. `projector-worker` secrets 已有 dev 模板与加密产物，当前 overlay 已显式配置 `replicas=1`，因此 shared secret 的校验必须前置到 admission。
 4. `counter-shared-db` secrets 用来把 `web-bff`、`outbox-relay-worker`、`projector-worker` 指向同一份远程 libSQL/Turso 数据源。
 5. `counter-service` secrets 已有模板和加密产物，但模板本身已明确说明它主要为 Phase 1+ 独立 deployable 预留。
 
@@ -107,7 +107,7 @@ just sops-verify-counter-shared-db ENV=dev
 
 1. 让本地进程消费和集群一致的环境变量形状。
 2. 避免为了开发临时制造新的 `.env` 主路径。
-3. 在把独立 worker overlay 从 `replicas=0` 提到 `1` 前，先验证 shared remote DB secret 不再指向本地 `file:` 路径。
+3. 在继续依赖当前已启用的独立 worker overlay 前，先验证 shared remote DB secret 不再指向本地 `file:` 路径。
 
 ## 4. 与 Kustomize / Flux 的关系
 
@@ -117,7 +117,7 @@ secrets 文档不能脱离部署链路单独理解。当前真实挂接关系是
    - `web-bff.enc.yaml`
    - `outbox-relay-worker.enc.yaml`
    - `shared-counter-db/kustomization.yaml`
-2. `infra/k3s/overlays/dev/projector-worker/kustomization.yaml` 与 `infra/k3s/overlays/dev/outbox-relay-worker/kustomization.yaml` 都已显式挂接 `counter-shared-db` secret，并默认将副本数保持为 0。
+2. `infra/k3s/overlays/dev/projector-worker/kustomization.yaml` 与 `infra/k3s/overlays/dev/outbox-relay-worker/kustomization.yaml` 都已显式挂接 `counter-shared-db` secret，并在当前清单中将副本数显式配置为 1。
 3. 同文件中 `counter-service.enc.yaml` 当前仍被注释，注释明确说明其对应未来独立 deployable 阶段。
 4. `infra/gitops/flux/apps/*.yaml` 已声明通过 `decryption.provider: sops` 和 `secretRef.name: sops-age` 解密。
 

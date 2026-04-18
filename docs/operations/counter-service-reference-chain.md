@@ -163,6 +163,7 @@ counter 链路要求：
 1. `services/counter-service/src/application/service.rs`
 2. `services/counter-service/src/infrastructure/libsql_adapter.rs`
 3. `services/counter-service/migrations/001_create_counter.sql`
+4. `services/counter-service/tests/integration/full_stack_test.rs`
 
 当前它承载的默认实践：
 
@@ -171,6 +172,10 @@ counter 链路要求：
 3. 成功写主状态后写统一 event_outbox（不再是 counter_outbox）。
 4. idempotency、主状态、event_outbox 属于同一条参考链上的核心数据结构。
 5. event_outbox 的 schema 由 packages/messaging 拥有，所有 service 共用。
+6. CAS mutation + outbox write 已收成 repository 级别的 `commit_mutation` 方法，通过 `LibSqlPort::begin()` → `SqlTransaction::execute()` → `commit()` 类型化事务原子执行（替代 `execute_batch("BEGIN;...;COMMIT;")` 字符串拼接）。CAS 冲突时主动 `rollback()`，确保 outbox 不写入空洞事件。idempotency cache 在事务提交后 best-effort 写入。
+7. 集成测试已包含 real EmbeddedTurso 并发测试（10/20 并发 tasks），验证 CAS 冲突重试和 outbox 一致性（counter 与 outbox 1:1 映射）。
+8. `SqlTransaction` trait（`data-traits::ports::lib_sql`）提供 `execute` + `commit` + `rollback`，返回 `Box<dyn SqlTransaction>` 支持多态。`query<T>` 有意排除以保持 dyn 兼容——事务内的读使用 port 的 `query`。
+9. counter-service deployable 已声明 `independent_deploy: true`，可独立于 web-bff 部署。
 
 ## 6. 异步链路
 
@@ -197,7 +202,7 @@ counter 链路要求：
 1. 已具备相当明确的 worker 结构。
 2. 默认 reader 已改为统一 `event_outbox` 数据库读取，不再把数据库失败静默降级为 in-memory stub。
 3. 事件发布侧已切到真实 NATS adapter，不再仅停留在内存 event bus / pubsub。
-4. 已补到独立的 dev secret / kustomize / Flux 落点，并可通过 `counter-shared-db` secret 接入 shared libSQL/Turso；但当前默认仍保持 `replicas=0`，直到已加密 secret 的真实值被核实后再启用。
+4. 已补到独立的 dev secret / kustomize / Flux 落点，并可通过 `counter-shared-db` secret 接入 shared libSQL/Turso；当前 base 与 dev overlay 中两个 worker 都显式配置为 `replicas=1`。
 
 因此新增 worker 时：
 
@@ -226,7 +231,7 @@ counter 链路要求：
 1. projector 已从纯骨架升级为统一 `event_outbox` replay source。
 2. 已具备持久化 `counter_projection` read model 与磁盘 checkpoint。
 3. 当配置 `PROJECTOR_NATS_URL` 时，可从 `events.counter.changed` subject 继续做 live tail，并默认通过 queue group 降低多副本重复消费。
-4. 已补到独立的 dev secret / kustomize / Flux 落点，并可通过 `counter-shared-db` secret 接入 shared libSQL/Turso；但当前默认仍保持 `replicas=0`，直到已加密 secret 的真实值被核实后再启用。
+4. 已补到独立的 dev secret / kustomize / Flux 落点，并可通过 `counter-shared-db` secret 接入 shared libSQL/Turso；当前 base 与 dev overlay 中两个 worker 都显式配置为 `replicas=1`。
 5. 它当前仍不是最终的独立消息骨干订阅平台实现，也不提供 durable broker checkpoint 语义。
 
 因此本文把它视为“已经进入真实最小闭环、但仍需继续补齐交付链路”的参考环节。
@@ -305,7 +310,7 @@ counter 链路要求：
 2. `web-bff`、`outbox-relay-worker`、`projector-worker` 都已经有 dev secret 模板与加密文件落点。
 3. `counter-shared-db` 已作为独立 secret 模板存在，用来把 `web-bff` 与独立 worker 指向同一个远程 libSQL/Turso。
 4. `web-bff` dev overlay 已显式消费 `counter-shared-db` secret，使 cluster 路径优先走远端 Turso，而本地 `just sops-run web-bff` 仍可保留嵌入式 fallback。
-5. `projector-worker` 与 `outbox-relay-worker` 的独立 dev overlay 已接入 `counter-shared-db` secret，但默认仍保持副本数为 0，避免在 secret 真实值未核实前伪造多 Pod 闭环。
+5. `projector-worker` 与 `outbox-relay-worker` 的独立 dev overlay 已接入 `counter-shared-db` secret，并在当前清单中显式保持 `replicas=1`。
 6. `counter-service` 本身也有 dev template，但注释明确说明 Phase 0 仍嵌入 `web-bff`，独立 deployable 属于 Phase 1+。
 
 这意味着：
@@ -322,13 +327,16 @@ counter 链路要求：
 2. `infra/k3s/overlays/dev/projector-worker/kustomization.yaml`
 3. `infra/k3s/base/configmap-projector-worker.yaml`
 4. `infra/k3s/overlays/dev/outbox-relay-worker/kustomization.yaml`
+5. `infra/k3s/overlays/staging/outbox-relay-worker/kustomization.yaml`
+6. `infra/k3s/overlays/staging/projector-worker/kustomization.yaml`
 
 当前真实状态：
 
 1. dev overlay 已消费 `web-bff` 的加密 secret，并额外显式挂接 `counter-shared-db` 作为 shared remote DB 入口。
 2. `outbox-relay-worker` 与 `projector-worker` 都已有独立 dev overlay，且 overlay 内已挂接 `counter-shared-db` secret。
-3. 二者当前仍默认保持 `replicas=0`，因为当前环境还不能从已加密 secret 直接证明远端 DB 凭证已经就绪。
+3. 二者当前在 base 与 dev overlay 中都显式配置为 `replicas=1`，因此 admission 必须继续校验 shared DB secret、overlay 和 Flux 路径是否一致。
 4. `counter-service.enc.yaml` 仍被注释掉，说明它尚未成为独立 deployable 的默认部署路径。
+5. staging overlay 已为 `outbox-relay-worker` 与 `projector-worker` 创建，引用 `counter-shared-db-staging` secret（需先通过 SOPS 加密）。prod overlay 尚未创建。
 
 因此新增服务若要进入目标态：
 
@@ -342,19 +350,23 @@ counter 链路要求：
 1. `infra/gitops/flux/apps/web.yaml`
 2. `infra/gitops/flux/apps/projector-worker.yaml`
 3. `infra/gitops/flux/apps/outbox-relay-worker.yaml`
-4. `docs/operations/gitops.md`
+4. `infra/gitops/flux/apps/staging-outbox-relay-worker.yaml`
+5. `infra/gitops/flux/apps/staging-projector-worker.yaml`
+6. `docs/operations/gitops.md`
 
 当前真实状态：
 
 1. `web-bff` 的 Flux Kustomization 已存在。
 2. 该 Kustomization 已包含 SOPS decryption 配置。
 3. `outbox-relay-worker` 与 `projector-worker` 的 Flux Kustomization 都已存在，并指向各自独立的 dev overlay。
-4. 二者当前仍默认保持 `replicas=0`。
+4. staging Flux Kustomization 已创建，指向各自 staging overlay（`ENV: staging`）。
+5. dev 与 staging overlay 配置都显式保持 `replicas=1`。
 
 当前缺口：
 
-1. `indexer-worker` 等其余 worker 的 Flux app 映射尚未全部补齐。
-2. `outbox-relay-worker` 与 `projector-worker` 虽然已具路径，但默认关闭，说明 counter 的 GitOps 链路仍未完整覆盖所有环节。
+1. staging SOPS secrets 尚未加密创建，staging overlay 不可直接 deploy。
+2. prod overlay 与 Flux app 尚未创建。
+3. `indexer-worker` 等其余 worker 的 Flux app 映射尚未全部补齐。
 
 ### 8.5 Delivery / Promotion / Drift / Runbook
 
@@ -364,11 +376,15 @@ counter 链路要求：
 2. `docs/operations/gitops.md`
 3. `docs/operations/secret-management.md`
 4. `ops/**` 与 `infra/**` 下的运维与交付文件
+5. `just verify-counter-delivery strict`
 
-当前缺口：
+当前真实状态：
 
-1. 还没有“counter delivery gate”将这些生产治理信号统一收口。
-2. 因此 agent 还不能只靠 gate/CI 就完整学到 delivery/promotion/runbook 路径。
+1. 仓库已新增 `scripts/verify-counter-delivery.ts` 与 `just verify-counter-delivery`，把 counter shared DB secret 校验、worker overlay、Flux app 落点收口为可执行 admission。
+2. gate 已扩展到 staging overlay + Flux app 检查（路径匹配、ENV 替换、secret 引用）。
+3. gate 已包含 platform model drift 检查（deployable 文件存在、ownership-map 声明 counter entity、projector-worker 有 async-projection profile）和 rollback 检查（runbook 必须提及 rollback）。
+4. `platform-ops-agent` scoped gate 已接入这条检查，避免 counter delivery 继续只存在于文档层。
+5. `ops/runbooks/counter-delivery.md` 已作为当前最小 runbook/admission 落点接入同一条主链。
 
 ## 9. 默认学习地图
 
@@ -407,7 +423,7 @@ counter 链路要求：
 当前若要把 counter 参考链真正提升为“最小生产链路完备样例”，优先需要补齐：
 
 1. 把 `web-bff` 的集群配置入口也完全收敛到真实 `APP_*` secret/key 形状，并与 shared counter DB secret 串成同一条主链。
-3. 为 counter 链路建立统一的 delivery / GitOps / promotion / runbook admission 检查。
+3. 继续把 `verify-counter-delivery` 从当前 dev + runbook admission 扩到更完整的 promotion/drift/rollback 闭环。
 4. 修正 platform model / schema / ownership 的命名漂移。
 5. 明确 counter-service 从嵌入式库到独立 deployable 的演进路径，并让该路径受 gate 约束。
 
