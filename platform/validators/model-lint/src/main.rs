@@ -4,6 +4,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use jsonschema::Validator;
 use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
@@ -76,6 +77,7 @@ fn main() -> Result<()> {
 
     // Define model type to schema file mapping
     let model_schema_map = [
+        ("capabilities", "capability.schema.json"),
         ("services", "service-metadata.schema.json"),
         ("deployables", "deployable.schema.json"),
         ("resources", "resource.schema.json"),
@@ -157,6 +159,7 @@ fn main() -> Result<()> {
     info!("Running cross-reference checks...");
     warnings += check_service_deployable_refs(&platform_dir, &mut results);
     warnings += check_resource_refs(&platform_dir, &mut results);
+    check_capability_naming(&platform_dir, &mut results);
     check_deployable_status_consistency(&platform_dir, &mut results);
 
     // Print results
@@ -441,6 +444,394 @@ fn check_deployable_status_consistency(platform_dir: &Path, results: &mut Vec<Va
     }
 }
 
+fn check_capability_naming(platform_dir: &Path, results: &mut Vec<ValidationResult>) {
+    let capabilities = load_capabilities(platform_dir, results);
+    if capabilities.is_empty() {
+        return;
+    }
+
+    for capability in capabilities.values() {
+        let mut errors = Vec::new();
+        let provider_prefix = format!("{}.", capability.key);
+
+        for provider in &capability.providers {
+            if !provider.key.starts_with(&provider_prefix) {
+                errors.push(format!(
+                    "provider key '{}' must start with capability prefix '{}'",
+                    provider.key, provider_prefix
+                ));
+            }
+        }
+
+        for adapter in &capability.adapters {
+            if !adapter.key.starts_with(&provider_prefix) {
+                errors.push(format!(
+                    "adapter key '{}' must start with capability prefix '{}'",
+                    adapter.key, provider_prefix
+                ));
+            }
+        }
+
+        for resource in &capability.resource_entities {
+            if contains_reserved_resource_word(&resource.key) {
+                errors.push(format!(
+                    "resource entity '{}' must not encode state/topology words such as shared, external, local, mock, real, or distributed",
+                    resource.key
+                ));
+            }
+        }
+
+        let provider_keys = capability
+            .providers
+            .iter()
+            .map(|provider| provider.key.as_str())
+            .collect::<BTreeSet<_>>();
+        for (state_name, state) in &capability.states {
+            if let Some(default_provider) = &state.default_provider
+                && !provider_keys.contains(default_provider.as_str())
+            {
+                errors.push(format!(
+                    "state '{}' references unknown default_provider '{}'",
+                    state_name, default_provider
+                ));
+            }
+        }
+
+        if !errors.is_empty() {
+            results.push(ValidationResult {
+                file: capability.file.clone(),
+                schema: "capability-naming".to_string(),
+                valid: false,
+                errors,
+            });
+        }
+    }
+
+    check_topology_capability_bindings(platform_dir, results, &capabilities);
+}
+
+fn check_topology_capability_bindings(
+    platform_dir: &Path,
+    results: &mut Vec<ValidationResult>,
+    capabilities: &BTreeMap<String, CapabilityModel>,
+) {
+    let topologies_dir = platform_dir.join("model/topologies");
+    if !topologies_dir.exists() {
+        return;
+    }
+
+    let yaml_pattern = format!("{}/*.yaml", topologies_dir.display());
+    let Ok(yaml_files) = glob::glob(&yaml_pattern) else {
+        return;
+    };
+
+    for yaml_file in yaml_files.filter_map(|path| path.ok()) {
+        let file_name = yaml_file
+            .strip_prefix(platform_dir)
+            .unwrap_or(&yaml_file)
+            .to_string_lossy()
+            .to_string();
+        let mut errors = Vec::new();
+
+        let content = match fs::read_to_string(&yaml_file) {
+            Ok(content) => content,
+            Err(error) => {
+                results.push(ValidationResult {
+                    file: file_name,
+                    schema: "capability-bindings".to_string(),
+                    valid: false,
+                    errors: vec![format!("Failed to read topology model: {error}")],
+                });
+                continue;
+            }
+        };
+
+        let yaml: serde_json::Value = match serde_yaml::from_str(&content) {
+            Ok(yaml) => yaml,
+            Err(error) => {
+                results.push(ValidationResult {
+                    file: file_name,
+                    schema: "capability-bindings".to_string(),
+                    valid: false,
+                    errors: vec![format!("Invalid topology YAML: {error}")],
+                });
+                continue;
+            }
+        };
+
+        let Some(bindings) = yaml
+            .get("capability_bindings")
+            .and_then(|value| value.as_object())
+        else {
+            continue;
+        };
+
+        for (capability_key, binding) in bindings {
+            let Some(capability) = capabilities.get(capability_key) else {
+                errors.push(format!(
+                    "capability_bindings references unknown capability '{}'",
+                    capability_key
+                ));
+                continue;
+            };
+
+            let state_name = binding.get("state").and_then(|value| value.as_str());
+            let provider = binding.get("provider").and_then(|value| value.as_str());
+            let resource = binding.get("resource").and_then(|value| value.as_str());
+            let adapter = binding.get("adapter").and_then(|value| value.as_str());
+            let secret_binding = binding
+                .get("secret_binding")
+                .and_then(|value| value.as_str());
+
+            if let Some(state_name) = state_name {
+                match capability.states.get(state_name) {
+                    Some(state) if !state.supported => {
+                        errors.push(format!(
+                            "capability '{}' binding selects unsupported state '{}'",
+                            capability_key, state_name
+                        ));
+                    }
+                    Some(_) => {}
+                    None => {
+                        errors.push(format!(
+                            "capability '{}' binding references unknown state '{}'",
+                            capability_key, state_name
+                        ));
+                    }
+                }
+            }
+
+            if let Some(provider) = provider {
+                let expected_prefix = format!("{}.", capability_key);
+                if !provider.starts_with(&expected_prefix) {
+                    errors.push(format!(
+                        "provider '{}' must start with capability prefix '{}'",
+                        provider, expected_prefix
+                    ));
+                }
+                if !capability
+                    .providers
+                    .iter()
+                    .any(|known_provider| known_provider.key == provider)
+                {
+                    errors.push(format!(
+                        "provider '{}' is not declared by capability '{}'",
+                        provider, capability_key
+                    ));
+                }
+            }
+
+            if let Some(adapter) = adapter {
+                let expected_prefix = format!("{}.", capability_key);
+                if !adapter.starts_with(&expected_prefix) {
+                    errors.push(format!(
+                        "adapter '{}' must start with capability prefix '{}'",
+                        adapter, expected_prefix
+                    ));
+                }
+                if !capability
+                    .adapters
+                    .iter()
+                    .any(|known_adapter| known_adapter.key == adapter)
+                {
+                    errors.push(format!(
+                        "adapter '{}' is not declared by capability '{}'",
+                        adapter, capability_key
+                    ));
+                }
+            }
+
+            if let Some(resource) = resource {
+                if contains_reserved_resource_word(resource) {
+                    errors.push(format!(
+                        "resource '{}' must not encode state/topology words such as shared, external, local, mock, real, or distributed",
+                        resource
+                    ));
+                }
+                if !capability
+                    .resource_entities
+                    .iter()
+                    .any(|known_resource| known_resource.key == resource)
+                {
+                    errors.push(format!(
+                        "resource '{}' is not declared by capability '{}'",
+                        resource, capability_key
+                    ));
+                }
+            }
+
+            if let Some(secret_binding) = secret_binding
+                && let Some(reason) = secret_binding_name_error(
+                    secret_binding,
+                    yaml.get("name")
+                        .and_then(|value| value.as_str())
+                        .unwrap_or(""),
+                    provider,
+                )
+            {
+                errors.push(format!(
+                    "secret_binding '{}' must not encode state/topology/provider facts: {}",
+                    secret_binding, reason
+                ));
+            }
+        }
+
+        if !errors.is_empty() {
+            results.push(ValidationResult {
+                file: file_name,
+                schema: "capability-bindings".to_string(),
+                valid: false,
+                errors,
+            });
+        }
+    }
+}
+
+fn load_capabilities(
+    platform_dir: &Path,
+    results: &mut Vec<ValidationResult>,
+) -> BTreeMap<String, CapabilityModel> {
+    let capabilities_dir = platform_dir.join("model/capabilities");
+    let mut capabilities = BTreeMap::new();
+    if !capabilities_dir.exists() {
+        return capabilities;
+    }
+
+    let yaml_pattern = format!("{}/*.yaml", capabilities_dir.display());
+    let Ok(yaml_files) = glob::glob(&yaml_pattern) else {
+        return capabilities;
+    };
+
+    for yaml_file in yaml_files.filter_map(|path| path.ok()) {
+        let file_name = yaml_file
+            .strip_prefix(platform_dir)
+            .unwrap_or(&yaml_file)
+            .to_string_lossy()
+            .to_string();
+        let content = match fs::read_to_string(&yaml_file) {
+            Ok(content) => content,
+            Err(error) => {
+                results.push(ValidationResult {
+                    file: file_name,
+                    schema: "capability-naming".to_string(),
+                    valid: false,
+                    errors: vec![format!("Failed to read capability model: {error}")],
+                });
+                continue;
+            }
+        };
+
+        let mut capability: CapabilityModel = match serde_yaml::from_str(&content) {
+            Ok(capability) => capability,
+            Err(error) => {
+                results.push(ValidationResult {
+                    file: file_name,
+                    schema: "capability-naming".to_string(),
+                    valid: false,
+                    errors: vec![format!("Invalid capability YAML: {error}")],
+                });
+                continue;
+            }
+        };
+        capability.file = file_name;
+        capabilities.insert(capability.key.clone(), capability);
+    }
+
+    capabilities
+}
+
+fn contains_reserved_resource_word(value: &str) -> bool {
+    value.split(['-', '_']).any(|part| {
+        matches!(
+            part,
+            "shared" | "external" | "local" | "mock" | "real" | "distributed"
+        )
+    })
+}
+
+fn secret_binding_name_error(
+    secret_binding: &str,
+    topology_name: &str,
+    provider: Option<&str>,
+) -> Option<String> {
+    let secret_parts = normalized_token_parts(secret_binding).collect::<BTreeSet<_>>();
+    if secret_parts
+        .iter()
+        .any(|part| is_state_like_token(part.as_str()))
+    {
+        return Some("state-like token is part of stable secret identity".to_string());
+    }
+
+    if !topology_name.is_empty() {
+        let topology_parts = normalized_token_parts(topology_name).collect::<BTreeSet<_>>();
+        if let Some(part) = topology_parts.intersection(&secret_parts).next() {
+            return Some(format!(
+                "topology token '{part}' is part of stable secret identity"
+            ));
+        }
+    }
+
+    if let Some(provider) = provider {
+        let provider_parts = normalized_token_parts(provider).collect::<BTreeSet<_>>();
+        if let Some(part) = provider_parts.intersection(&secret_parts).next() {
+            return Some(format!(
+                "provider token '{part}' is part of stable secret identity"
+            ));
+        }
+    }
+
+    None
+}
+
+fn token_parts(value: &str) -> impl Iterator<Item = &str> {
+    value.split(['-', '_', '.']).filter(|part| !part.is_empty())
+}
+
+fn normalized_token_parts(value: &str) -> impl Iterator<Item = String> + '_ {
+    token_parts(value).map(str::to_ascii_lowercase)
+}
+
+fn is_state_like_token(value: &str) -> bool {
+    matches!(
+        value,
+        "disabled" | "local" | "mock" | "real" | "external" | "single" | "node" | "distributed"
+    )
+}
+
+#[derive(Debug, Deserialize)]
+struct CapabilityModel {
+    key: String,
+    states: BTreeMap<String, CapabilityState>,
+    providers: Vec<CapabilityProvider>,
+    #[serde(default)]
+    adapters: Vec<CapabilityAdapter>,
+    #[serde(default)]
+    resource_entities: Vec<CapabilityResourceEntity>,
+    #[serde(skip)]
+    file: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct CapabilityState {
+    supported: bool,
+    default_provider: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CapabilityProvider {
+    key: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct CapabilityAdapter {
+    key: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct CapabilityResourceEntity {
+    key: String,
+}
+
 fn package_name_exists(platform_dir: &Path, package_name: &str) -> bool {
     let repo_root = platform_dir.parent().unwrap_or(platform_dir);
     let cargo_pattern = format!("{}/**/Cargo.toml", repo_root.display());
@@ -499,4 +890,35 @@ fn print_json_report(results: &[ValidationResult], passed: usize, failed: usize,
     });
 
     println!("{}", serde_json::to_string_pretty(&report).unwrap());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn secret_binding_name_rejects_state_topology_and_provider_tokens() {
+        assert!(secret_binding_name_error("billing-local-secret", "single-vps", None).is_some());
+        assert!(secret_binding_name_error("billing-LOCAL-secret", "single-vps", None).is_some());
+        assert!(secret_binding_name_error("web-bff-single-secret", "single-vps", None).is_some());
+        assert!(
+            secret_binding_name_error("creem-webhook-secret", "single-vps", Some("billing.creem"))
+                .is_some()
+        );
+    }
+
+    #[test]
+    fn secret_binding_name_allows_stable_entity_identity() {
+        assert!(
+            secret_binding_name_error("web-bff", "single-vps", Some("billing.creem")).is_none()
+        );
+        assert!(
+            secret_binding_name_error(
+                "counter-db-credentials",
+                "single-vps",
+                Some("database.turso-cloud")
+            )
+            .is_none()
+        );
+    }
 }

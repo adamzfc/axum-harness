@@ -104,6 +104,11 @@ async fn mutate_counter(
     )
     .await?;
 
+    let commercial_guard = state
+        .commercial()
+        .guard_counter_write(tenant_id.as_str(), request_context.user_sub())
+        .await?;
+
     let service = build_service(state)?;
     let command_context = request_context.to_counter_command_context();
     let counter_id = CounterId::new(tenant_id.as_str());
@@ -123,8 +128,17 @@ async fn mutate_counter(
                 .reset_with_context(&counter_id, idempotency_key, &command_context)
                 .await
         }
-    }
-    .map_err(map_counter_error)?;
+    };
+
+    let value = match value {
+        Ok(value) => value,
+        Err(error) => {
+            commercial_guard.release().await;
+            return Err(map_counter_error(error));
+        }
+    };
+
+    commercial_guard.commit().await?;
 
     state
         .append_audit(

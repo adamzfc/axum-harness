@@ -10,9 +10,8 @@
 
 1. `infra/gitops/flux/infrastructure/infrastructure.yaml`
 2. `infra/gitops/flux/apps/api.yaml`
-3. `infra/gitops/flux/apps/web.yaml`
-4. `infra/gitops/flux/apps/outbox-relay-worker.yaml`
-5. `infra/gitops/flux/apps/projector-worker.yaml`
+3. `infra/gitops/flux/apps/outbox-relay-worker.yaml`
+4. `infra/gitops/flux/apps/projector-worker.yaml`
 
 这些文件说明：
 
@@ -31,7 +30,6 @@
 1. `infra/gitops/flux/infrastructure/infrastructure.yaml`
 2. `infra/gitops/flux/infrastructure/*.yaml`
 3. `infra/gitops/flux/apps/api.yaml`
-4. `infra/gitops/flux/apps/web.yaml`
 
 按当前目录理解：
 
@@ -48,24 +46,24 @@
 2. `infra/security/sops/dev/web-bff.enc.yaml`
 3. `infra/security/sops/dev/outbox-relay-worker.enc.yaml`
 4. `infra/security/sops/dev/projector-worker.enc.yaml`
-5. `infra/security/sops/dev/counter-shared-db.enc.yaml`
+5. `infra/security/sops/dev/counter-db-credentials.enc.yaml`
 6. `infra/security/sops/dev/counter-service.enc.yaml`
 
 这反映出当前真实状态：
 
 1. counter 的同步主路径嵌在 `web-bff` 中。
-2. `web-bff` 所在 dev overlay 已显式消费 `counter-shared-db` secret，使 cluster 路径优先走 shared remote DB。
+2. `web-bff` 所在 dev overlay 已显式消费 `counter-db-credentials` secret，使 cluster 路径选择 DB capability state `external_single_node` 或 `external_distributed`，而不是本地 embedded DB。
 3. counter 的异步发布路径已经有独立 `outbox-relay-worker` Flux app 与 dev overlay，当前 overlay 中显式保持 replicas=1。
 4. `projector-worker` 已有独立 Flux app 与 dev overlay，当前 overlay 中显式保持 replicas=1。
-5. `counter-shared-db` secret 为 `web-bff` 与这些独立 worker 提供共享数据库入口。
+5. `counter-db-credentials` secret 是 external DB capability state 的 secret source，为 `web-bff` 与这些独立 worker 提供共享数据库入口。
 6. 独立 `counter-service` secrets 已预留，但 overlay 中仍注释掉了对应资源。
 
 ## 3. 当前已经确认的事实
 
 通过现有 YAML 可以确认：
 
-1. `api.yaml` 与 `web.yaml` 都配置了 `decryption.provider: sops`。
-2. 二者都使用 `secretRef.name: sops-age`，说明 Flux 期望在集群中持有 age key secret。
+1. `api.yaml` 配置了 `decryption.provider: sops`。
+2. `api.yaml` 使用 `secretRef.name: sops-age`，说明 Flux 期望在集群中持有 age key secret。
 3. `infrastructure.yaml` 明确先于应用层落地基础依赖。
 4. `infra/k3s/overlays/dev/kustomization.yaml` 是当前 `web-bff` 主链的 dev overlay 入口。
 5. `infra/k3s/overlays/dev/outbox-relay-worker/kustomization.yaml` 是 `outbox-relay-worker` 的独立 dev overlay 入口。
@@ -79,8 +77,8 @@
 当前还不能声称：
 
 1. GitOps 路径已经把独立 `counter-service` deployable 提升为 checked/tested default path。
-2. `infra/gitops/flux/apps/api.yaml`、`infra/gitops/flux/apps/web.yaml` 中的所有 health checks、命名和 target resources 都已经与现状完全一致。
-3. `outbox-relay-worker` 与 `projector-worker` 当前在 dev overlay 中都显式配置为 `replicas=1`；因此更需要先通过 `just sops-verify-counter-shared-db dev` 和 `just verify-counter-delivery strict` 核实 shared secret、overlay 和 Flux 路径没有漂移。
+2. `infra/gitops/flux/apps/api.yaml` 中的所有 health checks、命名和 target resources 都已经与现状完全一致。
+3. `outbox-relay-worker` 与 `projector-worker` 当前在 dev overlay 中都显式配置为 `replicas=1`；因此更需要先通过 `just sops-verify-counter-db-credentials dev` 和 `just verify-counter-delivery strict` 核实 external DB secret、overlay 和 Flux 路径没有漂移。
 4. promotion、rollback、drift handling 已经通过一条统一且经验证的流水线完成。
 5. K3s/K3d nodes 会或应该在集群内编译 first-party Rust code。
 6. GitOps 当前已经证明 `k3s-ha`；K3d 和单节点/少节点 rehearsal 不能替代 3+ server-node HA evidence。
@@ -104,9 +102,8 @@
 6. `infra/k3s/overlays/dev/projector-worker/kustomization.yaml`
 7. `infra/gitops/flux/infrastructure/infrastructure.yaml`
 8. `infra/gitops/flux/apps/api.yaml`
-9. `infra/gitops/flux/apps/web.yaml`
-10. `infra/gitops/flux/apps/outbox-relay-worker.yaml`
-11. `infra/gitops/flux/apps/projector-worker.yaml`
+9. `infra/gitops/flux/apps/outbox-relay-worker.yaml`
+10. `infra/gitops/flux/apps/projector-worker.yaml`
 
 这样读的原因是：
 

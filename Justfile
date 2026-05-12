@@ -15,23 +15,31 @@ set export  # 导出环境变量到子进程
 
 # 模块导入
 # justfiles/* 是命令面的一部分，不应静默缺失；这里保持显式导入和稳定顺序。
-# 主轴：setup -> dev -> build -> verify -> gates -> ops -> clean
-import 'justfiles/setup.just'
-import 'justfiles/dev.just'
-import 'justfiles/build.just'
-import 'justfiles/verify.just'
-import 'justfiles/gates.just'
-import 'justfiles/ops.just'
-import 'justfiles/clean.just'
-import 'justfiles/podman.just'
+# core: 本地开发生命周期
+import 'justfiles/core/setup.just'
+import 'justfiles/core/dev.just'
+import 'justfiles/core/build.just'
+import 'justfiles/core/clean.just'
 
-# 副轴：platform / secrets / local cluster profiles / template / skills
-import 'justfiles/platform.just'
-import 'justfiles/sops.just'
-import 'justfiles/k3d.just'
-import 'justfiles/multipass.just'
-import 'justfiles/template.just'
-import 'justfiles/skills.just'
+# quality: 可执行证据、聚合验证、生命周期 gates、供应链
+import 'justfiles/quality/verify.just'
+import 'justfiles/quality/gates.just'
+import 'justfiles/quality/supply-chain.just'
+
+# domains: bounded architecture surfaces
+import 'justfiles/domains/backend.just'
+import 'justfiles/domains/contracts.just'
+import 'justfiles/domains/platform.just'
+
+# ops: secrets、deploy、runtime resources、local topology profiles
+import 'justfiles/ops/deploy.just'
+import 'justfiles/ops/sops.just'
+import 'justfiles/ops/podman.just'
+import 'justfiles/ops/k3d.just'
+import 'justfiles/ops/multipass.just'
+
+# agent: template operations
+import 'justfiles/agent/template.just'
 
 # ── 默认行为 / 导航 ──────────────────────────────────────────
 
@@ -96,7 +104,6 @@ help-verify:
     @printf "  just drift-check              generated contract 漂移检查\n"
     @printf "  just boundary-check           架构边界检查\n"
     @printf "  just validate-publish-intent strict\n"
-    @printf "  just audit-app-shell-boundary dry-run\n"
     @printf "  just gate-existence MODE=warn\n"
     @printf "  just gate-ci-single-node\n"
     @printf "  just gate-local-k3d\n"
@@ -125,6 +132,7 @@ help-platform:
     @printf "  just validate-workflows strict\n"
     @printf "  just validate-contract-drift  platform 与 contracts 漂移检查\n"
     @printf "  just generate-platform-catalog 生成 platform catalog\n"
+    @printf "  just platform-capabilities     列出 platform capability models\n"
     @printf "  just verify-replay MODE=strict\n"
     @printf "  just verify-generated-artifacts 生成产物基线校验\n"
     @printf "  just platform-doctor          平台全量健康检查\n"
@@ -135,9 +143,11 @@ help-secrets:
     @printf "  just sops-gen-age-key\n"
     @printf "  just sops-show-age-key\n"
     @printf "  just sops-edit web-bff dev\n"
-    @printf "  just sops-run web-bff dev 'cargo run -p web-bff'\n"
+    @printf "  just sops-run web-bff dev 'cargo run -p web-bff' local_real\n"
+    @printf "  just sops-run web-bff dev 'cargo run -p web-bff' external_single_node\n"
     @printf "  just sops-export-env web-bff dev systemd-binary /run/axum-harness/web-bff.env\n"
     @printf "  just sops-export-env web-bff dev podman /run/axum-harness/web-bff.env\n"
+    @printf "  just sops-verify-counter-db-credentials dev\n"
     @printf "  just sops-reconcile dev\n"
     @printf "\n"
 
@@ -177,7 +187,6 @@ help-template:
     @printf "  just template-init backend-core dry-run\n"
     @printf "  just audit-backend-core dry-run\n"
     @printf "  just semver-check\n"
-    @printf "  just skills-list\n"
     @printf "  just storage-report\n"
     @printf "  just clean-run-artifacts\n"
     @printf "  just clean-aggressive-local\n"
